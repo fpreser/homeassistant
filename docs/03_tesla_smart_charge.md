@@ -52,7 +52,7 @@ flowchart TD
     A3 --> DoStart
     A4 --> DoStop[switch OFF<br/>Awtrix + notif<br/>+ refresh]
     A5 --> CondDelta{delta >= 1A<br/>ET cooldown 60s ?}
-    CondDelta -->|oui| SetAmps[set amps<br/>= clamp(opt, 5, tesla_max_amps)]
+    CondDelta -->|oui| SetAmps["set amps<br/>= clamp(opt, 5, tesla_max_amps)"]
     A6 --> CondLow{charge on<br/>ET surplus < 5A ?}
     CondLow -->|oui| Pause[switch OFF]
     A7 --> CondResume{charge off<br/>ET home ?}
