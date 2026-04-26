@@ -1,0 +1,98 @@
+#####################################################################
+#       A P P A R E I L S   &   E L E C T R O M E N A G E R
+#####################################################################
+#
+# Detection d'etat et informations pour les appareils connectes.
+#
+# Binary sensors :
+#   - Séchoir en cours       (puissance > 10 W → actif)
+#   - Machine a laver active (puissance >  5 W → active)
+#
+# Sensors :
+#   - Connexion WiFi iPhone Fabien : BSSID → nom du point d'acces
+#     (Routeur, Bureau, Grenier, Garage — 6/5/2.4 GHz)
+#   - Tony Status : etat de la tondeuse Bosch en francais
+#     (Tonte, A la base, Pause, Erreur, etc.)
+#   - Temps restant machine a laver : secondes restantes
+#     (depuis l'API Bosch Home Connect)
+#
+#####################################################################
+
+- binary_sensor:
+  - name: "Séchoir en cours"
+    unique_id: binary_sensor.sechoir_en_cours
+    state: >-
+      {{ states('sensor.buanderie_seche_linge_power') | int > 10 }}
+    icon: >-
+      {{ 'mdi:tumble-dryer' if states('sensor.buanderie_seche_linge_power') | int > 10 else 'mdi:tumble-dryer-off' }}
+    device_class: power
+
+  - name: "Machine à laver en cours"
+    unique_id: binary_sensor.machine_a_laver_en_cours
+    state: >-
+      {{ states('sensor.buanderie_machine_a_laver_power') | int > 5 }}
+    icon: >-
+      {{ 'mdi:washing-machine' if states('sensor.buanderie_machine_a_laver_power') | int > 5 else 'mdi:washing-machine-off' }}
+    device_class: power
+
+- sensor:
+  - name: "Connexion iPhone Fabien"
+    unique_id: sensor.connection_iphone_fabien
+    default_entity_id: sensor.connection_iphone_fabien  # Garde l'historique Recorder
+    state: >-
+      {% set bssid = states('sensor.iphone_16_pro_de_fabien_bssid_2') | lower | default('') %}
+      {% set mapping = {
+        'ca:9e:43:da:09:6e': 'Routeur 6 Ghz',        
+        '94:18:65:3a:22:75': 'Routeur 5 Ghz',
+        'ca:9e:43:d9:c9:39': 'Bureau 6 Ghz',
+        'c8:9e:43:d9:c9:37': 'Bureau 5 Ghz',
+        '36:98:b5:45:db:8c': 'Grenier 6 Ghz', 
+        '3a:98:b5:45:db:89': 'Grenier 5 Ghz',
+        '34:98:b5:45:db:8a': 'Grenier 2.4 Ghz',
+        '94:18:65:3a:00:': 'Garage'
+      } %}
+      {% set ns = namespace(found=false, location='Autre') %}
+      {% for prefix, loc in mapping.items() %}
+        {% if not ns.found and bssid.startswith(prefix) %}
+          {% set ns.found = true %}
+          {% set ns.location = loc %}
+        {% endif %}
+      {% endfor %}
+      {{ ns.location }}
+    icon: mdi:wifi
+    device_class: enum
+    
+  - name: "Tony Status"
+    unique_id: sensor.tony_status
+    state: >-
+      {% set status = {
+          'off': 'Eteint',
+          'on': 'Allumée',
+          'idle': 'Au repos',
+          'error': 'Nécessite une attention',
+          'charging': 'En charge',
+          'mowing': 'Tonte',
+          'paused': 'Pause',
+          'docked': 'A la base',
+          'returning': 'Retourne à la base'
+      } %}
+      {{ status.get(states('lawn_mower.tony'), 'Statut inconnu') }}
+    icon: mdi:robot-mower
+
+- sensor:
+  - name: "Temps restant machine à laver"
+    unique_id: sensor.washing_machine_time_to_complete
+    state: >-
+      {% set source = states('sensor.bosch_wav28gh0fg_68a40e728c79_bsh_common_option_remainingprogramtime') %}
+      {% if source == 'unavailable' or source == 'unknown' %}
+        0
+      {% else %}
+        {% set remaining_time = as_timestamp(source) %}
+        {% set current_time = as_timestamp(now()) %}
+        {% set diff = (remaining_time - current_time) | int(0) %}
+        {{ [0, diff] | max }}
+      {% endif %}
+    unit_of_measurement: s
+    device_class: duration
+    state_class: measurement
+    icon: mdi:timer

@@ -1,0 +1,474 @@
+#####################################################################
+#                  C H A R G E   N O C T U R N E   H C
+#####################################################################
+#
+# Charge la Tesla en heures creuses nocturnes quand le solaire
+# ne suffira pas le lendemain.
+#
+# Detection HC/HP basee sur le tarif actif du P1 Meter HomeWizard :
+#   sensor.p1_meter_3c39e7284d28_active_tariff
+#   Valeur 1 = heures pleines (T1), valeur 2 = heures creuses (T2)
+#
+# Le demarrage et l'arret suivent automatiquement les transitions
+# de tarif du compteur, sans horaires codes en dur. Toutes les
+# plages HC sont utilisees (nocturne 22h-07h et midi 11h-17h).
+#
+# Decision evaluee au moment du demarrage via sensor.tesla_charge_nocturne_necessaire :
+#   - Semaine : charge si batterie < SoC cible (pas de solaire possible)
+#   - Weekend : charge si batterie < SoC cible ET prevision solaire < seuil
+#
+# Contenu :
+#   1. Demarrage HC : evalue et lance la charge quand le tarif passe en HC (T2)
+#   2. Arret SoC : quand SoC cible atteint
+#   3. Suivi reseau : ajuste l'amperage ou pause si grille saturee (60s)
+#   3b. Resume reseau : relance la charge si pausee par protection reseau
+#   4. Arret HP : fin des heures creuses (tarif repasse en T1)
+#   5. Cable debranche : reset pending si cable debranche pendant la charge
+#   6. Sync helper SoC cible : propage la modification pendant charge HC
+#
+#####################################################################
+
+#####################################################################
+# 1. DEMARRAGE (passage en HC, cable branche en HC, ou restart HA)
+#####################################################################
+# Evalue et demarre la charge dans trois situations :
+#   - Le tarif passe en HC (T2) → evaluation complete via le sensor
+#   - Le cable est branche alors que HC est deja active → idem
+#   - Restart HA en cours de charge → reprend si pending etait actif
+# `pending` est active ici et sert de flag "charge nocturne en cours"
+# pour proteger les autres automations de toute interference.
+#####################################################################
+- id: 'tesla_night_charge_start'
+  alias: Tesla Night Charge - Demarrage
+  trigger:
+    - id: tariff
+      platform: state
+      entity_id: sensor.p1_meter_3c39e7284d28_active_tariff
+      to: '2'
+    - id: cable
+      platform: state
+      entity_id: binary_sensor.f_r_i_d_a_y_charge_cable
+      to: 'on'
+      for:
+        seconds: 30
+    - id: restart
+      platform: homeassistant
+      event: start
+  condition:
+    - condition: state
+      entity_id: input_boolean.tesla_smart_charge
+      state: 'on'
+    - condition: state
+      entity_id: sensor.p1_meter_3c39e7284d28_active_tariff
+      state: '2'
+    - condition: state
+      entity_id: device_tracker.f_r_i_d_a_y_location
+      state: home
+    - condition: state
+      entity_id: binary_sensor.f_r_i_d_a_y_charge_cable
+      state: 'on'
+    - condition: template
+      value_template: >-
+        {{ states('sensor.f_r_i_d_a_y_niveau_de_batterie') | int(0)
+           < states('input_number.tesla_soc_cible') | int(50) }}
+    # Restart : reprend si la charge etait en cours (pending actif).
+    # Autres triggers : evalue si la charge est necessaire maintenant.
+    - condition: template
+      value_template: >-
+        {{ trigger.id == 'restart' and is_state('input_boolean.tesla_night_charge_pending', 'on')
+           or states('sensor.tesla_charge_nocturne_necessaire') in ['oui_semaine', 'oui_meteo'] }}
+  action:
+    - service: input_boolean.turn_on
+      target:
+        entity_id: input_boolean.tesla_night_charge_pending
+    - service: script.tesla_refresh
+    - delay:
+        seconds: 5
+    # Force la limite Tesla a la valeur du SoC cible : la voiture
+    # s'arretera nativement (precis au %) quand la cible sera atteinte.
+    # Plus fiable que d'attendre le trigger sur le sensor batterie qui
+    # peut etre fige par le polling Fleet API endormi de nuit.
+    # La limite est restauree a tesla_soc_solaire_max par les auto 2/4/5 a la fin HC.
+    - service: number.set_value
+      target:
+        entity_id: number.f_r_i_d_a_y_charge_limit
+      data:
+        value: "{{ states('input_number.tesla_soc_cible') | int(50) }}"
+    - service: switch.turn_on
+      target:
+        entity_id: switch.f_r_i_d_a_y_charge
+    - service: number.set_value
+      target:
+        entity_id: number.f_r_i_d_a_y_charge_current
+      data:
+        value: "{{ states('input_number.tesla_max_amps') | int(28) }}"
+    - service: script.notify_fabien
+      data:
+        title: Tesla Charge Nocturne
+        message: >-
+          {% set raison = states('sensor.tesla_charge_nocturne_necessaire') %}
+          {% set batterie = state_attr('sensor.tesla_charge_nocturne_necessaire', 'batterie') %}
+          {% set cible = state_attr('sensor.tesla_charge_nocturne_necessaire', 'soc_cible') %}
+          {% set duree = states('sensor.tesla_duree_charge_nocturne_estimee') %}
+          {% set prevision = state_attr('sensor.tesla_charge_nocturne_necessaire', 'prevision_demain_kwh') %}
+          Charge nocturne demarree a {{ states('input_number.tesla_max_amps') | int }}A.
+          Batterie : {{ batterie }}% -> {{ cible }}% (~{{ duree }} min).
+          {% if raison == 'oui_semaine' %}
+          Raison : jour de semaine demain.
+          {% else %}
+          Raison : prevision solaire {{ prevision }} kWh (seuil : {{ state_attr('sensor.tesla_charge_nocturne_necessaire', 'seuil_solaire_kwh') }} kWh).
+          {% endif %}
+  mode: single
+
+#####################################################################
+# 2. ARRET - SoC cible atteint
+#####################################################################
+# Detecte la fin de charge HC via deux signaux complementaires :
+#   - batt   : trigger template, sensor batterie >= cible
+#              (signal direct mais polling Fleet API parfois lent)
+#   - switch : la voiture s'est arretee seule (limite Tesla atteinte
+#              car auto 1 a force charge_limit = soc_cible). Filet
+#              indispensable pour liberer pending rapidement, sinon
+#              le smart charge solaire reste en veille jusqu'au retour
+#              HP — bloquant en plage HC midi 11h-17h.
+#
+# Le filtre `batt >= cible` sur le trigger switch evite les faux
+# positifs venant de l'auto 3 (pause reseau) ou de l'auto 5 (cable
+# debranche) : on ne libere pending que si la cible est vraiment
+# atteinte cote sensor.
+#
+# Restaure aussi number.f_r_i_d_a_y_charge_limit a tesla_soc_solaire_max
+# (valeur normale solaire, modifiee par l'auto 1 pour limiter a la cible HC).
+#####################################################################
+- id: 'tesla_night_charge_stop_soc'
+  alias: Tesla Night Charge - SoC atteint
+  trigger:
+    - platform: template
+      value_template: >-
+        {{ states('sensor.f_r_i_d_a_y_niveau_de_batterie') | int(0)
+           >= states('input_number.tesla_soc_cible') | int(50) }}
+      id: batt
+    - platform: state
+      entity_id: switch.f_r_i_d_a_y_charge
+      to: 'off'
+      id: switch_off
+  condition:
+    - condition: state
+      entity_id: input_boolean.tesla_night_charge_pending
+      state: 'on'
+    # Filtre faux positifs (pause reseau, cable debranche) : on ne
+    # considere "SoC atteint" que si le sensor batterie l'atteste.
+    - condition: template
+      value_template: >-
+        {{ states('sensor.f_r_i_d_a_y_niveau_de_batterie') | int(0)
+           >= states('input_number.tesla_soc_cible') | int(50) }}
+  action:
+    - service: switch.turn_off
+      target:
+        entity_id: switch.f_r_i_d_a_y_charge
+    - service: number.set_value
+      target:
+        entity_id: number.f_r_i_d_a_y_charge_limit
+      data:
+        value: "{{ states('input_number.tesla_soc_solaire_max') | int(80) }}"
+    - service: input_boolean.turn_off
+      target:
+        entity_id: input_boolean.tesla_night_charge_pending
+    - service: script.notify_fabien
+      data:
+        title: Tesla Charge Nocturne
+        message: >-
+          Charge nocturne terminee. SoC cible atteint :
+          {{ states('sensor.f_r_i_d_a_y_niveau_de_batterie') }}%.
+          Limite de charge restauree a {{ states('input_number.tesla_soc_solaire_max') | int(80) }}%.
+  mode: single
+
+#####################################################################
+# 3. SUIVI AMPERAGE NOCTURNE (protection reseau)
+#####################################################################
+# La charge nocturne tourne a pleine puissance (28A). Si un gros
+# consommateur s'allume (chauffe-eau, seche-linge...), le soutirage
+# peut depasser la limite du compteur (15 000W effectif).
+#
+# Toutes les 60s :
+#   - Si max_grid < 5A (grille saturee) : pause la charge (switch off).
+#     Le resume reseau (3b) la relancera quand la grille se libere.
+#   - Sinon : ajuste l'amperage au max admissible (remonte aussi
+#     quand la consommation baisse).
+#
+# Fallback int(5) sur tesla_max_amp_grid si sensor unavailable :
+# mieux vaut charger au minimum que risquer une surcharge reseau.
+#####################################################################
+- id: 'tesla_night_charge_grid_adjust'
+  alias: Tesla Night Charge - Suivi reseau
+  trigger:
+    - platform: time_pattern
+      minutes: '/1'
+  variables:
+    # Duree depuis la derniere transition du switch (charge tournait depuis X s).
+    # Capture au firing du trigger, avant toute action qui modifierait last_changed.
+    charge_duration_s: >-
+      {% set last_on = states.switch.f_r_i_d_a_y_charge.last_changed %}
+      {{ (now() - last_on).total_seconds() | int if last_on else 0 }}
+  condition:
+    - condition: state
+      entity_id: input_boolean.tesla_night_charge_pending
+      state: 'on'
+    - condition: state
+      entity_id: switch.f_r_i_d_a_y_charge
+      state: 'on'
+    - condition: template
+      value_template: >-
+        {% set max_grid = states('sensor.tesla_max_amp_grid') | int(5) %}
+        {% set current  = states('number.f_r_i_d_a_y_charge_current') | int(0) %}
+        {% set max_amps = states('input_number.tesla_max_amps') | int(28) %}
+        {% set target   = [max_grid, max_amps] | min %}
+        {{ max_grid < 5 or (target - current) | abs >= 1 }}
+  action:
+    - choose:
+        # Grille saturee : pause la charge (resume_grid #3b reprendra)
+        - conditions:
+            - condition: template
+              value_template: >-
+                {{ states('sensor.tesla_max_amp_grid') | int(5) < 5 }}
+          sequence:
+            - service: switch.turn_off
+              target:
+                entity_id: switch.f_r_i_d_a_y_charge
+            # Notif uniquement si la charge tournait depuis > 2 min
+            # (silence les micro-oscillations autour du seuil).
+            - choose:
+                - conditions:
+                    - condition: template
+                      value_template: "{{ charge_duration_s > 120 }}"
+                  sequence:
+                    - service: script.notify_fabien
+                      data:
+                        title: Tesla Charge Nocturne
+                        message: >-
+                          Charge mise en pause — soutirage reseau sature
+                          (max admissible < 5A). Reprise auto quand le surplus revient.
+      default:
+        - service: number.set_value
+          target:
+            entity_id: number.f_r_i_d_a_y_charge_current
+          data:
+            value: >-
+              {% set max_grid = states('sensor.tesla_max_amp_grid') | int(5) %}
+              {% set max_amps = states('input_number.tesla_max_amps') | int(28) %}
+              {{ [5, [max_grid, max_amps] | min] | max }}
+  mode: single
+
+#####################################################################
+# 3b. RESUME APRES PROTECTION RESEAU
+#####################################################################
+# Quand la protection reseau a coupe la charge (switch OFF), le suivi
+# amperage (3) est inoperant car il exige switch=on.
+#
+# Deux triggers :
+#   - seuil      : relance si max_amp_grid repasse au-dessus de 4A (60s)
+#   - periodique : toutes les 5 min, verifie si la charge peut reprendre
+#                  (filet de securite si la coupure survient quand
+#                  max_amp_grid est deja > 4A → seuil ne se declenche pas)
+# L'amperage est fixe au max admissible du moment (pas au max absolu).
+#
+# Notif : uniquement si trigger=seuil ET pause > 2 min. Silence le
+# filet periodique et les micro-coupures pour eviter le spam.
+#####################################################################
+- id: 'tesla_night_charge_resume_grid'
+  alias: Tesla Night Charge - Resume apres protection reseau
+  trigger:
+    - platform: numeric_state
+      entity_id: sensor.tesla_max_amp_grid
+      above: 4
+      for:
+        seconds: 60
+      id: seuil
+    - platform: time_pattern
+      minutes: '/5'
+      id: periodique
+  variables:
+    # Duree depuis la derniere transition du switch (pause depuis X s).
+    # Capture au firing, avant turn_on qui ecraserait last_changed.
+    pause_duration_s: >-
+      {% set last_off = states.switch.f_r_i_d_a_y_charge.last_changed %}
+      {{ (now() - last_off).total_seconds() | int if last_off else 0 }}
+  condition:
+    - condition: state
+      entity_id: input_boolean.tesla_night_charge_pending
+      state: 'on'
+    - condition: state
+      entity_id: switch.f_r_i_d_a_y_charge
+      state: 'off'
+    - condition: state
+      entity_id: device_tracker.f_r_i_d_a_y_location
+      state: home
+    - condition: state
+      entity_id: sensor.p1_meter_3c39e7284d28_active_tariff
+      state: '2'
+  action:
+    # Re-applique la cible HC avant turn_on (defense contre une derive
+    # cote Tesla pendant la pause reseau : commande Fleet API perdue
+    # avec voiture endormie, modif via app, etc.).
+    - service: number.set_value
+      target:
+        entity_id: number.f_r_i_d_a_y_charge_limit
+      data:
+        value: "{{ states('input_number.tesla_soc_cible') | int(50) }}"
+    - service: switch.turn_on
+      target:
+        entity_id: switch.f_r_i_d_a_y_charge
+    - delay:
+        seconds: 5
+    - service: number.set_value
+      target:
+        entity_id: number.f_r_i_d_a_y_charge_current
+      data:
+        value: >-
+          {% set max_grid = states('sensor.tesla_max_amp_grid') | int(5) %}
+          {% set max_amps = states('input_number.tesla_max_amps') | int(28) %}
+          {{ [5, [max_grid, max_amps] | min] | max }}
+    # Notif uniquement sur reprise "significative" : trigger seuil
+    # (sortie franche de saturation) ET pause > 2 min.
+    - choose:
+        - conditions:
+            - condition: template
+              value_template: "{{ trigger.id == 'seuil' and pause_duration_s > 120 }}"
+          sequence:
+            - service: script.notify_fabien
+              data:
+                title: Tesla Charge Nocturne
+                message: >-
+                  {% set max_grid = states('sensor.tesla_max_amp_grid') | int(5) %}
+                  {% set max_amps = states('input_number.tesla_max_amps') | int(28) %}
+                  {% set amps = [5, [max_grid, max_amps] | min] | max %}
+                  {% set mins = (pause_duration_s / 60) | int %}
+                  Charge nocturne reprise apres {{ mins }} min de pause ({{ amps }}A).
+                  Soutirage revenu en zone acceptable.
+  mode: single
+
+#####################################################################
+# 4. ARRET - Fin des heures creuses (retour tarif HP)
+#####################################################################
+# Securite : arrete la charge quand le compteur repasse en heures
+# pleines (T1). Se declenche automatiquement via le sensor tarif
+# du P1 Meter HomeWizard au lieu d'une heure fixe.
+# (le SoC cible n'a pas ete atteint — evite de charger en HP)
+#####################################################################
+- id: 'tesla_night_charge_stop_hp'
+  alias: Tesla Night Charge - Fin HC
+  trigger:
+    - platform: state
+      entity_id: sensor.p1_meter_3c39e7284d28_active_tariff
+      to: '1'
+  condition:
+    - condition: state
+      entity_id: input_boolean.tesla_night_charge_pending
+      state: 'on'
+  action:
+    - choose:
+        - conditions:
+            - condition: state
+              entity_id: switch.f_r_i_d_a_y_charge
+              state: 'on'
+          sequence:
+            - service: switch.turn_off
+              target:
+                entity_id: switch.f_r_i_d_a_y_charge
+            - service: script.notify_fabien
+              data:
+                title: Tesla Charge Nocturne
+                message: >-
+                  Charge nocturne arretee (retour heures pleines detecte par le compteur).
+                  Batterie : {{ states('sensor.f_r_i_d_a_y_niveau_de_batterie') }}%
+                  (objectif {{ states('input_number.tesla_soc_cible') | int }}% non atteint).
+    # Restaure la limite a tesla_soc_solaire_max (modifiee par auto 1 pour
+    # s'arreter a la cible HC). Filet de securite si auto 2 n'a pas eu lieu.
+    - service: number.set_value
+      target:
+        entity_id: number.f_r_i_d_a_y_charge_limit
+      data:
+        value: "{{ states('input_number.tesla_soc_solaire_max') | int(80) }}"
+    - service: input_boolean.turn_off
+      target:
+        entity_id: input_boolean.tesla_night_charge_pending
+  mode: single
+
+#####################################################################
+# 5. CABLE DEBRANCHE PENDANT CHARGE NOCTURNE
+#####################################################################
+# Si l'utilisateur debranche le cable en pleine charge nocturne,
+# reset le flag pending et coupe l'etat HA. Sans cela, pending
+# resterait a on et resume_grid (3b) tenterait de relancer toutes
+# les 5 min jusqu'a la fin HC.
+#####################################################################
+- id: 'tesla_night_charge_cable_unplugged'
+  alias: Tesla Night Charge - Cable debranche
+  trigger:
+    - platform: state
+      entity_id: binary_sensor.f_r_i_d_a_y_charge_cable
+      to: 'off'
+      for:
+        seconds: 30
+  condition:
+    - condition: state
+      entity_id: input_boolean.tesla_night_charge_pending
+      state: 'on'
+  action:
+    - service: switch.turn_off
+      target:
+        entity_id: switch.f_r_i_d_a_y_charge
+    # Restaure la limite a tesla_soc_solaire_max (modifiee par auto 1 pour
+    # s'arreter a la cible HC). Indispensable : sinon la prochaine charge
+    # solaire serait plafonnee a la cible HC au lieu du SoC max solaire.
+    - service: number.set_value
+      target:
+        entity_id: number.f_r_i_d_a_y_charge_limit
+      data:
+        value: "{{ states('input_number.tesla_soc_solaire_max') | int(80) }}"
+    - service: input_boolean.turn_off
+      target:
+        entity_id: input_boolean.tesla_night_charge_pending
+    - service: script.notify_fabien
+      data:
+        title: Tesla Charge Nocturne
+        message: >-
+          Cable debranche en cours de charge nocturne.
+          Batterie : {{ states('sensor.f_r_i_d_a_y_niveau_de_batterie') }}%
+          (objectif {{ states('input_number.tesla_soc_cible') | int }}%).
+  mode: single
+
+#####################################################################
+# 6. SYNC HELPER tesla_soc_cible (pendant charge HC active)
+#####################################################################
+# Quand l'utilisateur modifie la cible HC depuis le dashboard pendant
+# une charge nocturne en cours, propage immediatement la nouvelle
+# valeur a number.f_r_i_d_a_y_charge_limit. La voiture s'arretera
+# nativement a la nouvelle cible.
+#
+# Ne fait rien hors charge HC : la nouvelle cible sera utilisee au
+# prochain demarrage HC (auto 1).
+#####################################################################
+- id: 'tesla_night_charge_sync_target'
+  alias: Tesla Night Charge - Sync helper SoC cible
+  trigger:
+    - platform: state
+      entity_id: input_number.tesla_soc_cible
+  condition:
+    - condition: state
+      entity_id: input_boolean.tesla_night_charge_pending
+      state: 'on'
+  action:
+    - service: number.set_value
+      target:
+        entity_id: number.f_r_i_d_a_y_charge_limit
+      data:
+        value: "{{ states('input_number.tesla_soc_cible') | int(50) }}"
+    - service: script.notify_fabien
+      data:
+        title: Tesla Charge Nocturne
+        message: >-
+          {% set cible = states('input_number.tesla_soc_cible') | int(50) %}
+          {% set bat = states('sensor.f_r_i_d_a_y_niveau_de_batterie') | int(0) %}
+          Cible HC mise a jour : {{ cible }}%. Charge en cours, batterie : {{ bat }}%.
+  mode: single

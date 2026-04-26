@@ -1,0 +1,21 @@
+#####################################################################
+#      Push a notification to the Awtrix Light
+#####################################################################
+awtrix_notification:
+  alias: Awtrix Notification
+  sequence:    
+  - service: mqtt.publish
+    data:
+      qos: 0
+      retain: false
+      topic: "awtrix_dd33c0/notify"
+      payload: |-
+        {   
+          "text": "{{ notification_text }}",
+          "icon": "{{ my_icon }}",                    
+          "textCase": "{{ text_case }}",                    
+          "rainbow": {{ iif(show_rainbow, "true", "false") }},    
+          "hold": {{ iif(hold_notification, "true", "false") }},
+          "duration": "{{ my_duration }}"
+        }
+  mode: single

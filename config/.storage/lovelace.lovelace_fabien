@@ -1,0 +1,4574 @@
+{
+  "version": 1,
+  "minor_version": 1,
+  "key": "lovelace.lovelace_fabien",
+  "data": {
+    "config": {
+      "views": [
+        {
+          "theme": "Mushroom Shadow",
+          "type": "custom:vertical-layout",
+          "title": "Home",
+          "ha-card-border-width": "0px",
+          "path": "home",
+          "icon": "mdi:home",
+          "badges": [],
+          "cards": [
+            {
+              "type": "horizontal-stack",
+              "cards": [
+                {
+                  "type": "custom:mushroom-person-card",
+                  "entity": "person.fabien",
+                  "border": "never"
+                },
+                {
+                  "type": "custom:mushroom-person-card",
+                  "entity": "person.gillian",
+                  "icon": "mdi:face-woman"
+                },
+                {
+                  "type": "custom:mushroom-person-card",
+                  "entity": "person.louis",
+                  "icon": "mdi:face-agent"
+                },
+                {
+                  "type": "custom:mushroom-person-card",
+                  "entity": "person.emma",
+                  "icon": "mdi:face-woman-profile"
+                }
+              ]
+            },
+            {
+              "type": "horizontal-stack",
+              "cards": [
+                {
+                  "type": "custom:mushroom-template-card",
+                  "primary": "{% set rads = expand('group.my_climates') | list %}\n{% set ns = namespace(cold=0) %}\n{% for r in rads %}\n  {% set ns.cold = ns.cold + (1 if r.attributes.current_temperature | float | round(0) < r.attributes.temperature | float else 0) %}\n{% endfor %}\n{{ ns.cold }} - Froid",
+                  "icon": "mdi:radiator",
+                  "tap_action": {
+                    "action": "navigate",
+                    "navigation_path": "chauffage"
+                  },
+                  "color": "blue",
+                  "features_position": "bottom"
+                },
+                {
+                  "type": "custom:mushroom-template-card",
+                  "primary": "{% set rads = expand('group.my_climates') | list %}\n{% set ns = namespace(good=0) %}\n{% for r in rads %}\n  {% set ns.good = ns.good + (1 if r.attributes.current_temperature | float | round(0) == r.attributes.temperature | float else 0) %}\n{% endfor %}\n{{ ns.good }} - Ok",
+                  "icon": "mdi:radiator-off",
+                  "tap_action": {
+                    "action": "navigate",
+                    "navigation_path": "chauffage"
+                  },
+                  "icon_color": "green"
+                },
+                {
+                  "type": "custom:mushroom-template-card",
+                  "primary": "{% set rads = expand('group.my_climates') | list %}\n{% set ns = namespace(hot=0) %}\n{% for r in rads %}\n  {% set ns.hot = ns.hot + (1 if r.attributes.current_temperature | float | round(0) > r.attributes.temperature | float else 0) %}\n{% endfor %}\n{{ ns.hot }} - Chaud",
+                  "icon": "mdi:radiator-off",
+                  "tap_action": {
+                    "action": "navigate",
+                    "navigation_path": "chauffage"
+                  },
+                  "color": "red",
+                  "features_position": "bottom"
+                }
+              ]
+            },
+            {
+              "type": "custom:layout-card",
+              "layout_type": "custom:grid-layout",
+              "layout": {
+                "grid-template-columns": "70% 15% 15%"
+              },
+              "cards": [
+                {
+                  "type": "custom:mushroom-template-card",
+                  "primary": "Lumières",
+                  "secondary": "{% set all_lights = expand('group.my_lights') | list %} {% set on_lights = all_lights | selectattr('state', 'eq', 'on') | list | count %} {% set off_lights = all_lights | selectattr('state', 'eq', 'off') | list | count %} {% set total_lights = all_lights | count %} {% if total_lights > 0 %}\n  {% if on_lights > 0 %}{{ on_lights }} Allumée{{'s' if on_lights > 1 }}{% endif %}\n  {% if off_lights > 0 %}{% if on_lights > 0 %} - {% endif %}{{ off_lights }} Eteinte{{'s' if off_lights > 1 }}{% endif %}\n{% else %}\n  Aucune lumière trouvée\n{% endif %}",
+                  "icon": "{% set all_lights = expand('group.my_lights') | list %} {% set on_lights = all_lights | selectattr('state', 'eq', 'on') | list | count %} {% if on_lights > 0 %}\n  mdi:lightbulb-group\n{% else %}\n  mdi:lightbulb-group-off\n{% endif %}",
+                  "tap_action": {
+                    "action": "navigate",
+                    "navigation_path": "lumieres"
+                  },
+                  "icon_color": "{% set all_lights = expand('group.my_lights') | list %} {% set on_lights = all_lights | selectattr('state', 'eq', 'on') | list | count %} {% if on_lights > 0 %}\n  yellow\n{% else %}\n  gray\n{% endif %}"
+                },
+                {
+                  "type": "custom:mushroom-template-card",
+                  "icon": "mdi:light-switch",
+                  "layout": "icon_only",
+                  "tap_action": {
+                    "action": "call-service",
+                    "service": "light.turn_on",
+                    "target": {
+                      "entity_id": "group.my_lights"
+                    }
+                  },
+                  "hold_action": {
+                    "action": "call-service",
+                    "service": "light.turn_on",
+                    "target": {
+                      "entity_id": "group.my_lights"
+                    }
+                  },
+                  "icon_color": "grey"
+                },
+                {
+                  "type": "custom:mushroom-template-card",
+                  "icon": "mdi:light-switch-off",
+                  "layout": "icon_only",
+                  "tap_action": {
+                    "action": "call-service",
+                    "service": "light.turn_off",
+                    "target": {
+                      "entity_id": "group.my_lights"
+                    }
+                  },
+                  "hold_action": {
+                    "action": "call-service",
+                    "service": "light.turn_off",
+                    "target": {
+                      "entity_id": "group.my_lights"
+                    }
+                  },
+                  "icon_color": "grey"
+                }
+              ]
+            },
+            {
+              "type": "custom:layout-card",
+              "layout_type": "custom:grid-layout",
+              "layout": {
+                "grid-template-columns": "70% 15% 15%"
+              },
+              "cards": [
+                {
+                  "type": "custom:mushroom-template-card",
+                  "primary": "Volets",
+                  "secondary": "{% set all_shutters = expand('cover.my_shutters') %} {% set moving_shutters = all_shutters | selectattr('state', 'in', ['opening', 'closing']) | list | count %} {% set positions = all_shutters | map(attribute='attributes.current_position') | list %} {% set fully_open = positions | select('==', 100) | list | count %} {% set fully_closed = positions | select('==', 0) | list | count %} {% set other_positions = positions | list | count - fully_open - fully_closed - moving_shutters %} {% set total_shutters = positions | list | count %} {% if total_shutters > 0 %}\n  {% if fully_closed > 0 %}{{ fully_closed }} Fermé{{'s' if fully_closed > 1 }}{% endif %}\n  {% if fully_open > 0 %}{% if fully_closed > 0 %} - {% endif %}{{ fully_open }} Ouvert{{'s' if fully_open > 1 }}{% endif %}\n  {% if other_positions > 0 %}{% if fully_closed > 0 or fully_open > 0 %} - {% endif %}{{ other_positions }} Autre{{'s' if other_positions > 1 }}{% endif %}\n  {% if moving_shutters > 0 %} - {{ moving_shutters }} Actif{{'s' if moving_shutters > 1 }}{% endif %}\n{% else %}\n  Aucun volet trouvé\n{% endif %}",
+                  "icon": "{% set all_shutters = expand('cover.my_shutters') %} {% set positions = all_shutters | map(attribute='attributes.current_position') | list %} {% set fully_open = positions | select('==', 100) | list | count %} {% set fully_closed = positions | select('==', 0) | list | count %} {% set other_positions = positions | list | count - fully_open - fully_closed %} {% if fully_open > 0 or other_positions > 0 %}\n  mdi:window-shutter-open\n{% else %}\n  mdi:window-shutter\n{% endif %}",
+                  "tap_action": {
+                    "action": "navigate",
+                    "navigation_path": "volets-et-velux"
+                  },
+                  "icon_color": "{% set all_shutters = expand('cover.my_shutters') %} {% set moving_shutters = all_shutters | selectattr('state', 'in', ['opening', 'closing']) | list | count %} {% if moving_shutters > 0 %}\n  orange\n{% else %}\n  {% set positions = all_shutters | map(attribute='attributes.current_position') | list %}\n  {% set fully_open = positions | select('==', 100) | list | count %}\n  {% set fully_closed = positions | select('==', 0) | list | count %}\n  {% set other_positions = positions | list | count - fully_open - fully_closed %}\n  {% if fully_open > 0 or other_positions > 0 %}\n    green\n  {% else %}\n    blue\n  {% endif %}\n{% endif %}"
+                },
+                {
+                  "type": "custom:mushroom-template-card",
+                  "icon": "mdi:arrow-up-bold",
+                  "layout": "icon_only",
+                  "tap_action": {
+                    "action": "call-service",
+                    "service": "scene.turn_on",
+                    "target": {
+                      "entity_id": "scene.ouverture_volets"
+                    }
+                  },
+                  "icon_color": "grey",
+                  "hold_action": {
+                    "action": "call-service",
+                    "service": "scene.turn_on",
+                    "target": {
+                      "entity_id": "scene.ouverture_volets"
+                    }
+                  }
+                },
+                {
+                  "type": "custom:mushroom-template-card",
+                  "icon": "mdi:arrow-down-bold",
+                  "layout": "icon_only",
+                  "tap_action": {
+                    "action": "call-service",
+                    "service": "scene.turn_on",
+                    "target": {
+                      "entity_id": "scene.fermeture_volets"
+                    }
+                  },
+                  "icon_color": "grey",
+                  "hold_action": {
+                    "action": "call-service",
+                    "service": "scene.turn_on",
+                    "target": {
+                      "entity_id": "scene.fermeture_volets"
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "type": "custom:tabbed-card",
+              "options": {},
+              "tabs": [
+                {
+                  "card": {
+                    "type": "vertical-stack",
+                    "cards": [
+                      {
+                        "type": "horizontal-stack",
+                        "cards": [
+                          {
+                            "type": "custom:mushroom-template-card",
+                            "primary": "{{ states('sensor.solar_production') | int(0) }} W",
+                            "secondary": "",
+                            "icon": "mdi:solar-power",
+                            "icon_color": "{% if states('sensor.solar_production') | int(0) > 0 %}\ngreen\n{% else %}\ngray\n{% endif %}",
+                            "entity": "sensor.solar_production",
+                            "tap_action": {
+                              "action": "navigate",
+                              "navigation_path": "solar"
+                            }
+                          },
+                          {
+                            "type": "custom:mushroom-template-card",
+                            "primary": "{% if states('sensor.p1_meter_3c39e7284d28_active_power') | int(0) >= 0 %} {{ states('sensor.p1_meter_3c39e7284d28_active_power') | int(0) }} W in {% else %} {{ (states('sensor.p1_meter_3c39e7284d28_active_power') | int(0) * -1) }} W out {% endif %}",
+                            "secondary": "",
+                            "icon": "{% if states('sensor.p1_meter_3c39e7284d28_active_power') | int(0) >= 0 %} mdi:transmission-tower-export {% else %} mdi:transmission-tower-import {% endif %}",
+                            "icon_color": "{% if states('sensor.p1_meter_3c39e7284d28_active_power') | int(0) >= 0 %} red {% else %} green {% endif %}",
+                            "entity": "sensor.p1_meter_3c39e7284d28_active_power",
+                            "tap_action": {
+                              "action": "navigate",
+                              "navigation_path": "power"
+                            }
+                          }
+                        ]
+                      },
+                      {
+                        "type": "custom:swipe-card",
+                        "cards": [
+                          {
+                            "type": "energy-distribution",
+                            "link_dashboard": false
+                          },
+                          {
+                            "type": "energy-usage-graph"
+                          },
+                          {
+                            "type": "energy-devices-detail-graph"
+                          },
+                          {
+                            "type": "energy-solar-graph"
+                          },
+                          {
+                            "type": "energy-gas-graph"
+                          },
+                          {
+                            "type": "energy-solar-consumed-gauge"
+                          },
+                          {
+                            "type": "vertical-stack",
+                            "cards": [
+                              {
+                                "type": "sensor",
+                                "graph": "line",
+                                "entity": "sensor.net_energy",
+                                "detail": 1
+                              },
+                              {
+                                "type": "custom:layout-card",
+                                "layout_type": "custom:grid-layout",
+                                "cards": [
+                                  {
+                                    "type": "custom:mushroom-entity-card",
+                                    "entity": "input_number.min_consommation_nette",
+                                    "name": "Min",
+                                    "icon": "mdi:solar-power-variant",
+                                    "icon_color": "green"
+                                  },
+                                  {
+                                    "type": "custom:mushroom-entity-card",
+                                    "entity": "input_datetime.min_consommation_nette_timestamp",
+                                    "name": "Min Date",
+                                    "icon": "mdi:solar-power-variant",
+                                    "icon_color": "green"
+                                  }
+                                ],
+                                "layout": {
+                                  "grid-template-columns": "40% 60%",
+                                  "padding": "0px",
+                                  "margin": "0px",
+                                  "card_margin": "0px"
+                                }
+                              },
+                              {
+                                "type": "custom:layout-card",
+                                "layout_type": "custom:grid-layout",
+                                "cards": [
+                                  {
+                                    "type": "custom:mushroom-entity-card",
+                                    "entity": "input_number.max_consommation_nette",
+                                    "name": "Max",
+                                    "icon": "mdi:solar-power-variant",
+                                    "icon_color": "red"
+                                  },
+                                  {
+                                    "type": "custom:mushroom-entity-card",
+                                    "entity": "input_datetime.max_consommation_nette_timestamp",
+                                    "name": "Max Date",
+                                    "icon": "mdi:solar-power-variant",
+                                    "icon_color": "red"
+                                  }
+                                ],
+                                "layout": {
+                                  "grid-template-columns": "40% 60%",
+                                  "padding": "0px",
+                                  "margin": "0px",
+                                  "card_margin": "0px"
+                                }
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  "attributes": {
+                    "label": "Energie"
+                  }
+                },
+                {
+                  "card": {
+                    "type": "custom:swipe-card",
+                    "cards": [
+                      {
+                        "type": "custom:mini-graph-card",
+                        "name": "Extérieur",
+                        "entities": [
+                          {
+                            "entity": "sensor.vicare_outside_temperature",
+                            "name": "Extérieur"
+                          }
+                        ],
+                        "hour24": true,
+                        "hours_to_show": 48,
+                        "points_per_hour": 8,
+                        "aggregate_func": "max",
+                        "update_interval": 5,
+                        "line_width": 2,
+                        "smoothing": false
+                      },
+                      {
+                        "type": "custom:mini-graph-card",
+                        "name": "Temperature rez",
+                        "entities": [
+                          {
+                            "entity": "sensor.temp_hall_entree",
+                            "name": "Hall entrée"
+                          },
+                          {
+                            "entity": "sensor.temp_wc_bas",
+                            "name": "WC Bas"
+                          },
+                          {
+                            "entity": "sensor.temp_salle_a_manger",
+                            "name": "Salle à manger"
+                          },
+                          {
+                            "entity": "sensor.temp_salon",
+                            "name": "Salon"
+                          },
+                          {
+                            "entity": "sensor.temp_cuisine",
+                            "name": "Cuisine"
+                          }
+                        ],
+                        "hour24": true,
+                        "hours_to_show": 48,
+                        "points_per_hour": 8,
+                        "aggregate_func": "max",
+                        "update_interval": 5,
+                        "line_width": 2,
+                        "smoothing": false
+                      },
+                      {
+                        "type": "custom:mini-graph-card",
+                        "name": "Temperature premier",
+                        "entities": [
+                          {
+                            "entity": "sensor.temp_hall_nuit",
+                            "name": "Hall nuit"
+                          },
+                          {
+                            "entity": "sensor.temp_polyvalent",
+                            "name": "Espace Polyvalent"
+                          },
+                          {
+                            "entity": "sensor.temp_chambre_emma",
+                            "name": "Chambre Emma"
+                          },
+                          {
+                            "entity": "sensor.temp_chambre_louis",
+                            "name": "Chambre Louis"
+                          },
+                          {
+                            "entity": "sensor.temp_bureau_fabien",
+                            "name": "Bureau Fabien"
+                          },
+                          {
+                            "entity": "sensor.temp_bureau_gillian",
+                            "name": "Bureau Gillian"
+                          },
+                          {
+                            "entity": "sensor.temp_salle_de_bain",
+                            "name": "Salle de bain"
+                          }
+                        ],
+                        "hour24": true,
+                        "hours_to_show": 48,
+                        "points_per_hour": 8,
+                        "aggregate_func": "max",
+                        "update_interval": 5,
+                        "line_width": 2,
+                        "smoothing": false
+                      },
+                      {
+                        "type": "custom:mini-graph-card",
+                        "name": "Chambre Grenier",
+                        "entities": [
+                          {
+                            "entity": "sensor.chambre_inside_temperature",
+                            "name": "Chambre Grenier"
+                          }
+                        ],
+                        "hour24": true,
+                        "hours_to_show": 48,
+                        "points_per_hour": 8,
+                        "aggregate_func": "max",
+                        "update_interval": 5,
+                        "line_width": 2,
+                        "smoothing": false
+                      }
+                    ]
+                  },
+                  "attributes": {
+                    "label": "Température"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "theme": "Backend-selected",
+          "title": "Salon",
+          "path": "salon",
+          "icon": "mdi:sofa",
+          "type": "custom:vertical-layout",
+          "badges": [],
+          "cards": [
+            {
+              "type": "custom:mushroom-title-card",
+              "title": "Salon"
+            },
+            {
+              "type": "horizontal-stack",
+              "cards": [
+                {
+                  "type": "custom:mushroom-light-card",
+                  "entity": "light.salon_prises",
+                  "show_brightness_control": true,
+                  "collapsible_controls": false,
+                  "name": "Prises",
+                  "fill_container": false,
+                  "icon": "mdi:floor-lamp"
+                },
+                {
+                  "type": "custom:mushroom-light-card",
+                  "entity": "light.salon_table",
+                  "show_brightness_control": true,
+                  "collapsible_controls": false,
+                  "name": "Table",
+                  "icon": "mdi:light-recessed"
+                },
+                {
+                  "type": "custom:mushroom-light-card",
+                  "entity": "light.salon_exterieur",
+                  "show_brightness_control": true,
+                  "collapsible_controls": false,
+                  "name": "Ext",
+                  "icon": "mdi:light-recessed"
+                }
+              ]
+            },
+            {
+              "type": "horizontal-stack",
+              "cards": [
+                {
+                  "type": "custom:mushroom-cover-card",
+                  "entity": "cover.volet_tv",
+                  "show_position_control": false,
+                  "show_tilt_position_control": false,
+                  "show_buttons_control": true,
+                  "name": "TV"
+                },
+                {
+                  "type": "custom:mushroom-cover-card",
+                  "entity": "cover.volet_canape",
+                  "show_position_control": false,
+                  "show_tilt_position_control": false,
+                  "show_buttons_control": true,
+                  "name": "Canapé"
+                }
+              ]
+            },
+            {
+              "type": "custom:mushroom-climate-card",
+              "entity": "climate.salon",
+              "show_temperature_control": true
+            },
+            {
+              "type": "custom:mushroom-title-card",
+              "title": "SàM"
+            },
+            {
+              "type": "horizontal-stack",
+              "cards": [
+                {
+                  "type": "custom:mushroom-light-card",
+                  "entity": "light.salle_a_manger_table",
+                  "show_brightness_control": true,
+                  "collapsible_controls": false,
+                  "name": "Table",
+                  "fill_container": false,
+                  "icon": "mdi:light-recessed"
+                },
+                {
+                  "type": "custom:mushroom-light-card",
+                  "entity": "light.salle_a_manger_exterieur",
+                  "show_brightness_control": true,
+                  "collapsible_controls": false,
+                  "name": "Ext",
+                  "icon": "mdi:light-recessed"
+                }
+              ]
+            },
+            {
+              "type": "horizontal-stack",
+              "cards": [
+                {
+                  "type": "custom:mushroom-cover-card",
+                  "entity": "cover.volet_salle_a_manger_low_speed",
+                  "show_position_control": false,
+                  "show_tilt_position_control": false,
+                  "show_buttons_control": true,
+                  "name": "Salle à Manger"
+                }
+              ]
+            },
+            {
+              "type": "custom:mushroom-climate-card",
+              "entity": "climate.salle_a_manger",
+              "show_temperature_control": true
+            },
+            {
+              "type": "entities",
+              "entities": [
+                {
+                  "entity": "select.salon_activities",
+                  "name": "Activités"
+                },
+                "remote.salon"
+              ],
+              "title": "Salon"
+            }
+          ]
+        },
+        {
+          "theme": "Backend-selected",
+          "title": "Cuisine",
+          "path": "cuisine",
+          "icon": "mdi:chef-hat",
+          "type": "custom:vertical-layout",
+          "badges": [],
+          "cards": [
+            {
+              "type": "custom:mushroom-title-card",
+              "title": "Cuisine"
+            },
+            {
+              "type": "horizontal-stack",
+              "cards": [
+                {
+                  "type": "custom:mushroom-light-card",
+                  "entity": "light.cuisine_ilot",
+                  "show_brightness_control": false,
+                  "collapsible_controls": false,
+                  "name": "Îlôt",
+                  "fill_container": false,
+                  "icon": "mdi:light-recessed"
+                },
+                {
+                  "type": "custom:mushroom-light-card",
+                  "entity": "light.cuisine_passage",
+                  "show_brightness_control": false,
+                  "collapsible_controls": false,
+                  "name": "Passage",
+                  "icon": "mdi:light-recessed"
+                },
+                {
+                  "type": "custom:mushroom-light-card",
+                  "entity": "light.cuisine_evier",
+                  "show_brightness_control": false,
+                  "collapsible_controls": false,
+                  "name": "Evier",
+                  "icon": "mdi:light-recessed"
+                }
+              ]
+            },
+            {
+              "type": "horizontal-stack",
+              "cards": [
+                {
+                  "type": "custom:mushroom-cover-card",
+                  "entity": "cover.volet_cuisine_low_speed",
+                  "show_position_control": false,
+                  "show_tilt_position_control": false,
+                  "show_buttons_control": true,
+                  "name": "Volet"
+                }
+              ]
+            },
+            {
+              "type": "custom:mushroom-climate-card",
+              "entity": "climate.cuisine",
+              "show_temperature_control": true
+            },
+            {
+              "square": false,
+              "columns": 2,
+              "type": "grid",
+              "cards": [
+                {
+                  "type": "custom:mushroom-entity-card",
+                  "entity": "sensor.microwave_combination_oven_status",
+                  "name": "Micro-Ondes",
+                  "icon": "mdi:microwave"
+                },
+                {
+                  "type": "custom:mushroom-entity-card",
+                  "entity": "sensor.steam_combination_oven_status",
+                  "name": "Four",
+                  "icon": "mdi:stove"
+                },
+                {
+                  "type": "custom:mushroom-entity-card",
+                  "entity": "sensor.hob_status",
+                  "name": "Plaques"
+                },
+                {
+                  "type": "custom:mushroom-entity-card",
+                  "entity": "sensor.dishwasher_status",
+                  "name": "Lave vaisselle"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "theme": "Backend-selected",
+          "title": "Chambre Grenier",
+          "path": "chambre-grenier",
+          "icon": "mdi:bed",
+          "type": "custom:vertical-layout",
+          "badges": [],
+          "cards": [
+            {
+              "type": "custom:mushroom-title-card",
+              "title": "Chambre Grenier"
+            },
+            {
+              "type": "horizontal-stack",
+              "cards": [
+                {
+                  "type": "custom:mushroom-light-card",
+                  "entity": "light.chambre_grenier_entree",
+                  "show_brightness_control": false,
+                  "collapsible_controls": false,
+                  "name": "Entrée",
+                  "icon": "mdi:light-recessed"
+                },
+                {
+                  "type": "custom:mushroom-light-card",
+                  "entity": "light.chambre_grenier_principal",
+                  "show_brightness_control": false,
+                  "collapsible_controls": false,
+                  "icon": "mdi:light-recessed",
+                  "name": "Principal"
+                }
+              ]
+            },
+            {
+              "type": "horizontal-stack",
+              "cards": [
+                {
+                  "type": "custom:mushroom-cover-card",
+                  "entity": "cover.volet_velux_chambre",
+                  "show_position_control": false,
+                  "show_tilt_position_control": false,
+                  "show_buttons_control": true,
+                  "name": "Vélux"
+                },
+                {
+                  "type": "custom:mushroom-cover-card",
+                  "entity": "cover.volet_chambre_low_speed",
+                  "show_position_control": false,
+                  "show_tilt_position_control": false,
+                  "show_buttons_control": true,
+                  "name": "Fenêtre"
+                },
+                {
+                  "type": "custom:mushroom-cover-card",
+                  "entity": "cover.velux_chambre",
+                  "show_buttons_control": true
+                }
+              ]
+            },
+            {
+              "type": "custom:mushroom-climate-card",
+              "entity": "climate.chambre",
+              "name": "Climatisation",
+              "primary_info": "name",
+              "show_temperature_control": true,
+              "hvac_modes": [
+                "heat",
+                "cool"
+              ]
+            },
+            {
+              "type": "horizontal-stack",
+              "cards": [
+                {
+                  "type": "custom:mushroom-entity-card",
+                  "entity": "input_datetime.ac_timer",
+                  "icon": "mdi:air-conditioner"
+                },
+                {
+                  "show_name": false,
+                  "show_icon": true,
+                  "type": "button",
+                  "icon": "mdi:sleep",
+                  "icon_height": "30px",
+                  "tap_action": {
+                    "action": "call-service",
+                    "haptic": "success",
+                    "service": "script.sieste_chambre_grenier",
+                    "data": {},
+                    "target": {}
+                  }
+                },
+                {
+                  "show_name": false,
+                  "show_icon": true,
+                  "type": "button",
+                  "icon": "mdi:sleep-off",
+                  "icon_height": "30px",
+                  "tap_action": {
+                    "action": "call-service",
+                    "haptic": "success",
+                    "service": "script.fin_sieste_chambre_grenier",
+                    "target": {}
+                  }
+                }
+              ]
+            },
+            {
+              "type": "grid",
+              "square": false,
+              "columns": 1,
+              "cards": [
+                {
+                  "type": "entities",
+                  "entities": [
+                    {
+                      "entity": "switch.humidificateurs_panel_sound",
+                      "name": "Panel Sound"
+                    }
+                  ],
+                  "title": "Humidificateurs"
+                },
+                {
+                  "type": "humidifier",
+                  "entity": "humidifier.humidificateurs",
+                  "features": [
+                    {
+                      "type": "humidifier-toggle"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "custom:mushroom-media-player-card",
+              "icon": "mdi:google-assistant",
+              "use_media_info": true,
+              "show_volume_level": true,
+              "media_controls": [
+                "previous",
+                "play_pause_stop",
+                "next",
+                "on_off"
+              ],
+              "volume_controls": [
+                "volume_mute",
+                "volume_set",
+                "volume_buttons"
+              ],
+              "entity": "media_player.reveil_chambre_grenier"
+            },
+            {
+              "type": "entities",
+              "entities": [
+                {
+                  "entity": "sensor.withings_poids",
+                  "name": "Poids"
+                },
+                {
+                  "entity": "sensor.withings_taux_de_graisse",
+                  "name": "Taux de graisse"
+                },
+                {
+                  "entity": "sensor.withings_heart_pulse",
+                  "name": "Heart pulse"
+                }
+              ],
+              "title": "Withings"
+            },
+            {
+              "type": "entities",
+              "entities": [
+                "sensor.cpap_ahi_events_per_hour",
+                "sensor.cpap_current_data_date",
+                "sensor.cpap_mask_leak",
+                "sensor.cpap_mask_on_off",
+                "sensor.cpap_sleep_data_last_collected",
+                "sensor.cpap_total_myair_score",
+                "sensor.cpap_usage_minutes",
+                "sensor.cpap_usage_time",
+                "sensor.most_recent_sleep_date"
+              ],
+              "title": "AirSense11 Elite"
+            }
+          ]
+        },
+        {
+          "title": "Santé",
+          "path": "sante",
+          "icon": "mdi:heart",
+          "cards": [
+            {
+              "type": "entities",
+              "entities": [
+                {
+                  "entity": "sensor.withings_poids",
+                  "name": "Poids"
+                },
+                {
+                  "entity": "sensor.withings_taux_de_graisse",
+                  "name": "Taux de graisse"
+                },
+                {
+                  "entity": "sensor.withings_heart_pulse",
+                  "name": "Heart pulse"
+                },
+                {
+                  "entity": "sensor.withings_masse_musculaire",
+                  "name": "Masse musculaire"
+                },
+                {
+                  "entity": "sensor.withings_fat_free_mass",
+                  "name": "Fat free mass"
+                },
+                {
+                  "entity": "sensor.withings_bone_mass",
+                  "name": "Bone mass"
+                },
+                {
+                  "entity": "sensor.withings_fat_mass",
+                  "name": "Fat mass"
+                }
+              ],
+              "title": "Withings"
+            }
+          ]
+        },
+        {
+          "title": "Media",
+          "path": "media",
+          "icon": "mdi:radio",
+          "type": "custom:vertical-layout",
+          "badges": [],
+          "cards": [
+            {
+              "type": "conditional",
+              "conditions": [
+                {
+                  "condition": "state",
+                  "entity": "input_select.smart_speakers",
+                  "state": "Bureau Fabien"
+                }
+              ],
+              "card": {
+                "type": "custom:mini-media-player",
+                "entity": "media_player.bureau_fabien",
+                "name": "Bureau Fabien",
+                "icon": "mdi:music",
+                "artwork": "full-cover",
+                "source": "full",
+                "sound_mode": "full",
+                "info": "scroll",
+                "background": "/local/radio/radiobackground.jpg",
+                "tts": {
+                  "platform": "google_translate",
+                  "language": "fr",
+                  "entity_id": "media_player.bureau_fabien"
+                },
+                "voice_name": "fr-FR-Wavenet-A",
+                "shortcuts": {
+                  "columns": 3,
+                  "list": [
+                    {
+                      "name": "Mix Rock",
+                      "type": "service",
+                      "icon": "mdi:spotify",
+                      "id": "spotcast.start",
+                      "data": {
+                        "device_name": "Bureau Fabien",
+                        "uri": "spotify:playlist:37i9dQZF1EQpj7X7UK8OOF",
+                        "random_song": true,
+                        "shuffle": true
+                      }
+                    },
+                    {
+                      "name": "Les dieux du stade",
+                      "type": "service",
+                      "icon": "mdi:spotify",
+                      "id": "spotcast.start",
+                      "data": {
+                        "device_name": "Bureau Fabien",
+                        "uri": "spotify:playlist:37i9dQZF1DXbJR1DWfHjWw",
+                        "random_song": true,
+                        "shuffle": true
+                      }
+                    },
+                    {
+                      "name": "Daily Mix 1",
+                      "type": "service",
+                      "icon": "mdi:spotify",
+                      "id": "spotcast.start",
+                      "data": {
+                        "device_name": "Bureau Fabien",
+                        "uri": "spotify:playlist:37i9dQZF1E38KednXSK3I4",
+                        "random_song": true,
+                        "shuffle": true
+                      }
+                    },
+                    {
+                      "name": "Daily Mix 2",
+                      "type": "service",
+                      "icon": "mdi:spotify",
+                      "id": "spotcast.start",
+                      "data": {
+                        "device_name": "Bureau Fabien",
+                        "uri": "spotify:playlist:37i9dQZF1E37NEp3chUkfE",
+                        "random_song": true,
+                        "shuffle": true
+                      }
+                    },
+                    {
+                      "name": "Daily Mix 3",
+                      "type": "service",
+                      "icon": "mdi:spotify",
+                      "id": "spotcast.start",
+                      "data": {
+                        "device_name": "Bureau Fabien",
+                        "uri": "spotify:playlist:37i9dQZF1E37MrzRbZgDZT",
+                        "random_song": true,
+                        "shuffle": true
+                      }
+                    },
+                    {
+                      "name": "Daily Mix 4",
+                      "type": "service",
+                      "icon": "mdi:spotify",
+                      "id": "spotcast.start",
+                      "data": {
+                        "device_name": "Bureau Fabien",
+                        "uri": "spotify:playlist:37i9dQZF1E39PdmEAx6cEW",
+                        "random_song": true,
+                        "shuffle": true
+                      }
+                    },
+                    {
+                      "name": "Daily Mix 5",
+                      "type": "service",
+                      "icon": "mdi:spotify",
+                      "id": "spotcast.start",
+                      "data": {
+                        "device_name": "Bureau Fabien",
+                        "uri": "spotify:playlist:37i9dQZF1E39npnZuftSDh",
+                        "random_song": true,
+                        "shuffle": true
+                      }
+                    },
+                    {
+                      "name": "Daily Mix 6",
+                      "type": "service",
+                      "icon": "mdi:spotify",
+                      "id": "spotcast.start",
+                      "data": {
+                        "device_name": "Bureau Fabien",
+                        "uri": "spotify:playlist:37i9dQZF1E37f9P2HiZzJ3",
+                        "random_song": true,
+                        "shuffle": true
+                      }
+                    },
+                    {
+                      "name": "RTL2",
+                      "type": "service",
+                      "icon": "mdi:radio",
+                      "image": "/local/radio/rtl2.png",
+                      "id": "media_player.play_media",
+                      "data": {
+                        "entity_id": "media_player.bureau_fabien",
+                        "media_content_id": "media-source://radio_browser/034d52a3-30dc-4017-8495-004cd65383b1",
+                        "media_content_type": "music",
+                        "enqueue": "replace"
+                      }
+                    },
+                    {
+                      "name": "France Info",
+                      "type": "service",
+                      "icon": "mdi:radio",
+                      "id": "media_player.play_media",
+                      "data": {
+                        "entity_id": "media_player.bureau_fabien",
+                        "media_content_id": "media-source://radio_browser/1cfb151d-a341-11e9-a787-52543be04c81",
+                        "media_content_type": "music",
+                        "enqueue": "replace"
+                      }
+                    },
+                    {
+                      "name": "La Première",
+                      "type": "service",
+                      "icon": "mdi:radio",
+                      "id": "media_player.play_media",
+                      "data": {
+                        "entity_id": "media_player.bureau_fabien",
+                        "media_content_id": "media-source://radio_browser/961d37d6-0601-11e8-ae97-52543be04c81",
+                        "media_content_type": "music"
+                      }
+                    },
+                    {
+                      "name": "Classic 21",
+                      "type": "service",
+                      "icon": "mdi:radio",
+                      "id": "media_player.play_media",
+                      "data": {
+                        "entity_id": "media_player.bureau_fabien",
+                        "media_content_id": "media-source://radio_browser/0af512c6-eae5-4875-a206-302dc6a12a64",
+                        "media_content_type": "music"
+                      }
+                    }
+                  ]
+                },
+                "volume_stateless": false,
+                "group": false
+              }
+            },
+            {
+              "type": "conditional",
+              "conditions": [
+                {
+                  "condition": "state",
+                  "entity": "input_select.smart_speakers",
+                  "state": "Salle de douche"
+                }
+              ],
+              "card": {
+                "type": "custom:mini-media-player",
+                "entity": "media_player.sdd",
+                "name": "Salle de douche",
+                "icon": "mdi:music",
+                "artwork": "full-cover",
+                "source": "full",
+                "sound_mode": "full",
+                "info": "scroll",
+                "background": "/local/radio/radiobackground.jpg",
+                "shortcuts": {
+                  "columns": 3,
+                  "list": [
+                    {
+                      "name": "Mix Rock",
+                      "type": "service",
+                      "icon": "mdi:spotify",
+                      "id": "spotcast.start",
+                      "data": {
+                        "device_name": "Salle de douche",
+                        "uri": "spotify:playlist:37i9dQZF1EQpj7X7UK8OOF",
+                        "random_song": true,
+                        "shuffle": true
+                      }
+                    },
+                    {
+                      "name": "Les dieux du stade",
+                      "type": "service",
+                      "icon": "mdi:spotify",
+                      "id": "spotcast.start",
+                      "data": {
+                        "device_name": "Salle de douche",
+                        "uri": "spotify:playlist:37i9dQZF1DXbJR1DWfHjWw",
+                        "random_song": true,
+                        "shuffle": true
+                      }
+                    },
+                    {
+                      "name": "Daily Mix 1",
+                      "type": "service",
+                      "icon": "mdi:spotify",
+                      "id": "spotcast.start",
+                      "data": {
+                        "device_name": "Salle de douche",
+                        "uri": "spotify:playlist:37i9dQZF1E38KednXSK3I4",
+                        "random_song": true,
+                        "shuffle": true
+                      }
+                    },
+                    {
+                      "name": "Daily Mix 2",
+                      "type": "service",
+                      "icon": "mdi:spotify",
+                      "id": "spotcast.start",
+                      "data": {
+                        "device_name": "Salle de douche",
+                        "uri": "spotify:playlist:37i9dQZF1E37NEp3chUkfE",
+                        "random_song": true,
+                        "shuffle": true
+                      }
+                    },
+                    {
+                      "name": "Daily Mix 3",
+                      "type": "service",
+                      "icon": "mdi:spotify",
+                      "id": "spotcast.start",
+                      "data": {
+                        "device_name": "Salle de douche",
+                        "uri": "spotify:playlist:37i9dQZF1E37MrzRbZgDZT",
+                        "random_song": true,
+                        "shuffle": true
+                      }
+                    },
+                    {
+                      "name": "Daily Mix 4",
+                      "type": "service",
+                      "icon": "mdi:spotify",
+                      "id": "spotcast.start",
+                      "data": {
+                        "device_name": "Salle de douche",
+                        "uri": "spotify:playlist:37i9dQZF1E39PdmEAx6cEW",
+                        "random_song": true,
+                        "shuffle": true
+                      }
+                    },
+                    {
+                      "name": "Daily Mix 5",
+                      "type": "service",
+                      "icon": "mdi:spotify",
+                      "id": "spotcast.start",
+                      "data": {
+                        "device_name": "Salle de douche",
+                        "uri": "spotify:playlist:37i9dQZF1E39npnZuftSDh",
+                        "random_song": true,
+                        "shuffle": true
+                      }
+                    },
+                    {
+                      "name": "Daily Mix 6",
+                      "type": "service",
+                      "icon": "mdi:spotify",
+                      "id": "spotcast.start",
+                      "data": {
+                        "device_name": "Salle de douche",
+                        "uri": "spotify:playlist:37i9dQZF1E37f9P2HiZzJ3",
+                        "random_song": true,
+                        "shuffle": true
+                      }
+                    },
+                    {
+                      "name": "RTL2",
+                      "type": "service",
+                      "icon": "mdi:radio",
+                      "id": "media_player.play_media",
+                      "data": {
+                        "entity_id": "media_player.sdd",
+                        "media_content_id": "media-source://radio_browser/034d52a3-30dc-4017-8495-004cd65383b1",
+                        "media_content_type": "music",
+                        "enqueue": "replace"
+                      }
+                    },
+                    {
+                      "name": "France Info",
+                      "type": "service",
+                      "icon": "mdi:radio",
+                      "id": "media_player.play_media",
+                      "data": {
+                        "entity_id": "media_player.sdd",
+                        "media_content_id": "media-source://radio_browser/1cfb151d-a341-11e9-a787-52543be04c81",
+                        "media_content_type": "music",
+                        "enqueue": "replace"
+                      }
+                    },
+                    {
+                      "name": "La Première",
+                      "type": "service",
+                      "icon": "mdi:radio",
+                      "id": "media_player.play_media",
+                      "data": {
+                        "entity_id": "media_player.sdd",
+                        "media_content_id": "media-source://radio_browser/961d37d6-0601-11e8-ae97-52543be04c81",
+                        "media_content_type": "music"
+                      }
+                    },
+                    {
+                      "name": "Classic 21",
+                      "type": "service",
+                      "icon": "mdi:radio",
+                      "id": "media_player.play_media",
+                      "data": {
+                        "entity_id": "media_player.sdd",
+                        "media_content_id": "media-source://radio_browser/0af512c6-eae5-4875-a206-302dc6a12a64",
+                        "media_content_type": "music"
+                      }
+                    }
+                  ]
+                },
+                "volume_stateless": false,
+                "group": false
+              }
+            },
+            {
+              "type": "conditional",
+              "conditions": [
+                {
+                  "condition": "state",
+                  "entity": "input_select.smart_speakers",
+                  "state": "Réveil Chambre"
+                }
+              ],
+              "card": {
+                "type": "custom:mini-media-player",
+                "entity": "media_player.reveil_chambre_grenier",
+                "name": "Réveil Chambre Grenier",
+                "icon": "mdi:music",
+                "artwork": "full-cover",
+                "source": "full",
+                "sound_mode": "full",
+                "info": "scroll",
+                "background": "/local/radio/radiobackground.jpg",
+                "shortcuts": {
+                  "columns": 3,
+                  "list": [
+                    {
+                      "name": "Mix Rock",
+                      "type": "service",
+                      "icon": "mdi:spotify",
+                      "id": "spotcast.start",
+                      "data": {
+                        "device_name": "Réveil Chambre Grenier",
+                        "uri": "spotify:playlist:37i9dQZF1EQpj7X7UK8OOF",
+                        "random_song": true,
+                        "shuffle": true
+                      }
+                    },
+                    {
+                      "name": "Les dieux du stade",
+                      "type": "service",
+                      "icon": "mdi:spotify",
+                      "id": "spotcast.start",
+                      "data": {
+                        "device_name": "Réveil Chambre Grenier",
+                        "uri": "spotify:playlist:37i9dQZF1DXbJR1DWfHjWw",
+                        "random_song": true,
+                        "shuffle": true
+                      }
+                    },
+                    {
+                      "name": "Daily Mix 1",
+                      "type": "service",
+                      "icon": "mdi:spotify",
+                      "id": "spotcast.start",
+                      "data": {
+                        "device_name": "Réveil Chambre Grenier",
+                        "uri": "spotify:playlist:37i9dQZF1E38KednXSK3I4",
+                        "random_song": true,
+                        "shuffle": true
+                      }
+                    },
+                    {
+                      "name": "Daily Mix 2",
+                      "type": "service",
+                      "icon": "mdi:spotify",
+                      "id": "spotcast.start",
+                      "data": {
+                        "device_name": "Réveil Chambre Grenier",
+                        "uri": "spotify:playlist:37i9dQZF1E37NEp3chUkfE",
+                        "random_song": true,
+                        "shuffle": true
+                      }
+                    },
+                    {
+                      "name": "Daily Mix 3",
+                      "type": "service",
+                      "icon": "mdi:spotify",
+                      "id": "spotcast.start",
+                      "data": {
+                        "device_name": "Réveil Chambre Grenier",
+                        "uri": "spotify:playlist:37i9dQZF1E37MrzRbZgDZT",
+                        "random_song": true,
+                        "shuffle": true
+                      }
+                    },
+                    {
+                      "name": "Daily Mix 4",
+                      "type": "service",
+                      "icon": "mdi:spotify",
+                      "id": "spotcast.start",
+                      "data": {
+                        "device_name": "Réveil Chambre Grenier",
+                        "uri": "spotify:playlist:37i9dQZF1E39PdmEAx6cEW",
+                        "random_song": true,
+                        "shuffle": true
+                      }
+                    },
+                    {
+                      "name": "Daily Mix 5",
+                      "type": "service",
+                      "icon": "mdi:spotify",
+                      "id": "spotcast.start",
+                      "data": {
+                        "device_name": "Réveil Chambre Grenier",
+                        "uri": "spotify:playlist:37i9dQZF1E39npnZuftSDh",
+                        "random_song": true,
+                        "shuffle": true
+                      }
+                    },
+                    {
+                      "name": "Daily Mix 6",
+                      "type": "service",
+                      "icon": "mdi:spotify",
+                      "id": "spotcast.start",
+                      "data": {
+                        "device_name": "Réveil Chambre Grenier",
+                        "uri": "spotify:playlist:37i9dQZF1E37f9P2HiZzJ3",
+                        "random_song": true,
+                        "shuffle": true
+                      }
+                    },
+                    {
+                      "name": "RTL2",
+                      "type": "service",
+                      "icon": "mdi:radio",
+                      "id": "media_player.play_media",
+                      "data": {
+                        "entity_id": "media_player.reveil_chambre_grenier",
+                        "media_content_id": "media-source://radio_browser/034d52a3-30dc-4017-8495-004cd65383b1",
+                        "media_content_type": "music",
+                        "enqueue": "replace"
+                      }
+                    },
+                    {
+                      "name": "France Info",
+                      "type": "service",
+                      "icon": "mdi:radio",
+                      "id": "media_player.play_media",
+                      "data": {
+                        "entity_id": "media_player.reveil_chambre_grenier",
+                        "media_content_id": "media-source://radio_browser/1cfb151d-a341-11e9-a787-52543be04c81",
+                        "media_content_type": "music",
+                        "enqueue": "replace"
+                      }
+                    },
+                    {
+                      "name": "La Première",
+                      "type": "service",
+                      "icon": "mdi:radio",
+                      "id": "media_player.play_media",
+                      "data": {
+                        "entity_id": "media_player.reveil_chambre_grenier",
+                        "media_content_id": "media-source://radio_browser/961d37d6-0601-11e8-ae97-52543be04c81",
+                        "media_content_type": "music"
+                      }
+                    },
+                    {
+                      "name": "Classic 21",
+                      "type": "service",
+                      "icon": "mdi:radio",
+                      "id": "media_player.play_media",
+                      "data": {
+                        "entity_id": "media_player.reveil_chambre_grenier",
+                        "media_content_id": "media-source://radio_browser/0af512c6-eae5-4875-a206-302dc6a12a64",
+                        "media_content_type": "music"
+                      }
+                    }
+                  ]
+                },
+                "volume_stateless": false,
+                "group": false
+              }
+            },
+            {
+              "type": "entities",
+              "entities": [
+                {
+                  "entity": "input_select.smart_speakers"
+                }
+              ]
+            },
+            {
+              "type": "entities",
+              "entities": [
+                {
+                  "entity": "sensor.canon_mb2100_series_black_pgbk",
+                  "name": "Black(PGBK)"
+                },
+                "sensor.canon_mb2100_series",
+                {
+                  "entity": "sensor.canon_mb2100_series_cyan",
+                  "name": "Cyan"
+                },
+                {
+                  "entity": "sensor.canon_mb2100_series_magenta",
+                  "name": "Magenta"
+                },
+                {
+                  "entity": "sensor.canon_mb2100_series_yellow",
+                  "name": "Yellow"
+                }
+              ],
+              "title": "Canon MB2100 series"
+            }
+          ]
+        },
+        {
+          "theme": "Backend-selected",
+          "title": "Tesla",
+          "path": "tesla",
+          "icon": "mdi:car",
+          "badges": [],
+          "cards": [
+            {
+              "type": "entities",
+              "entities": [
+                {
+                  "type": "section",
+                  "label": "Maitre & etat vehicule"
+                },
+                {
+                  "type": "call-service",
+                  "name": "Refresh + Wake (force le reveil)",
+                  "icon": "mdi:car-arrow-right",
+                  "action_name": "Refresh",
+                  "service": "script.tesla_refresh"
+                },
+                {
+                  "type": "call-service",
+                  "name": "Update sans Wake (poll cache)",
+                  "icon": "mdi:refresh",
+                  "action_name": "Update",
+                  "service": "script.tesla_update_no_wake"
+                },
+                {
+                  "entity": "sensor.tesla_dernier_fetch_api",
+                  "name": "Dernier fetch Fleet API"
+                },
+                {
+                  "entity": "binary_sensor.f_r_i_d_a_y_status",
+                  "name": "Voiture en ligne"
+                },
+                {
+                  "entity": "input_boolean.tesla_smart_charge",
+                  "name": "Smart Charge (maitre)"
+                },
+                {
+                  "entity": "input_boolean.tesla_night_charge_pending",
+                  "name": "Charge HC en cours"
+                },
+                {
+                  "entity": "sensor.f_r_i_d_a_y_niveau_de_batterie",
+                  "name": "Batterie"
+                },
+                {
+                  "entity": "sensor.f_r_i_d_a_y_charging",
+                  "name": "Etat charge"
+                },
+                {
+                  "entity": "binary_sensor.f_r_i_d_a_y_charge_cable",
+                  "name": "Cable branche"
+                },
+                {
+                  "entity": "device_tracker.f_r_i_d_a_y_location",
+                  "name": "Localisation"
+                },
+                {
+                  "type": "section",
+                  "label": "Decision charge nocturne"
+                },
+                {
+                  "entity": "sensor.tesla_charge_nocturne_necessaire",
+                  "name": "Decision HC"
+                },
+                {
+                  "entity": "sensor.tesla_heures_creuses",
+                  "name": "En heures creuses"
+                },
+                {
+                  "entity": "sensor.tesla_duree_charge_nocturne_estimee",
+                  "name": "Duree estimee"
+                },
+                {
+                  "entity": "input_number.tesla_soc_cible",
+                  "name": "SoC cible nocturne"
+                },
+                {
+                  "entity": "input_number.tesla_soc_solaire_max",
+                  "name": "SoC max solaire"
+                },
+                {
+                  "entity": "input_number.tesla_seuil_solaire",
+                  "name": "Seuil prevision solaire"
+                },
+                {
+                  "type": "section",
+                  "label": "Charge en cours"
+                },
+                {
+                  "entity": "switch.f_r_i_d_a_y_charge",
+                  "name": "Switch charge"
+                },
+                {
+                  "entity": "number.f_r_i_d_a_y_charge_current",
+                  "name": "Amperage commande"
+                },
+                {
+                  "entity": "sensor.tesla_current_charging_amp",
+                  "name": "Amperage reel"
+                },
+                {
+                  "entity": "sensor.tesla_derniere_commande_amperage",
+                  "name": "Derniere commande amperage"
+                },
+                {
+                  "entity": "number.f_r_i_d_a_y_charge_limit",
+                  "name": "Limite SoC"
+                },
+                {
+                  "entity": "sensor.power_tesla",
+                  "name": "Puissance charge"
+                },
+                {
+                  "entity": "sensor.f_r_i_d_a_y_charge_energy_added",
+                  "name": "Energie ajoutee (session)"
+                },
+                {
+                  "entity": "sensor.f_r_i_d_a_y_time_to_full_charge_2",
+                  "name": "Temps restant"
+                },
+                {
+                  "type": "section",
+                  "label": "Calcul solaire & reseau"
+                },
+                {
+                  "entity": "sensor.tesla_optimized_amp",
+                  "name": "Amperage optimal solaire"
+                },
+                {
+                  "entity": "sensor.tesla_max_amp_grid",
+                  "name": "Amperage max reseau"
+                },
+                {
+                  "entity": "sensor.solar_total",
+                  "name": "Production solaire"
+                },
+                {
+                  "entity": "sensor.energy_production_tomorrow",
+                  "name": "Prevision solaire demain"
+                },
+                {
+                  "entity": "sensor.p1_meter_3c39e7284d28_active_tariff",
+                  "name": "Tarif actif (1=HP, 2=HC)"
+                },
+                {
+                  "entity": "sensor.p1_meter_3c39e7284d28_active_power",
+                  "name": "Soutirage reseau"
+                },
+                {
+                  "type": "section",
+                  "label": "Parametres installation"
+                },
+                {
+                  "entity": "input_number.tesla_max_amps",
+                  "name": "Amperage max installation"
+                },
+                {
+                  "entity": "input_number.tesla_grid_limit",
+                  "name": "Limite puissance compteur"
+                }
+              ],
+              "state_color": true,
+              "title": "Smart Charge (jour & nuit)"
+            },
+            {
+              "type": "grid",
+              "square": false,
+              "columns": 1,
+              "cards": [
+                {
+                  "type": "entities",
+                  "entities": [
+                    {
+                      "entity": "button.f_r_i_d_a_y_appel_de_phares_2",
+                      "name": "Appel de phares"
+                    },
+                    {
+                      "entity": "switch.f_r_i_d_a_y_auto_seat_climate_left",
+                      "name": "Auto seat climate left"
+                    },
+                    {
+                      "entity": "switch.f_r_i_d_a_y_auto_seat_climate_right",
+                      "name": "Auto seat climate right"
+                    },
+                    {
+                      "entity": "switch.f_r_i_d_a_y_auto_steering_wheel_heater",
+                      "name": "Auto steering wheel heater"
+                    },
+                    {
+                      "entity": "switch.f_r_i_d_a_y_charge",
+                      "name": "Charge"
+                    },
+                    {
+                      "entity": "lock.f_r_i_d_a_y_charge_cable_lock_2",
+                      "name": "Charge cable lock"
+                    },
+                    {
+                      "entity": "number.f_r_i_d_a_y_charge_current",
+                      "name": "Charge current"
+                    },
+                    {
+                      "entity": "number.f_r_i_d_a_y_charge_limit",
+                      "name": "Charge limit"
+                    },
+                    {
+                      "entity": "cover.f_r_i_d_a_y_coffre",
+                      "name": "Coffre"
+                    },
+                    {
+                      "entity": "cover.f_r_i_d_a_y_coffre_avant_2",
+                      "name": "Coffre avant"
+                    },
+                    {
+                      "entity": "switch.f_r_i_d_a_y_defrost",
+                      "name": "Defrost"
+                    },
+                    {
+                      "entity": "button.f_r_i_d_a_y_faire_peter",
+                      "name": "Faire péter"
+                    },
+                    {
+                      "entity": "button.f_r_i_d_a_y_homelink",
+                      "name": "Homelink"
+                    },
+                    {
+                      "entity": "button.f_r_i_d_a_y_keyless_driving",
+                      "name": "Keyless driving"
+                    },
+                    {
+                      "entity": "button.f_r_i_d_a_y_klaxonner_2",
+                      "name": "Klaxonner"
+                    },
+                    {
+                      "entity": "lock.f_r_i_d_a_y_lock",
+                      "name": "Lock"
+                    },
+                    {
+                      "entity": "select.f_r_i_d_a_y_seat_heater_front_left",
+                      "name": "Seat heater front left"
+                    },
+                    {
+                      "entity": "select.f_r_i_d_a_y_seat_heater_front_right",
+                      "name": "Seat heater front right"
+                    },
+                    {
+                      "entity": "switch.f_r_i_d_a_y_sentry_mode",
+                      "name": "Sentry mode"
+                    },
+                    {
+                      "entity": "select.f_r_i_d_a_y_steering_wheel_heater",
+                      "name": "Steering wheel heater"
+                    },
+                    {
+                      "entity": "cover.f_r_i_d_a_y_trappe_de_charge",
+                      "name": "Trappe de charge"
+                    },
+                    {
+                      "entity": "button.f_r_i_d_a_y_wake",
+                      "name": "Wake"
+                    },
+                    {
+                      "entity": "cover.f_r_i_d_a_y_windows",
+                      "name": "Windows"
+                    }
+                  ],
+                  "title": "F.R.I.D.A.Y."
+                },
+                {
+                  "type": "thermostat",
+                  "entity": "climate.f_r_i_d_a_y_climate",
+                  "features": [
+                    {
+                      "type": "climate-hvac-modes",
+                      "hvac_modes": [
+                        "heat_cool",
+                        "off"
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "media-control",
+                  "entity": "media_player.f_r_i_d_a_y_media_player"
+                }
+              ]
+            },
+            {
+              "type": "entities",
+              "entities": [
+                {
+                  "entity": "sensor.f_r_i_d_a_y_autonomie_de_batterie",
+                  "name": "Autonomie de batterie"
+                },
+                {
+                  "entity": "sensor.f_r_i_d_a_y_charge_energy_added",
+                  "name": "Charge energy added"
+                },
+                {
+                  "entity": "sensor.f_r_i_d_a_y_charger_power",
+                  "name": "Charger power"
+                },
+                {
+                  "entity": "sensor.f_r_i_d_a_y_charging",
+                  "name": "Charging"
+                },
+                {
+                  "entity": "sensor.f_r_i_d_a_y_distance_pour_arriver",
+                  "name": "Distance pour arriver"
+                },
+                {
+                  "entity": "sensor.f_r_i_d_a_y_niveau_de_batterie",
+                  "name": "Niveau de batterie"
+                },
+                {
+                  "entity": "binary_sensor.f_r_i_d_a_y_status",
+                  "name": "Status"
+                },
+                {
+                  "entity": "sensor.f_r_i_d_a_y_temperature_exterieure_2",
+                  "name": "Température extérieure"
+                },
+                {
+                  "entity": "sensor.f_r_i_d_a_y_temperature_interieure_2",
+                  "name": "Température intérieure"
+                },
+                {
+                  "entity": "sensor.f_r_i_d_a_y_temps_pour_arriver",
+                  "name": "Temps pour arriver"
+                },
+                {
+                  "entity": "binary_sensor.f_r_i_d_a_y_user_present",
+                  "name": "User present"
+                }
+              ],
+              "title": "F.R.I.D.A.Y."
+            },
+            {
+              "type": "entities",
+              "entities": [
+                {
+                  "entity": "update.f_r_i_d_a_y_mise_a_jour_2",
+                  "name": "Mise à jour"
+                },
+                {
+                  "entity": "binary_sensor.f_r_i_d_a_y_charge_cable",
+                  "name": "Charge cable"
+                },
+                {
+                  "entity": "sensor.f_r_i_d_a_y_charger_current",
+                  "name": "Charger current"
+                },
+                {
+                  "entity": "sensor.f_r_i_d_a_y_charger_voltage",
+                  "name": "Charger voltage"
+                },
+                {
+                  "entity": "binary_sensor.f_r_i_d_a_y_front_driver_window",
+                  "name": "Front driver window"
+                },
+                {
+                  "entity": "binary_sensor.f_r_i_d_a_y_front_passenger_window",
+                  "name": "Front passenger window"
+                },
+                {
+                  "entity": "device_tracker.f_r_i_d_a_y_location",
+                  "name": "Location"
+                },
+                {
+                  "entity": "binary_sensor.f_r_i_d_a_y_porte_arriere_conducteur",
+                  "name": "Porte arrière conducteur"
+                },
+                {
+                  "entity": "binary_sensor.f_r_i_d_a_y_porte_arriere_passager",
+                  "name": "Porte arrière passager"
+                },
+                {
+                  "entity": "binary_sensor.f_r_i_d_a_y_porte_avant_conducteur",
+                  "name": "Porte avant conducteur"
+                },
+                {
+                  "entity": "binary_sensor.f_r_i_d_a_y_porte_avant_passager",
+                  "name": "Porte avant passager"
+                },
+                {
+                  "entity": "binary_sensor.f_r_i_d_a_y_rear_driver_window",
+                  "name": "Rear driver window"
+                },
+                {
+                  "entity": "binary_sensor.f_r_i_d_a_y_rear_passenger_window",
+                  "name": "Rear passenger window"
+                },
+                {
+                  "entity": "sensor.f_r_i_d_a_y_time_to_full_charge_2",
+                  "name": "Time to full charge"
+                },
+                {
+                  "entity": "device_tracker.f_r_i_d_a_y_trajet",
+                  "name": "Trajet"
+                },
+                {
+                  "entity": "sensor.f_r_i_d_a_y_vitesse_de_charge",
+                  "name": "Vitesse de charge"
+                }
+              ],
+              "title": "F.R.I.D.A.Y."
+            }
+          ]
+        },
+        {
+          "title": "Camera",
+          "path": "camera",
+          "icon": "mdi:cctv",
+          "badges": [],
+          "cards": [
+            {
+              "type": "picture-entity",
+              "entity": "camera.sonnette"
+            },
+            {
+              "type": "entities",
+              "entities": [
+                {
+                  "entity": "counter.cycles_pompe_a_eau"
+                },
+                {
+                  "entity": "sensor.jardin_pompe_a_eau_power"
+                },
+                {
+                  "entity": "sensor.home_nearest_direction_of_travel",
+                  "name": "Nearest direction of travel"
+                },
+                {
+                  "entity": "sensor.home_distance_la_plus_proche",
+                  "name": "Distance la plus proche"
+                },
+                {
+                  "entity": "sensor.home_appareil_le_plus_proche",
+                  "name": "Appareil le plus proche"
+                },
+                {
+                  "entity": "zone.home"
+                },
+                {
+                  "entity": "sensor.home_direction_du_deplacement_de_emma",
+                  "name": "Direction du déplacement de Emma"
+                },
+                {
+                  "entity": "sensor.home_direction_du_deplacement_de_fabien",
+                  "name": "Direction du déplacement de Fabien"
+                },
+                {
+                  "entity": "sensor.home_direction_du_deplacement_de_gillian",
+                  "name": "Direction du déplacement de Gillian"
+                },
+                {
+                  "entity": "sensor.home_direction_du_deplacement_de_louis",
+                  "name": "Direction du déplacement de Louis"
+                },
+                {
+                  "entity": "sensor.home_distance_emma",
+                  "name": "Distance Emma"
+                },
+                {
+                  "entity": "sensor.home_distance_fabien",
+                  "name": "Distance Fabien"
+                },
+                {
+                  "entity": "sensor.home_distance_gillian",
+                  "name": "Distance Gillian"
+                },
+                {
+                  "entity": "sensor.home_distance_louis",
+                  "name": "Distance Louis"
+                }
+              ],
+              "title": "Home"
+            },
+            {
+              "type": "picture",
+              "image": {
+                "media_content_id": "/local/tmp/snapshot-doorbell.jpg"
+              }
+            }
+          ]
+        },
+        {
+          "theme": "Backend-selected",
+          "title": "Buanderie",
+          "path": "buanderie",
+          "icon": "mdi:washing-machine",
+          "badges": [],
+          "cards": [
+            {
+              "type": "horizontal-stack",
+              "cards": [
+                {
+                  "type": "gauge",
+                  "entity": "sensor.temp_chauffe_eau",
+                  "needle": true,
+                  "max": 70,
+                  "min": -1,
+                  "severity": {
+                    "blue": 0,
+                    "green": 40,
+                    "red": 60
+                  }
+                },
+                {
+                  "type": "custom:mushroom-entity-card",
+                  "entity": "button.activate_one_time_charge",
+                  "name": "Eau Chaude",
+                  "tap_action": {
+                    "action": "toggle"
+                  }
+                }
+              ]
+            },
+            {
+              "type": "custom:mushroom-entity-card",
+              "entity": "binary_sensor.vicare_circulation_pump_active",
+              "name": "Circulateur"
+            },
+            {
+              "type": "custom:mushroom-entity-card",
+              "entity": "sensor.bosch_wav28gh0fg_68a40e728c79_bsh_common_status_operationstate",
+              "secondary_info": "state"
+            },
+            {
+              "type": "horizontal-stack",
+              "cards": [
+                {
+                  "type": "custom:mushroom-template-card",
+                  "primary": "Séchoir",
+                  "secondary": "",
+                  "icon": "{% if states ('sensor.buanderie_seche_linge_power') | int > 5  %} \n  mdi:tumble-dryer\n{% else %} \n  mdi:tumble-dryer-off\n{% endif %}  ",
+                  "entity": "switch.buanderie_seche_linge_191",
+                  "icon_color": "{% if states ('sensor.buanderie_seche_linge_power') | int > 5  %} \n  amber\n{% else %} \n  grey\n{% endif %} ",
+                  "tap_action": null,
+                  "action": "more-info"
+                },
+                {
+                  "type": "custom:mushroom-template-card",
+                  "primary": "Machine à Laver",
+                  "secondary": "",
+                  "icon": "{% if states ('sensor.buanderie_machine_a_laver_power') | int > 5  %} \n  mdi:washing-machine\n{% else %} \n  mdi:washing-machine-off\n{% endif %}  ",
+                  "entity": "switch.buanderie_machine_a_laver_201",
+                  "icon_color": "{% if states ('sensor.buanderie_machine_a_laver_power') | int > 5  %} \n  amber\n{% else %} \n  grey\n{% endif %} ",
+                  "tap_action": {
+                    "action": "none"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "theme": "Backend-selected",
+          "title": "Awtrix Light",
+          "path": "awtrix-light",
+          "icon": "mdi:clock-digital",
+          "type": "custom:vertical-layout",
+          "badges": [],
+          "cards": [
+            {
+              "type": "custom:mushroom-title-card",
+              "title": "Awtrix Light"
+            },
+            {
+              "type": "horizontal-stack",
+              "cards": [
+                {
+                  "type": "custom:mushroom-entity-card",
+                  "entity": "light.matrix",
+                  "name": "Affichage",
+                  "tap_action": {
+                    "action": "toggle"
+                  },
+                  "icon_color": "orange",
+                  "fill_container": true
+                },
+                {
+                  "type": "custom:mushroom-entity-card",
+                  "entity": "input_number.awtrix_app_time_display_duration"
+                }
+              ]
+            },
+            {
+              "type": "horizontal-stack",
+              "cards": [
+                {
+                  "type": "custom:mushroom-entity-card",
+                  "entity": "input_boolean.awtrix_toggle_date",
+                  "name": "Date App",
+                  "tap_action": {
+                    "action": "toggle"
+                  },
+                  "icon": "mdi:calendar"
+                },
+                {
+                  "type": "custom:mushroom-entity-card",
+                  "entity": "input_boolean.awtrix_toggle_time",
+                  "name": "Time App",
+                  "tap_action": {
+                    "action": "toggle"
+                  },
+                  "icon": "mdi:clock-digital"
+                }
+              ]
+            },
+            {
+              "type": "horizontal-stack",
+              "cards": [
+                {
+                  "type": "custom:mushroom-entity-card",
+                  "entity": "input_boolean.awtrix_toggle_temperature",
+                  "name": "Temp App",
+                  "tap_action": {
+                    "action": "toggle"
+                  },
+                  "icon": "mdi:thermometer"
+                },
+                {
+                  "type": "custom:mushroom-entity-card",
+                  "entity": "input_boolean.awtrix_toggle_humidity",
+                  "name": "Humidity App",
+                  "tap_action": {
+                    "action": "toggle"
+                  },
+                  "icon": "mdi:water-percent"
+                }
+              ]
+            },
+            {
+              "type": "horizontal-stack",
+              "cards": [
+                {
+                  "type": "custom:mushroom-entity-card",
+                  "entity": "input_boolean.awtrix_toggle_battery",
+                  "name": "Battery App",
+                  "tap_action": {
+                    "action": "toggle"
+                  },
+                  "icon": "mdi:battery"
+                },
+                {
+                  "type": "custom:mushroom-entity-card",
+                  "entity": "input_boolean.awtrix_toggle_tank",
+                  "name": "Propane App",
+                  "tap_action": {
+                    "action": "toggle"
+                  },
+                  "icon": "mdi:storage-tank"
+                }
+              ]
+            },
+            {
+              "type": "horizontal-stack",
+              "cards": [
+                {
+                  "type": "custom:mushroom-entity-card",
+                  "entity": "input_boolean.awtrix_toggle_tesla",
+                  "name": "Tesla Battery",
+                  "icon": "mdi:car-electric",
+                  "icon_color": "red",
+                  "tap_action": {
+                    "action": "toggle"
+                  }
+                },
+                {
+                  "type": "custom:mushroom-entity-card",
+                  "entity": "input_boolean.awtrix_toggle_tesla_charge",
+                  "tap_action": {
+                    "action": "toggle"
+                  },
+                  "name": "Tesla Charge",
+                  "icon": "mdi:battery-charging-100"
+                }
+              ]
+            },
+            {
+              "type": "horizontal-stack",
+              "cards": [
+                {
+                  "type": "custom:mushroom-entity-card",
+                  "entity": "input_boolean.awtrix_toggle_mercedes",
+                  "tap_action": {
+                    "action": "toggle"
+                  },
+                  "name": "Mercedes",
+                  "icon": "mdi:fuel"
+                },
+                {
+                  "type": "custom:mushroom-entity-card",
+                  "entity": "input_boolean.awtrix_toggle_tony",
+                  "icon": "mdi:robot-mower",
+                  "tap_action": {
+                    "action": "toggle"
+                  },
+                  "name": "Tony"
+                }
+              ]
+            },
+            {
+              "type": "horizontal-stack",
+              "cards": [
+                {
+                  "type": "custom:mushroom-entity-card",
+                  "entity": "input_boolean.awtrix_toggle_trajet_matin_fabien",
+                  "name": "Fabien",
+                  "icon": "mdi:car-clock",
+                  "icon_color": "primary",
+                  "tap_action": {
+                    "action": "toggle"
+                  }
+                },
+                {
+                  "type": "custom:mushroom-entity-card",
+                  "entity": "input_boolean.awtrix_toggle_trajet_matin_gillian",
+                  "tap_action": {
+                    "action": "toggle"
+                  },
+                  "name": "Gillian",
+                  "icon": "mdi:briefcase-clock"
+                }
+              ]
+            },
+            {
+              "type": "horizontal-stack",
+              "cards": [
+                {
+                  "type": "custom:mushroom-entity-card",
+                  "entity": "input_boolean.awtrix_toggle_consommation_nette",
+                  "name": "Consommation",
+                  "tap_action": {
+                    "action": "toggle"
+                  },
+                  "icon": "mdi:transmission-tower"
+                },
+                {
+                  "type": "custom:mushroom-entity-card",
+                  "entity": "input_boolean.awtrix_toggle_temperature_exterieure",
+                  "tap_action": {
+                    "action": "toggle"
+                  },
+                  "name": "Température Ext",
+                  "icon": "mdi:home-thermometer-outline"
+                }
+              ]
+            },
+            {
+              "type": "horizontal-stack",
+              "cards": [
+                {
+                  "type": "custom:mushroom-entity-card",
+                  "entity": "input_boolean.awtrix_toggle_dishwasher",
+                  "tap_action": {
+                    "action": "toggle"
+                  },
+                  "name": "Lave Vaisselle",
+                  "icon": "mdi:dishwasher"
+                },
+                {
+                  "type": "custom:mushroom-entity-card",
+                  "entity": "input_boolean.awtrix_toggle_machine_a_laver",
+                  "icon": "mdi:washing-machine",
+                  "tap_action": {
+                    "action": "toggle"
+                  },
+                  "name": "Machine à Laver"
+                }
+              ]
+            },
+            {
+              "type": "horizontal-stack",
+              "cards": [
+                {
+                  "type": "custom:mushroom-entity-card",
+                  "entity": "input_boolean.test_notification",
+                  "tap_action": {
+                    "action": "toggle"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "title": "NAS",
+          "path": "nas",
+          "icon": "mdi:nas",
+          "badges": [],
+          "cards": [
+            {
+              "type": "vertical-stack",
+              "cards": [
+                {
+                  "type": "picture",
+                  "image": "local/nas.png"
+                },
+                {
+                  "type": "custom:mushroom-entity-card",
+                  "entity": "sensor.diskstation_last_boot"
+                },
+                {
+                  "type": "entities",
+                  "entities": [
+                    {
+                      "entity": "sensor.diskstation_disque_1_temperature"
+                    },
+                    {
+                      "entity": "sensor.diskstation_disque_2_temperature"
+                    },
+                    {
+                      "entity": "sensor.diskstation_disque_3_temperature"
+                    },
+                    {
+                      "entity": "sensor.diskstation_disque_4_temperature"
+                    },
+                    {
+                      "entity": "sensor.diskstation_disque_5_temperature"
+                    },
+                    {
+                      "entity": "sensor.diskstation_temperature"
+                    },
+                    {
+                      "entity": "sensor.diskstation_cpu_load_average_15_min",
+                      "name": "Charge moyenne du processeur (15 min)"
+                    },
+                    {
+                      "entity": "sensor.diskstation_cpu_load_average_5_min",
+                      "name": "Charge moyenne du processeur (5 min)"
+                    },
+                    {
+                      "entity": "sensor.diskstation_download_throughput",
+                      "name": "Débit de téléchargement"
+                    },
+                    {
+                      "entity": "sensor.diskstation_upload_throughput",
+                      "name": "Débit de transfert"
+                    },
+                    {
+                      "entity": "binary_sensor.diskstation_security_status",
+                      "name": "État de sécurité"
+                    },
+                    {
+                      "entity": "sensor.diskstation_memory_available_real",
+                      "name": "Mémoire disponible (réelle)"
+                    },
+                    {
+                      "entity": "sensor.diskstation_memory_available_swap",
+                      "name": "Mémoire disponible (swap)"
+                    },
+                    {
+                      "entity": "sensor.diskstation_memory_total_real",
+                      "name": "Mémoire totale (réelle)"
+                    },
+                    {
+                      "entity": "sensor.diskstation_memory_total_swap",
+                      "name": "Mémoire totale (swap)"
+                    },
+                    {
+                      "entity": "sensor.diskstation_memory_usage_real",
+                      "name": "Utilisation de la mémoire (réelle)"
+                    },
+                    {
+                      "entity": "sensor.diskstation_cpu_utilization_total",
+                      "name": "Utilisation du processeur (totale)"
+                    },
+                    {
+                      "entity": "sensor.diskstation_cpu_utilization_user",
+                      "name": "Utilisation du processeur (utilisateur)"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "icon": "mdi:power-plug-battery",
+          "title": "UPS",
+          "path": "ups",
+          "badges": [],
+          "cards": [
+            {
+              "type": "vertical-stack",
+              "cards": [
+                {
+                  "type": "picture",
+                  "image": "local/ups.png"
+                },
+                {
+                  "type": "entities",
+                  "entities": [
+                    {
+                      "entity": "sensor.ups_charge_de_la_batterie",
+                      "name": "Charge de la batterie"
+                    },
+                    {
+                      "entity": "sensor.prise_ups_power"
+                    },
+                    {
+                      "entity": "sensor.ups_code_d_etat",
+                      "name": "Code d'état"
+                    },
+                    {
+                      "entity": "sensor.ups_etat",
+                      "name": "État"
+                    },
+                    {
+                      "entity": "sensor.ups_autonomie_de_la_batterie",
+                      "name": "Autonomie de la batterie"
+                    },
+                    {
+                      "entity": "sensor.ups_autonomie_de_la_batterie_faible",
+                      "name": "Autonomie de la batterie faible"
+                    },
+                    {
+                      "entity": "sensor.ups_avertissement_consigne_batterie",
+                      "name": "Avertissement consigne batterie"
+                    },
+                    {
+                      "entity": "sensor.ups_chimie_de_la_batterie",
+                      "name": "Chimie de la batterie"
+                    },
+                    {
+                      "entity": "sensor.ups_consigne_de_batterie_faible",
+                      "name": "Consigne de batterie faible"
+                    },
+                    {
+                      "entity": "sensor.ups_delai_d_arret_de_l_onduleur",
+                      "name": "Délai d'arrêt de l'onduleur"
+                    },
+                    {
+                      "entity": "sensor.ups_etat_du_signal_sonore",
+                      "name": "État du signal sonore"
+                    },
+                    {
+                      "entity": "sensor.ups_minuterie_d_arret_de_la_charge",
+                      "name": "Minuterie d'arrêt de la charge"
+                    },
+                    {
+                      "entity": "sensor.ups_minuterie_de_redemarrage_de_la_charge",
+                      "name": "Minuterie de redémarrage de la charge"
+                    },
+                    {
+                      "entity": "sensor.ups_tension_de_la_batterie",
+                      "name": "Tension de la batterie"
+                    },
+                    {
+                      "entity": "sensor.ups_tension_nominale_de_la_batterie",
+                      "name": "Tension nominale de la batterie"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Gaz",
+          "path": "gaz",
+          "icon": "mdi:storage-tank",
+          "badges": [],
+          "cards": [
+            {
+              "type": "vertical-stack",
+              "cards": [
+                {
+                  "type": "custom:layout-card",
+                  "layout_type": "custom:grid-layout",
+                  "cards": [
+                    {
+                      "type": "gauge",
+                      "entity": "sensor.gaz_tank_level",
+                      "unit": "%",
+                      "needle": true,
+                      "min": 0,
+                      "max": 100,
+                      "segments": [
+                        {
+                          "from": 0,
+                          "to": 15,
+                          "color": "red"
+                        },
+                        {
+                          "from": 16,
+                          "to": 66,
+                          "color": "orange"
+                        },
+                        {
+                          "from": 60,
+                          "to": 100,
+                          "color": "green"
+                        }
+                      ],
+                      "name": "Niveau Citerne"
+                    },
+                    {
+                      "type": "vertical-stack",
+                      "cards": [
+                        {
+                          "type": "custom:mushroom-template-card",
+                          "primary": "Date du relevé",
+                          "icon": "mdi:calendar",
+                          "icon_color": "blue",
+                          "secondary": "{% set date_str = states('sensor.gaz_tank_level_date') %} {% if date_str not in ['', 'unknown', 'unavailable', None] %}\n  {% set parts = date_str.split('/') %}\n  {% set d = parts[0] | int %}\n  {% set m = parts[1] | int %}\n  {% set y = parts[2] | int %}\n  {% set mois = [\n    'Janvier','Février','Mars','Avril','Mai','Juin','Juillet',\n    'Août','Septembre','Octobre','Novembre','Décembre'\n  ] %}\n  {{ d }} {{ mois[m-1] }} {{ y }}\n{% else %}\n  Inconnue\n{% endif %}\n",
+                          "tap_action": {
+                            "action": "none"
+                          }
+                        },
+                        {
+                          "type": "custom:mushroom-template-card",
+                          "primary": "Date extraction",
+                          "icon": "mdi:clock",
+                          "icon_color": "blue",
+                          "secondary": "{% set ts = states('sensor.gaz_scrape_timestamp') %} {% if ts not in ['', 'unknown', 'unavailable', None] %}\n  {% set d = as_datetime(ts) %}\n  {% set mois = [\n    'Janvier','Février','Mars','Avril','Mai','Juin','Juillet',\n    'Août','Septembre','Octobre','Novembre','Décembre'\n  ] %}\n  {{ d.day }} {{ mois[d.month-1] }}, {{ d.strftime('%H:%M') }}\n{% else %}\n  Inconnue\n{% endif %}\n",
+                          "tap_action": {
+                            "action": "none"
+                          }
+                        }
+                      ]
+                    }
+                  ],
+                  "layout": {
+                    "grid-template-columns": "40% 60%",
+                    "padding": "0px",
+                    "margin": "0px",
+                    "card_margin": "0px"
+                  }
+                },
+                {
+                  "type": "energy-gas-graph",
+                  "title": "Gaz"
+                },
+                {
+                  "type": "horizontal-stack",
+                  "cards": [
+                    {
+                      "type": "custom:mushroom-template-card",
+                      "primary": "Dernière Livraison",
+                      "secondary": "{{ state_attr('sensor.antargaz', 'date_derniere_livraison') }}",
+                      "icon": "mdi:truck-delivery",
+                      "vertical": true
+                    },
+                    {
+                      "type": "custom:mushroom-template-card",
+                      "primary": "Last Invoice",
+                      "secondary": "{{ state_attr('sensor.antargaz', 'derniere_facture') }}",
+                      "icon": "mdi:receipt",
+                      "layout": "vertical"
+                    }
+                  ]
+                },
+                {
+                  "type": "horizontal-stack",
+                  "cards": [
+                    {
+                      "type": "custom:mushroom-template-card",
+                      "primary": "Remaining Balance",
+                      "secondary": "{{ state_attr('sensor.antargaz', 'solde_restant') }} EUR",
+                      "icon": "mdi:currency-eur",
+                      "layout": "vertical"
+                    },
+                    {
+                      "type": "custom:mushroom-template-card",
+                      "primary": "Client ID",
+                      "secondary": "{{ state_attr('sensor.antargaz', 'client') }}",
+                      "icon": "mdi:account",
+                      "layout": "vertical"
+                    }
+                  ]
+                },
+                {
+                  "type": "horizontal-stack",
+                  "cards": [
+                    {
+                      "type": "custom:mushroom-template-card",
+                      "primary": "Address",
+                      "secondary": "{{ state_attr('sensor.antargaz', 'adresse') }}",
+                      "icon": "mdi:map-marker",
+                      "layout": "vertical"
+                    },
+                    {
+                      "type": "custom:mushroom-template-card",
+                      "primary": "Tank Number",
+                      "secondary": "{{ state_attr('sensor.antargaz', 'numero_citerne') }}",
+                      "icon": "mdi:barcode",
+                      "layout": "vertical"
+                    }
+                  ]
+                },
+                {
+                  "type": "horizontal-stack",
+                  "cards": [
+                    {
+                      "type": "custom:mushroom-template-card",
+                      "primary": "Tank Volume",
+                      "secondary": "{{ state_attr('sensor.antargaz', 'volume_citerne') }} liters",
+                      "icon": "mdi:cube",
+                      "layout": "vertical"
+                    },
+                    {
+                      "type": "custom:mushroom-template-card",
+                      "primary": "Gas Type",
+                      "secondary": "{{ state_attr('sensor.antargaz', 'type_gaz') }}",
+                      "icon": "mdi:gas-burner",
+                      "layout": "vertical"
+                    }
+                  ]
+                },
+                {
+                  "type": "entities",
+                  "title": "Chaudière",
+                  "entities": [
+                    "sensor.vicare_heating_gas_consumption_today",
+                    "sensor.vicare_hot_water_gas_consumption_today",
+                    "sensor.vicare_heating_gas_consumption_this_week",
+                    "sensor.vicare_hot_water_gas_consumption_this_week",
+                    "sensor.vicare_heating_gas_consumption_this_month",
+                    "sensor.vicare_hot_water_gas_consumption_this_month",
+                    "sensor.vicare_heating_gas_consumption_this_year",
+                    "sensor.vicare_hot_water_gas_consumption_this_year",
+                    "sensor.vicare_outside_temperature"
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Tony",
+          "path": "tony",
+          "icon": "mdi:robot-mower",
+          "badges": [],
+          "cards": [
+            {
+              "type": "vertical-stack",
+              "cards": [
+                {
+                  "type": "picture",
+                  "image": "local/tony.png"
+                },
+                {
+                  "type": "entities",
+                  "entities": [
+                    {
+                      "entity": "lawn_mower.tony"
+                    },
+                    {
+                      "entity": "sensor.tony_batterie",
+                      "name": "Batterie"
+                    },
+                    {
+                      "entity": "binary_sensor.tony_depart_de_la_base",
+                      "name": "Départ de la base"
+                    },
+                    {
+                      "entity": "binary_sensor.tony_en_charge",
+                      "name": "En charge"
+                    },
+                    {
+                      "entity": "sensor.tony_error",
+                      "name": "Error"
+                    },
+                    {
+                      "entity": "sensor.tony_mode",
+                      "name": "Mode"
+                    },
+                    {
+                      "entity": "sensor.tony_prochain_demarrage",
+                      "name": "Prochain démarrage"
+                    },
+                    {
+                      "entity": "sensor.tony_restricted_reason",
+                      "name": "Restricted reason"
+                    },
+                    {
+                      "entity": "calendar.tony"
+                    },
+                    {
+                      "entity": "switch.tony_activer_la_minuterie",
+                      "name": "Activer la minuterie"
+                    },
+                    {
+                      "entity": "sensor.tony_distance_parcourue_totale",
+                      "name": "Distance parcourue totale"
+                    },
+                    {
+                      "entity": "sensor.tony_nombre_de_cycles_de_charge",
+                      "name": "Nombre de cycles de charge"
+                    },
+                    {
+                      "entity": "sensor.tony_temps_de_charge_total",
+                      "name": "Temps de charge total"
+                    },
+                    {
+                      "entity": "sensor.tony_temps_de_fonctionnement_total",
+                      "name": "Temps de fonctionnement total"
+                    },
+                    {
+                      "entity": "sensor.tony_temps_de_recherche_total",
+                      "name": "Temps de recherche total"
+                    },
+                    {
+                      "entity": "sensor.tony_temps_de_tonte_total",
+                      "name": "Temps de tonte total"
+                    },
+                    {
+                      "entity": "device_tracker.tony"
+                    },
+                    {
+                      "entity": "switch.tony_activer_la_minuterie",
+                      "name": "Activer la minuterie"
+                    },
+                    {
+                      "entity": "button.tony_sync_clock",
+                      "name": "Sync clock"
+                    },
+                    {
+                      "entity": "select.tony_phares",
+                      "name": "Phares"
+                    }
+                  ]
+                }
+              ],
+              "title": "Tony"
+            }
+          ]
+        },
+        {
+          "type": "custom:vertical-layout",
+          "path": "poubelles",
+          "title": "Poubelles",
+          "icon": "mdi:trash-can",
+          "cards": [
+            {
+              "type": "vertical-stack",
+              "title": "Prochains passages poubelles",
+              "cards": [
+                {
+                  "type": "horizontal-stack",
+                  "cards": [
+                    {
+                      "type": "custom:mushroom-template-card",
+                      "primary": "Date Extraction",
+                      "secondary": "{% set ts = state_attr('sensor.prochaines_poubelles', 'timestamp') %} {% if ts %}\n  {% set d = as_datetime(ts) %}\n  {% set mois = {\n    'January':'janvier','February':'février','March':'mars','April':'avril',\n    'May':'mai','June':'juin','July':'juillet','August':'août',\n    'September':'septembre','October':'octobre','November':'novembre','December':'décembre'\n  } %}\n  {% set mois_fr = mois[d.strftime('%B')] %}\n  {{ d.strftime('%-d') }} {{ mois_fr|capitalize }}, {{ d.strftime('%H:%M') }}\n{% else %}\n  Aucune date\n{% endif %}\n",
+                      "icon": "mdi:calendar-clock",
+                      "tap_action": {
+                        "action": "none"
+                      },
+                      "vertical": true,
+                      "features_position": "bottom"
+                    }
+                  ]
+                },
+                {
+                  "type": "horizontal-stack",
+                  "cards": [
+                    {
+                      "type": "custom:mushroom-template-card",
+                      "primary": "Ordures ménagères",
+                      "secondary": "{% set date_str = state_attr('sensor.prochaines_poubelles', 'ordures') %} {% if date_str %}\n  {% set d = as_datetime(date_str) %}\n  {% set mois = {\n    'January':'janvier','February':'février','March':'mars','April':'avril',\n    'May':'mai','June':'juin','July':'juillet','August':'août',\n    'September':'septembre','October':'octobre','November':'novembre','December':'décembre'\n  } %}\n  {% set mois_fr = mois[d.strftime('%B')] %}\n\n  {% if d.date() == now().date() %}\n    Aujourd’hui\n  {% elif d.date() == (now() + timedelta(days=1)).date() %}\n    Demain\n  {% else %}\n    {{ d.strftime('%-d') }} {{ mois_fr|capitalize }}\n  {% endif %}\n{% else %}\n  Non planifiée\n{% endif %}\n",
+                      "icon": "mdi:delete-empty",
+                      "color": "{% set date_str = state_attr('sensor.prochaines_poubelles', 'ordures') %} {% if date_str %}\n  {% set d = as_datetime(date_str) %}\n  {% if d.date() == now().date() %} orange\n  {% elif d.date() == (now() + timedelta(days=1)).date() %} red\n  {% else %} gray {% endif %}\n{% else %} disabled {% endif %}\n",
+                      "vertical": true,
+                      "tap_action": {
+                        "action": "none"
+                      }
+                    },
+                    {
+                      "type": "custom:mushroom-template-card",
+                      "primary": "Déchets organiques",
+                      "secondary": "{% set date_str = state_attr('sensor.prochaines_poubelles', 'organiques') %} {% if date_str %}\n  {% set d = as_datetime(date_str) %}\n  {% set mois = {\n    'January':'janvier','February':'février','March':'mars','April':'avril',\n    'May':'mai','June':'juin','July':'juillet','August':'août',\n    'September':'septembre','October':'octobre','November':'novembre','December':'décembre'\n  } %}\n  {% set mois_fr = mois[d.strftime('%B')] %}\n\n  {% if d.date() == now().date() %}\n    Aujourd’hui\n  {% elif d.date() == (now() + timedelta(days=1)).date() %}\n    Demain\n  {% else %}\n    {{ d.strftime('%-d') }} {{ mois_fr|capitalize }}\n  {% endif %}\n{% else %}\n  Non planifiée\n{% endif %}\n",
+                      "icon": "mdi:compost",
+                      "icon_color": "{% set date_str = state_attr('sensor.prochaines_poubelles', 'organiques') %} {% if date_str %}\n  {% set d = as_datetime(date_str) %}\n  {% if d.date() == now().date() %} orange\n  {% elif d.date() == (now() + timedelta(days=1)).date() %} red\n  {% else %} green {% endif %}\n{% else %} disabled {% endif %}\n",
+                      "card_mod": null,
+                      "style": ".secondary {\n  color: green;\n}\n",
+                      "layout": "vertical",
+                      "tap_action": {
+                        "action": "none"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "type": "horizontal-stack",
+                  "cards": [
+                    {
+                      "type": "custom:mushroom-template-card",
+                      "primary": "PMC",
+                      "secondary": "{% set date_str = state_attr('sensor.prochaines_poubelles', 'pmc') %} {% if date_str %}\n  {% set d = as_datetime(date_str) %}\n  {% set mois = {\n    'January':'janvier','February':'février','March':'mars','April':'avril',\n    'May':'mai','June':'juin','July':'juillet','August':'août',\n    'September':'septembre','October':'octobre','November':'novembre','December':'décembre'\n  } %}\n  {% set mois_fr = mois[d.strftime('%B')] %}\n\n  {% if d.date() == now().date() %}\n    Aujourd’hui\n  {% elif d.date() == (now() + timedelta(days=1)).date() %}\n    Demain\n  {% else %}\n    {{ d.strftime('%-d') }} {{ mois_fr|capitalize }}\n  {% endif %}\n{% else %}\n  Non planifiée\n{% endif %}\n",
+                      "icon": "mdi:recycle",
+                      "icon_color": "{% set date_str = state_attr('sensor.prochaines_poubelles', 'pmc') %} {% if date_str %}\n  {% set d = as_datetime(date_str) %}\n  {% if d.date() == now().date() %} orange\n  {% elif d.date() == (now() + timedelta(days=1)).date() %} red\n  {% else %} blue {% endif %}\n{% else %} disabled {% endif %}\n",
+                      "layout": "vertical",
+                      "tap_action": {
+                        "action": "none"
+                      }
+                    },
+                    {
+                      "type": "custom:mushroom-template-card",
+                      "primary": "Papier",
+                      "secondary": "{% set date_str = state_attr('sensor.prochaines_poubelles', 'papier') %} {% if date_str %}\n  {% set d = as_datetime(date_str) %}\n  {% set mois = {\n    'January':'janvier','February':'février','March':'mars','April':'avril',\n    'May':'mai','June':'juin','July':'juillet','August':'août',\n    'September':'septembre','October':'octobre','November':'novembre','December':'décembre'\n  } %}\n  {% set mois_fr = mois[d.strftime('%B')] %}\n\n  {% if d.date() == now().date() %}\n    Aujourd’hui\n  {% elif d.date() == (now() + timedelta(days=1)).date() %}\n    Demain\n  {% else %}\n    {{ d.strftime('%-d') }} {{ mois_fr|capitalize }}\n  {% endif %}\n{% else %}\n  Non planifiée\n{% endif %}\n",
+                      "icon": "mdi:newspaper",
+                      "icon_color": "{% set date_str = state_attr('sensor.prochaines_poubelles', 'papier') %} {% if date_str %}\n  {% set d = as_datetime(date_str) %}\n  {% if d.date() == now().date() %} orange\n  {% elif d.date() == (now() + timedelta(days=1)).date() %} red\n  {% else %} yellow {% endif %}\n{% else %} disabled {% endif %}\n",
+                      "layout": "vertical",
+                      "tap_action": {
+                        "action": "none"
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Réseau",
+          "path": "reseau",
+          "icon": "mdi:network",
+          "cards": [
+            {
+              "type": "horizontal-stack",
+              "cards": [
+                {
+                  "type": "custom:mushroom-entity-card",
+                  "entity": "binary_sensor.satellite_chambre_grenier"
+                },
+                {
+                  "type": "custom:mushroom-entity-card",
+                  "entity": "binary_sensor.satellite_bureau_fabien"
+                }
+              ]
+            },
+            {
+              "type": "horizontal-stack",
+              "cards": [
+                {
+                  "type": "custom:mushroom-entity-card",
+                  "entity": "sensor.iphone_16_pro_de_fabien_battery_level_2"
+                },
+                {
+                  "type": "custom:mushroom-entity-card",
+                  "entity": "sensor.iphone_16_pro_de_fabien_battery_state_2"
+                }
+              ]
+            },
+            {
+              "type": "custom:layout-card",
+              "layout_type": "custom:grid-layout",
+              "layout": {
+                "grid-template-columns": "25% 25% 25% 25%"
+              },
+              "cards": [
+                {
+                  "type": "custom:mushroom-template-card",
+                  "icon": "mdi:restart",
+                  "icon_color": "blue",
+                  "tap_action": {
+                    "action": "button.press",
+                    "target": {
+                      "entity_id": "button.routeur_redemarrer"
+                    }
+                  },
+                  "hold_action": {
+                    "action": "button.press",
+                    "target": {
+                      "entity_id": "button.routeur_redemarrer"
+                    }
+                  },
+                  "name": "Routeur",
+                  "secondary": "Routeur"
+                },
+                {
+                  "type": "custom:mushroom-template-card",
+                  "icon": "mdi:restart",
+                  "icon_color": "blue",
+                  "tap_action": {
+                    "action": "call-service",
+                    "service": "script.restart_wifi",
+                    "service_data": {
+                      "satellite": "Bureau"
+                    }
+                  },
+                  "hold_action": {
+                    "action": "call-service",
+                    "service": "script.restart_wifi",
+                    "service_data": {
+                      "satellite": "Bureau"
+                    }
+                  },
+                  "name": "Bureau",
+                  "secondary": "Bureau"
+                },
+                {
+                  "type": "custom:mushroom-template-card",
+                  "icon": "mdi:restart",
+                  "icon_color": "blue",
+                  "tap_action": {
+                    "action": "call-service",
+                    "service": "script.restart_wifi",
+                    "service_data": {
+                      "satellite": "Grenier"
+                    }
+                  },
+                  "hold_action": {
+                    "action": "call-service",
+                    "service": "script.restart_wifi",
+                    "service_data": {
+                      "satellite": "Grenier"
+                    }
+                  },
+                  "name": "Grenier",
+                  "secondary": "Grenier"
+                },
+                {
+                  "type": "custom:mushroom-template-card",
+                  "icon": "mdi:restart",
+                  "icon_color": "blue",
+                  "tap_action": {
+                    "action": "call-service",
+                    "service": "script.restart_wifi",
+                    "service_data": {
+                      "satellite": "All"
+                    }
+                  },
+                  "hold_action": {
+                    "action": "call-service",
+                    "service": "script.restart_wifi",
+                    "service_data": {
+                      "satellite": "All"
+                    }
+                  },
+                  "name": "Both",
+                  "secondary": "All"
+                }
+              ]
+            },
+            {
+              "type": "custom:mushroom-template-card",
+              "primary": "Connexion iPhone Fabien",
+              "secondary": "{% set location = states('sensor.connexion_iphone_fabien') %}\n{% set conn_type = states('sensor.iphone_16_pro_de_fabien_connection_type_2') %}\n{% if conn_type == 'Wi-Fi' %}\n  Wi-Fi : {{ location }}\n{% elif conn_type == 'Cellular' %}\n  Cellulaire\n{% else %}\n  Non connecté\n{% endif %}\n",
+              "icon": "{% set conn_type = states('sensor.iphone_16_pro_de_fabien_connection_type_2') %} {% if conn_type == 'Wi-Fi' %}\n  mdi:wifi\n{% elif conn_type == 'Cellular' %}\n  mdi:signal-cellular-1\n{% else %}\n  mdi:lan-disconnect\n{% endif %}\n",
+              "icon_color": "{% set conn_type = states('sensor.iphone_16_pro_de_fabien_connection_type_2') %} {% if conn_type == 'Cellular' %}\n  red\n{% elif conn_type == 'Wi-Fi' %}\n    green\n{% else %}\n  gray\n{% endif %}\n",
+              "tap_action": {
+                "action": "more-info",
+                "entity": "sensor.iphone_16_pro_de_fabien_bssid_2"
+              },
+              "features_position": "bottom"
+            }
+          ]
+        },
+        {
+          "type": "sections",
+          "max_columns": 4,
+          "title": "Test",
+          "path": "test",
+          "sections": [
+            {
+              "type": "grid",
+              "cards": [
+                {
+                  "type": "custom:mushroom-template-card",
+                  "entity": "input_boolean.presence_toggle",
+                  "primary": "{% if is_state('input_boolean.presence_toggle', 'on') %}\n  Someone is home!\n{% else %}\n  No one is home.\n{% endif %}\n",
+                  "icon": "{% if is_state('input_boolean.presence_toggle', 'on') %}\n  mdi:home\n{% else %}\n  mdi:home-outline\n{% endif %}\n"
+                },
+                {
+                  "type": "custom:layout-card",
+                  "layout_type": "custom:grid-layout",
+                  "layout": {
+                    "grid-template-columns": "20% 20% 20% 20% 20%"
+                  },
+                  "cards": [
+                    {
+                      "type": "custom:mushroom-template-card",
+                      "primary": "{% set rads = expand('group.my_climates') | list %}\n{% set ns  = namespace(cold=0) %}       \n{% for r in rads %}\n   {% set ns.cold  = ns.cold  + (1 if r.attributes.current_temperature | float | round(0) <  r.attributes.temperature | float else 0) %}\n{% endfor %}\n{{ ns.cold }}",
+                      "icon": "mdi:radiator",
+                      "tap_action": {
+                        "action": "navigate",
+                        "navigation_path": "chauffage"
+                      },
+                      "icon_color": "blue"
+                    },
+                    {
+                      "type": "custom:mushroom-template-card",
+                      "primary": "{% set rads = expand('group.my_climates') | list %}       \n{% set ns = namespace(good=0) %}      \n{% for r in rads %}\n   {% set ns.good  = ns.good  + (1 if r.attributes.current_temperature | float | round(0) ==  r.attributes.temperature | float else 0) %}\n{% endfor %}\n{{ ns.good }}",
+                      "icon": "mdi:radiator-off",
+                      "tap_action": {
+                        "action": "navigate",
+                        "navigation_path": "chauffage"
+                      },
+                      "icon_color": "green"
+                    },
+                    {
+                      "type": "custom:mushroom-template-card",
+                      "primary": "{% set rads = expand('group.my_climates') | list %}    \n{% set ns = namespace(hot=0) %}      \n{% for r in rads %}\n   {% set ns.hot  = ns.hot  + (1 if r.attributes.current_temperature | float | round(0) >  r.attributes.temperature | float else 0) %}\n{% endfor %}\n{{ ns.hot }}",
+                      "icon": "mdi:radiator-off",
+                      "tap_action": {
+                        "action": "navigate",
+                        "navigation_path": "chauffage"
+                      },
+                      "icon_color": "red"
+                    },
+                    {
+                      "type": "custom:mushroom-template-card",
+                      "icon": "mdi:light-switch",
+                      "layout": "icon_only",
+                      "tap_action": {
+                        "action": "call-service",
+                        "service": "input_boolean.turn_on",
+                        "data": {},
+                        "target": {
+                          "entity_id": "input_boolean.presence_toggle"
+                        }
+                      },
+                      "hold_action": {
+                        "action": "call-service",
+                        "service": "input_boolean.turn_on",
+                        "data": {},
+                        "target": {
+                          "entity_id": "input_boolean.presence_toggle"
+                        }
+                      }
+                    },
+                    {
+                      "type": "custom:mushroom-template-card",
+                      "icon": "mdi:light-switch-off",
+                      "layout": "icon_only",
+                      "tap_action": {
+                        "action": "call-service",
+                        "service": "input_boolean.turn_off",
+                        "data": {},
+                        "target": {
+                          "entity_id": "input_boolean.presence_toggle"
+                        }
+                      },
+                      "hold_action": {
+                        "action": "call-service",
+                        "service": "input_boolean.turn_off",
+                        "data": {},
+                        "target": {
+                          "entity_id": "input_boolean.presence_toggle"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "cards": []
+        },
+        {
+          "theme": "Backend-selected",
+          "title": "Lumières",
+          "path": "lumieres",
+          "icon": "mdi:lightbulb",
+          "type": "custom:vertical-layout",
+          "subview": true,
+          "badges": [],
+          "cards": [
+            {
+              "type": "custom:tabbed-card",
+              "options": {},
+              "tabs": [
+                {
+                  "card": {
+                    "type": "vertical-stack",
+                    "cards": [
+                      {
+                        "type": "custom:mushroom-title-card",
+                        "title": "Jardin"
+                      },
+                      {
+                        "type": "horizontal-stack",
+                        "cards": [
+                          {
+                            "type": "custom:mushroom-light-card",
+                            "entity": "light.buis_exterieur",
+                            "show_brightness_control": false,
+                            "collapsible_controls": false,
+                            "name": "Buis Extérieur"
+                          },
+                          {
+                            "type": "custom:mushroom-light-card",
+                            "entity": "light.jardin_exterieur_porte",
+                            "show_brightness_control": false,
+                            "collapsible_controls": false,
+                            "name": "Porte Entrée"
+                          },
+                          {
+                            "type": "custom:mushroom-light-card",
+                            "entity": "light.spot_garage",
+                            "show_brightness_control": false,
+                            "collapsible_controls": false,
+                            "name": "Spot garage"
+                          }
+                        ]
+                      },
+                      {
+                        "type": "custom:mushroom-title-card",
+                        "title": "Terrasse"
+                      },
+                      {
+                        "type": "horizontal-stack",
+                        "cards": [
+                          {
+                            "type": "custom:mushroom-light-card",
+                            "entity": "light.jardin_passage",
+                            "show_brightness_control": true,
+                            "collapsible_controls": false,
+                            "name": "Passage"
+                          },
+                          {
+                            "type": "custom:mushroom-light-card",
+                            "entity": "light.terasse",
+                            "show_brightness_control": true,
+                            "collapsible_controls": false,
+                            "name": "Terrasse"
+                          },
+                          {
+                            "type": "custom:mushroom-light-card",
+                            "entity": "light.terasse_bois",
+                            "show_brightness_control": false,
+                            "collapsible_controls": false,
+                            "name": "Bois"
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  "attributes": {
+                    "icon": "mdi:tree"
+                  }
+                },
+                {
+                  "card": {
+                    "type": "vertical-stack",
+                    "cards": [
+                      {
+                        "type": "custom:mushroom-title-card",
+                        "title": "Hall"
+                      },
+                      {
+                        "type": "horizontal-stack",
+                        "cards": [
+                          {
+                            "type": "custom:mushroom-light-card",
+                            "entity": "light.hall_d_entree",
+                            "show_brightness_control": false,
+                            "collapsible_controls": false,
+                            "name": "Hall Entrée",
+                            "fill_container": false
+                          },
+                          {
+                            "type": "custom:mushroom-light-card",
+                            "entity": "light.guirlande_escalier",
+                            "show_brightness_control": false,
+                            "collapsible_controls": false,
+                            "name": "Guirlande Escalier"
+                          }
+                        ]
+                      },
+                      {
+                        "type": "horizontal-stack",
+                        "cards": [
+                          {
+                            "type": "custom:mushroom-light-card",
+                            "entity": "light.escalier_principal",
+                            "show_brightness_control": false,
+                            "collapsible_controls": false,
+                            "name": "Escalier"
+                          },
+                          {
+                            "type": "custom:mushroom-light-card",
+                            "entity": "light.escalier_veilleuses"
+                          }
+                        ]
+                      },
+                      {
+                        "type": "custom:mushroom-title-card",
+                        "title": "Salon"
+                      },
+                      {
+                        "type": "horizontal-stack",
+                        "cards": [
+                          {
+                            "type": "custom:mushroom-light-card",
+                            "entity": "light.salon_prises",
+                            "show_brightness_control": true,
+                            "collapsible_controls": false,
+                            "name": "Prises",
+                            "fill_container": false
+                          },
+                          {
+                            "type": "custom:mushroom-light-card",
+                            "entity": "light.salon_table",
+                            "show_brightness_control": true,
+                            "collapsible_controls": false,
+                            "name": "Table"
+                          },
+                          {
+                            "type": "custom:mushroom-light-card",
+                            "entity": "light.salon_exterieur",
+                            "show_brightness_control": true,
+                            "collapsible_controls": false,
+                            "name": "Ext"
+                          }
+                        ]
+                      },
+                      {
+                        "type": "custom:mushroom-title-card",
+                        "title": "SàM"
+                      },
+                      {
+                        "type": "horizontal-stack",
+                        "cards": [
+                          {
+                            "type": "custom:mushroom-light-card",
+                            "entity": "light.salle_a_manger_table",
+                            "show_brightness_control": true,
+                            "collapsible_controls": false,
+                            "name": "Table",
+                            "fill_container": false
+                          },
+                          {
+                            "type": "custom:mushroom-light-card",
+                            "entity": "light.salle_a_manger_exterieur",
+                            "show_brightness_control": true,
+                            "collapsible_controls": false,
+                            "name": "Ext"
+                          }
+                        ]
+                      },
+                      {
+                        "type": "custom:mushroom-title-card",
+                        "title": "Cuisine"
+                      },
+                      {
+                        "type": "horizontal-stack",
+                        "cards": [
+                          {
+                            "type": "custom:mushroom-light-card",
+                            "entity": "light.cuisine_ilot",
+                            "show_brightness_control": false,
+                            "collapsible_controls": false,
+                            "name": "Ilôt",
+                            "fill_container": false
+                          },
+                          {
+                            "type": "custom:mushroom-light-card",
+                            "entity": "light.cuisine_passage",
+                            "show_brightness_control": false,
+                            "collapsible_controls": false,
+                            "name": "Passage"
+                          },
+                          {
+                            "type": "custom:mushroom-light-card",
+                            "entity": "light.cuisine_evier",
+                            "show_brightness_control": false,
+                            "collapsible_controls": false,
+                            "name": "Evier"
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  "attributes": {
+                    "icon": "mdi:home-floor-0"
+                  }
+                },
+                {
+                  "card": {
+                    "type": "vertical-stack",
+                    "cards": [
+                      {
+                        "type": "custom:mushroom-title-card",
+                        "title": "Hall de nuit"
+                      },
+                      {
+                        "type": "horizontal-stack",
+                        "cards": [
+                          {
+                            "type": "custom:mushroom-light-card",
+                            "entity": "light.hall_de_nuit",
+                            "show_brightness_control": false,
+                            "collapsible_controls": false,
+                            "name": "Hall de nuit",
+                            "fill_container": false
+                          }
+                        ]
+                      },
+                      {
+                        "type": "custom:mushroom-title-card",
+                        "title": "Chambre Emma"
+                      },
+                      {
+                        "type": "horizontal-stack",
+                        "cards": [
+                          {
+                            "type": "custom:mushroom-light-card",
+                            "entity": "light.chambre_emma",
+                            "name": "Chambre Emma"
+                          },
+                          {
+                            "type": "custom:mushroom-light-card",
+                            "entity": "light.chambre_emma_chevet",
+                            "show_brightness_control": true
+                          },
+                          {
+                            "type": "custom:mushroom-light-card",
+                            "entity": "light.chambre_emma_lampe_bureau",
+                            "show_brightness_control": true
+                          }
+                        ]
+                      },
+                      {
+                        "type": "horizontal-stack",
+                        "cards": [
+                          {
+                            "type": "custom:mushroom-light-card",
+                            "entity": "light.mangrove",
+                            "show_brightness_control": true,
+                            "name": "Mangrove"
+                          },
+                          {
+                            "type": "custom:mushroom-light-card",
+                            "entity": "light.horizon",
+                            "show_brightness_control": true,
+                            "name": "Horizon"
+                          }
+                        ]
+                      },
+                      {
+                        "type": "custom:mushroom-title-card",
+                        "title": "Chambre Louis"
+                      },
+                      {
+                        "type": "horizontal-stack",
+                        "cards": [
+                          {
+                            "type": "custom:mushroom-light-card",
+                            "entity": "light.chambre_louis",
+                            "name": "Chambre Louis"
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  "attributes": {
+                    "icon": "mdi:home-floor-1"
+                  }
+                },
+                {
+                  "card": {
+                    "type": "vertical-stack",
+                    "cards": [
+                      {
+                        "type": "custom:mushroom-title-card",
+                        "title": "Pallier 2ème"
+                      },
+                      {
+                        "type": "horizontal-stack",
+                        "cards": [
+                          {
+                            "type": "custom:mushroom-light-card",
+                            "entity": "light.escalier_pallier_2eme",
+                            "name": "Pallier 2ème",
+                            "fill_container": false
+                          }
+                        ]
+                      },
+                      {
+                        "type": "custom:mushroom-title-card",
+                        "title": "Bureau Gillian"
+                      },
+                      {
+                        "type": "horizontal-stack",
+                        "cards": [
+                          {
+                            "type": "custom:mushroom-light-card",
+                            "entity": "light.grenier",
+                            "name": "Bureau Gillian"
+                          }
+                        ]
+                      },
+                      {
+                        "type": "custom:mushroom-title-card",
+                        "title": "Chambre Grenier"
+                      },
+                      {
+                        "type": "horizontal-stack",
+                        "cards": [
+                          {
+                            "type": "custom:mushroom-light-card",
+                            "entity": "light.chambre_grenier_entree",
+                            "name": "Entrée"
+                          },
+                          {
+                            "type": "custom:mushroom-light-card",
+                            "entity": "light.chambre_grenier_principal",
+                            "name": "Principal"
+                          }
+                        ]
+                      },
+                      {
+                        "type": "custom:mushroom-title-card",
+                        "title": "Salle de douche"
+                      },
+                      {
+                        "type": "horizontal-stack",
+                        "cards": [
+                          {
+                            "type": "custom:mushroom-light-card",
+                            "entity": "light.salle_de_douche",
+                            "name": "Salle de douche"
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  "attributes": {
+                    "icon": "mdi:home-floor-2"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "theme": "Backend-selected",
+          "title": "Chauffage",
+          "path": "chauffage",
+          "icon": "mdi:radiator",
+          "type": "custom:vertical-layout",
+          "subview": true,
+          "badges": [],
+          "cards": [
+            {
+              "type": "horizontal-stack",
+              "cards": [
+                {
+                  "type": "custom:mushroom-entity-card",
+                  "entity": "sensor.vicare_outside_temperature",
+                  "name": " Extérieur",
+                  "tap_action": {
+                    "action": "more-info"
+                  },
+                  "hold_action": {
+                    "action": "more-info"
+                  },
+                  "double_tap_action": {
+                    "action": "more-info"
+                  }
+                },
+                {
+                  "type": "custom:mushroom-entity-card",
+                  "entity": "sensor.motion_sensor_air_temperature",
+                  "name": "Ext Garage",
+                  "tap_action": {
+                    "action": "more-info"
+                  },
+                  "hold_action": {
+                    "action": "more-info"
+                  },
+                  "double_tap_action": {
+                    "action": "more-info"
+                  }
+                }
+              ]
+            },
+            {
+              "type": "horizontal-stack",
+              "cards": [
+                {
+                  "type": "custom:mushroom-entity-card",
+                  "entity": "sensor.e3_vitodens_200_0419_dhw_storage_temperature",
+                  "name": "Eau chaude",
+                  "icon": "mdi:water-boiler"
+                },
+                {
+                  "type": "custom:mushroom-entity-card",
+                  "entity": "sensor.vicare_supply_temperature",
+                  "name": "Chaudière"
+                }
+              ]
+            },
+            {
+              "type": "horizontal-stack",
+              "cards": [
+                {
+                  "type": "custom:mushroom-entity-card",
+                  "entity": "binary_sensor.vicare_circulation_pump_active",
+                  "name": "Circulateur",
+                  "tap_action": {
+                    "action": "more-info"
+                  },
+                  "hold_action": {
+                    "action": "more-info"
+                  },
+                  "double_tap_action": {
+                    "action": "more-info"
+                  },
+                  "icon": "mdi:pump"
+                },
+                {
+                  "type": "custom:mushroom-entity-card",
+                  "entity": "binary_sensor.vicare_burner_active",
+                  "name": "Brûleur",
+                  "tap_action": {
+                    "action": "more-info"
+                  },
+                  "hold_action": {
+                    "action": "more-info"
+                  },
+                  "double_tap_action": {
+                    "action": "more-info"
+                  },
+                  "icon": "mdi:fire"
+                }
+              ]
+            },
+            {
+              "type": "horizontal-stack",
+              "title": "Statut Système de Chauffage",
+              "cards": [
+                {
+                  "type": "custom:mushroom-select-card",
+                  "entity": "input_select.evohome_select",
+                  "name": "Statut demandé",
+                  "icon": "mdi:thermostat",
+                  "show_state": true,
+                  "layout": "horizontal",
+                  "fill_container": true,
+                  "tap_action": {
+                    "action": "none"
+                  },
+                  "style": ""
+                },
+                {
+                  "type": "custom:mushroom-entity-card",
+                  "entity": "sensor.evohome_mode_systeme",
+                  "name": "Statut Actuel",
+                  "icon": "mdi:thermostat",
+                  "show_state": true,
+                  "layout": "horizontal",
+                  "fill_container": true,
+                  "tap_action": {
+                    "action": "none"
+                  }
+                }
+              ]
+            },
+            {
+              "type": "custom:mushroom-title-card",
+              "title": "Rez"
+            },
+            {
+              "type": "horizontal-stack",
+              "cards": [
+                {
+                  "type": "custom:mushroom-template-card",
+                  "entity": "climate.hall_entree",
+                  "icon": "mdi:coat-rack",
+                  "icon_color": "{% if state_attr('climate.hall_entree','current_temperature') | float | round (0) < state_attr('climate.hall_entree','temperature') | float | round (0) %} blue\n  {% elif state_attr('climate.hall_entree','current_temperature') | float | round (0) == state_attr('climate.hall_entree','temperature') | float | round (0) %}\n  green\n    {% elif state_attr('climate.hall_entree','current_temperature') | float | round (0) > state_attr('climate.hall_entree','temperature') | float | round (0) %}\n    red\n{% endif %}",
+                  "primary": "{{ state_attr('climate.hall_entree','current_temperature') }} °C",
+                  "secondary": "{{ state_attr('climate.hall_entree','temperature') }} °C",
+                  "tap_action": {
+                    "action": "more-info"
+                  },
+                  "hold_action": {
+                    "action": "more-info"
+                  },
+                  "double_tap_action": {
+                    "action": "more-info"
+                  }
+                },
+                {
+                  "type": "custom:mushroom-template-card",
+                  "entity": "climate.wc_bas",
+                  "icon": "mdi:toilet",
+                  "icon_color": "{% if state_attr('climate.wc_bas','current_temperature') | float | round (0) < state_attr('climate.wc_bas','temperature') | float | round (0) %} blue\n  {% elif state_attr('climate.wc_bas','current_temperature') | float | round (0) == state_attr('climate.wc_bas','temperature') | float | round (0) %}\n  green\n    {% elif state_attr('climate.wc_bas','current_temperature') | float | round (0) > state_attr('climate.wc_bas','temperature') | float | round (0) %}\n    red\n{% endif %}",
+                  "primary": "{{ state_attr('climate.wc_bas','current_temperature') }} °C",
+                  "secondary": "{{ state_attr('climate.wc_bas','temperature') }} °C",
+                  "tap_action": {
+                    "action": "more-info"
+                  },
+                  "hold_action": {
+                    "action": "more-info"
+                  },
+                  "double_tap_action": {
+                    "action": "more-info"
+                  }
+                }
+              ]
+            },
+            {
+              "type": "horizontal-stack",
+              "cards": [
+                {
+                  "type": "custom:mushroom-template-card",
+                  "entity": "climate.salon",
+                  "icon": "mdi:sofa",
+                  "icon_color": "{% if state_attr('climate.salon','current_temperature') | float | round (0) < state_attr('climate.salon','temperature') | float | round (0) %} blue\n  {% elif state_attr('climate.salon','current_temperature') | float | round (0) == state_attr('climate.salon','temperature') | float | round (0) %}\n  green\n    {% elif state_attr('climate.salon','current_temperature') | float | round (0) > state_attr('climate.salon','temperature') | float | round (0) %}\n    red\n{% endif %}",
+                  "primary": "{{ state_attr('climate.salon','current_temperature') }} °C",
+                  "secondary": "{{ state_attr('climate.salon','temperature') }} °C",
+                  "tap_action": {
+                    "action": "more-info"
+                  },
+                  "hold_action": {
+                    "action": "more-info"
+                  },
+                  "double_tap_action": {
+                    "action": "more-info"
+                  }
+                },
+                {
+                  "type": "custom:mushroom-template-card",
+                  "entity": "climate.salle_a_manger",
+                  "icon": "mdi:silverware",
+                  "icon_color": "{% if state_attr('climate.salle_a_manger','current_temperature') | float | round (0) < state_attr('climate.salle_a_manger','temperature') | float | round (0) %} blue\n  {% elif state_attr('climate.salle_a_manger','current_temperature') | float | round (0) == state_attr('climate.salle_a_manger','temperature') | float | round (0) %}\n  green\n    {% elif state_attr('climate.salle_a_manger','current_temperature') | float | round (0) > state_attr('climate.salle_a_manger','temperature') | float | round (0) %}\n    red\n{% endif %}",
+                  "primary": "{{ state_attr('climate.salle_a_manger','current_temperature') }} °C",
+                  "secondary": "{{ state_attr('climate.salle_a_manger','temperature') }} °C",
+                  "tap_action": {
+                    "action": "more-info"
+                  },
+                  "hold_action": {
+                    "action": "more-info"
+                  },
+                  "double_tap_action": {
+                    "action": "more-info"
+                  }
+                },
+                {
+                  "type": "custom:mushroom-template-card",
+                  "entity": "climate.cuisine",
+                  "icon": "mdi:chef-hat",
+                  "icon_color": "{% if state_attr('climate.cuisine','current_temperature') | float | round (0) < state_attr('climate.cuisine','temperature') | float | round (0) %} blue\n  {% elif state_attr('climate.cuisine','current_temperature') | float | round (0) == state_attr('climate.cuisine','temperature') | float | round (0) %}\n  green\n    {% elif state_attr('climate.cuisine','current_temperature') | float | round (0) > state_attr('climate.cuisine','temperature') | float | round (0) %}\n    red\n{% endif %}",
+                  "primary": "{{ state_attr('climate.cuisine','current_temperature') }} °C",
+                  "secondary": "{{ state_attr('climate.cuisine','temperature') }} °C",
+                  "tap_action": {
+                    "action": "more-info"
+                  },
+                  "hold_action": {
+                    "action": "more-info"
+                  },
+                  "double_tap_action": {
+                    "action": "more-info"
+                  }
+                }
+              ]
+            },
+            {
+              "type": "custom:mushroom-title-card",
+              "title": "Premier"
+            },
+            {
+              "type": "horizontal-stack",
+              "cards": [
+                {
+                  "type": "custom:mushroom-template-card",
+                  "entity": "climate.hall_nuit",
+                  "icon": "mdi:stairs-up",
+                  "icon_color": "{% if state_attr('climate.hall_nuit','current_temperature') | float | round (0) < state_attr('climate.hall_nuit','temperature') | float | round (0) %} blue\n  {% elif state_attr('climate.hall_nuit','current_temperature') | float | round (0) == state_attr('climate.hall_nuit','temperature') | float | round (0) %}\n  green\n    {% elif state_attr('climate.hall_nuit','current_temperature') | float | round (0) > state_attr('climate.hall_nuit','temperature') | float | round (0) %}\n    red\n{% endif %}",
+                  "primary": "{{ state_attr('climate.hall_nuit','current_temperature') }} °C",
+                  "secondary": "{{ state_attr('climate.hall_nuit','temperature') }} °C",
+                  "tap_action": {
+                    "action": "more-info"
+                  },
+                  "hold_action": {
+                    "action": "more-info"
+                  },
+                  "double_tap_action": {
+                    "action": "more-info"
+                  }
+                }
+              ]
+            },
+            {
+              "type": "horizontal-stack",
+              "cards": [
+                {
+                  "type": "custom:mushroom-template-card",
+                  "entity": "climate.salle_de_bain",
+                  "icon": "mdi:bathtub",
+                  "icon_color": "{% if state_attr('climate.salle_de_bain','current_temperature') | float | round (0) < state_attr('climate.salle_de_bain','temperature') | float | round (0) %} blue\n  {% elif state_attr('climate.salle_de_bain','current_temperature') | float | round (0) == state_attr('climate.salle_de_bain','temperature') | float | round (0) %}\n  green\n    {% elif state_attr('climate.salle_de_bain','current_temperature') | float | round (0) > state_attr('climate.salle_de_bain','temperature') | float | round (0) %}\n    red\n{% endif %}",
+                  "primary": "{{ state_attr('climate.salle_de_bain','current_temperature') }} °C",
+                  "secondary": "{{ state_attr('climate.salle_de_bain','temperature') }} °C",
+                  "tap_action": {
+                    "action": "more-info"
+                  },
+                  "hold_action": {
+                    "action": "more-info"
+                  },
+                  "double_tap_action": {
+                    "action": "more-info"
+                  }
+                },
+                {
+                  "type": "custom:mushroom-template-card",
+                  "entity": "climate.chambre_amis",
+                  "icon": "mdi:chair-school",
+                  "icon_color": "{% if state_attr('climate.chambre_amis','current_temperature') | float | round (0) < state_attr('climate.chambre_amis','temperature') | float | round (0) %} blue\n  {% elif state_attr('climate.chambre_amis','current_temperature') | float | round (0) == state_attr('climate.chambre_amis','temperature') | float | round (0) %}\n  green\n    {% elif state_attr('climate.chambre_amis','current_temperature') | float | round (0) > state_attr('climate.chambre_amis','temperature') | float | round (0) %}\n    red\n{% endif %}",
+                  "primary": "{{ state_attr('climate.chambre_amis','current_temperature') }} °C",
+                  "secondary": "{{ state_attr('climate.chambre_amis','temperature') }} °C",
+                  "tap_action": {
+                    "action": "more-info"
+                  },
+                  "hold_action": {
+                    "action": "more-info"
+                  },
+                  "double_tap_action": {
+                    "action": "more-info"
+                  }
+                },
+                {
+                  "type": "custom:mushroom-template-card",
+                  "entity": "climate.bureau_fabien",
+                  "icon": "mdi:chair-rolling",
+                  "icon_color": "{% if state_attr('climate.bureau_fabien','current_temperature') | float | round (0) < state_attr('climate.bureau_fabien','temperature') | float | round (0) %} blue\n  {% elif state_attr('climate.bureau_fabien','current_temperature') | float | round (0) == state_attr('climate.bureau_fabien','temperature') | float | round (0) %}\n  green\n    {% elif state_attr('climate.bureau_fabien','current_temperature') | float | round (0) > state_attr('climate.bureau_fabien','temperature') | float | round (0) %}\n    red\n{% endif %}",
+                  "primary": "{{ state_attr('climate.bureau_fabien','current_temperature') }} °C",
+                  "secondary": "{{ state_attr('climate.bureau_fabien','temperature') }} °C",
+                  "tap_action": {
+                    "action": "more-info"
+                  },
+                  "hold_action": {
+                    "action": "more-info"
+                  },
+                  "double_tap_action": {
+                    "action": "more-info"
+                  }
+                }
+              ]
+            },
+            {
+              "type": "horizontal-stack",
+              "cards": [
+                {
+                  "type": "custom:mushroom-template-card",
+                  "entity": "climate.polyvalent",
+                  "icon": "mdi:controller-classic",
+                  "icon_color": "{% if state_attr('climate.polyvalent','current_temperature') | float | round (0) < state_attr('climate.polyvalent','temperature') | float | round (0) %} blue\n  {% elif state_attr('climate.polyvalent','current_temperature') | float | round (0) == state_attr('climate.polyvalent','temperature') | float | round (0) %}\n  green\n    {% elif state_attr('climate.polyvalent','current_temperature') | float | round (0) > state_attr('climate.polyvalent','temperature') | float | round (0) %}\n    red\n{% endif %}",
+                  "primary": "{{ state_attr('climate.polyvalent','current_temperature') }} °C",
+                  "secondary": "{{ state_attr('climate.polyvalent','temperature') }} °C",
+                  "tap_action": {
+                    "action": "more-info"
+                  },
+                  "hold_action": {
+                    "action": "more-info"
+                  },
+                  "double_tap_action": {
+                    "action": "more-info"
+                  }
+                },
+                {
+                  "type": "custom:mushroom-template-card",
+                  "entity": "climate.ch_emma",
+                  "icon": "mdi:face-woman-outline",
+                  "icon_color": "{% if state_attr('climate.ch_emma','current_temperature') | float | round (0) < state_attr('climate.ch_emma','temperature') | float | round (0) %} blue\n  {% elif state_attr('climate.ch_emma','current_temperature') | float | round (0) == state_attr('climate.ch_emma','temperature') | float | round (0) %}\n  green\n    {% elif state_attr('climate.ch_emma','current_temperature') | float | round (0) > state_attr('climate.ch_emma','temperature') | float | round (0) %}\n    red\n{% endif %}",
+                  "primary": "{{ state_attr('climate.ch_emma','current_temperature') }} °C",
+                  "secondary": "{{ state_attr('climate.ch_emma','temperature') }} °C",
+                  "tap_action": {
+                    "action": "more-info"
+                  },
+                  "hold_action": {
+                    "action": "more-info"
+                  },
+                  "double_tap_action": {
+                    "action": "more-info"
+                  }
+                },
+                {
+                  "type": "custom:mushroom-template-card",
+                  "entity": "climate.ch_louis",
+                  "icon": "mdi:face-agent",
+                  "icon_color": "{% if state_attr('climate.ch_louis','current_temperature') | float | round (0) < state_attr('climate.ch_louis','temperature') | float | round (0) %} blue\n  {% elif state_attr('climate.ch_louis','current_temperature') | float | round (0) == state_attr('climate.ch_louis','temperature') | float | round (0) %}\n  green\n    {% elif state_attr('climate.ch_louis','current_temperature') | float | round (0) > state_attr('climate.ch_louis','temperature') | float | round (0) %}\n    red\n{% endif %}",
+                  "primary": "{{ state_attr('climate.ch_louis','current_temperature') }} °C",
+                  "secondary": "{{ state_attr('climate.ch_louis','temperature') }} °C",
+                  "tap_action": {
+                    "action": "more-info"
+                  },
+                  "hold_action": {
+                    "action": "more-info"
+                  },
+                  "double_tap_action": {
+                    "action": "more-info"
+                  }
+                }
+              ]
+            },
+            {
+              "type": "custom:mushroom-title-card",
+              "title": "Second"
+            },
+            {
+              "type": "horizontal-stack",
+              "cards": [
+                {
+                  "type": "custom:mushroom-template-card",
+                  "entity": "climate.radiateur_bureau_gillian",
+                  "icon": "mdi:laptop",
+                  "icon_color": "{% if state_attr('climate.radiateur_bureau_gillian','current_temperature') | float(0) | round (0) < state_attr('climate.radiateur_bureau_gillian','temperature') | float(0) | round (0) %} blue\n  {% elif state_attr('climate.radiateur_bureau_gillian','current_temperature') | float(0) | round (0) == state_attr('climate.chambre','temperature') | float(0) | round (0) %}\n  green\n    {% elif state_attr('climate.radiateur_bureau_gillian','current_temperature') | float(0) | round (0) > state_attr('climate.chambre','temperature') | float(0) | round (0) %}\n    red\n{% endif %}",
+                  "primary": "{{ state_attr('climate.radiateur_bureau_gillian','current_temperature') }} °C",
+                  "secondary": "{{ state_attr('climate.radiateur_bureau_gillian','temperature') }} °C",
+                  "tap_action": {
+                    "action": "more-info"
+                  },
+                  "hold_action": {
+                    "action": "more-info"
+                  },
+                  "double_tap_action": {
+                    "action": "more-info"
+                  }
+                },
+                {
+                  "type": "custom:mushroom-template-card",
+                  "entity": "climate.chambre",
+                  "icon": "mdi:bed",
+                  "icon_color": "{% if state_attr('climate.chambre','current_temperature') | float(0) | round (0) < state_attr('climate.chambre','temperature') | float(0) | round (0) %} blue\n  {% elif state_attr('climate.chambre','current_temperature') | float(0) | round (0) == state_attr('climate.chambre','temperature') | float(0) | round (0) %}\n  green\n    {% elif state_attr('climate.chambre','current_temperature') | float(0) | round (0) > state_attr('climate.chambre','temperature') | float(0) | round (0) %}\n    red\n{% endif %}",
+                  "primary": "{{ state_attr('climate.chambre','current_temperature') }} °C",
+                  "secondary": "{{ state_attr('climate.chambre','temperature') }} °C",
+                  "tap_action": {
+                    "action": "more-info"
+                  },
+                  "hold_action": {
+                    "action": "more-info"
+                  },
+                  "double_tap_action": {
+                    "action": "more-info"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "theme": "Backend-selected",
+          "icon": "mdi:solar-power",
+          "title": "Solar",
+          "path": "solar",
+          "subview": true,
+          "type": "custom:vertical-layout",
+          "badges": [],
+          "cards": [
+            {
+              "type": "horizontal-stack",
+              "cards": [
+                {
+                  "type": "gauge",
+                  "entity": "sensor.sb5_0_1av_41_208_grid_power",
+                  "needle": true,
+                  "max": 5000,
+                  "min": 0,
+                  "severity": {
+                    "green": 0,
+                    "yellow": 2000,
+                    "red": 4500
+                  },
+                  "name": "Onduleur 1"
+                },
+                {
+                  "type": "gauge",
+                  "needle": true,
+                  "max": 5000,
+                  "min": 0,
+                  "entity": "sensor.sb5_0_1av_41_345_grid_power",
+                  "severity": {
+                    "green": 0,
+                    "yellow": 2000,
+                    "red": 4500
+                  },
+                  "name": "Onduleur 2"
+                },
+                {
+                  "type": "gauge",
+                  "entity": "sensor.solar_production",
+                  "needle": true,
+                  "severity": {
+                    "green": 0,
+                    "yellow": 4000,
+                    "red": 9000
+                  },
+                  "max": 10000,
+                  "name": "Total"
+                }
+              ]
+            },
+            {
+              "type": "horizontal-stack",
+              "cards": [
+                {
+                  "type": "horizontal-stack",
+                  "cards": [
+                    {
+                      "type": "gauge",
+                      "entity": "sensor.sb5_0_1av_41_208_voltage_l1_safe",
+                      "name": "Onduleur 1",
+                      "unit": "V",
+                      "min": 201,
+                      "max": 259,
+                      "needle": true,
+                      "segments": [
+                        {
+                          "from": 201,
+                          "to": 210,
+                          "color": "#ff0000"
+                        },
+                        {
+                          "from": 211,
+                          "to": 220,
+                          "color": "#ff8c00"
+                        },
+                        {
+                          "from": 221,
+                          "to": 239,
+                          "color": "#00ff00"
+                        },
+                        {
+                          "from": 240,
+                          "to": 249,
+                          "color": "#ff8c00"
+                        },
+                        {
+                          "from": 250,
+                          "to": 259,
+                          "color": "#ff0000"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "gauge",
+                      "entity": "sensor.sb5_0_1av_41_345_voltage_l1_safe",
+                      "name": "Onduleur 2",
+                      "unit": "V",
+                      "min": 201,
+                      "max": 259,
+                      "needle": true,
+                      "segments": [
+                        {
+                          "from": 201,
+                          "to": 210,
+                          "color": "#ff0000"
+                        },
+                        {
+                          "from": 211,
+                          "to": 220,
+                          "color": "#ff8c00"
+                        },
+                        {
+                          "from": 221,
+                          "to": 239,
+                          "color": "#00ff00"
+                        },
+                        {
+                          "from": 240,
+                          "to": 249,
+                          "color": "#ff8c00"
+                        },
+                        {
+                          "from": 250,
+                          "to": 259,
+                          "color": "#ff0000"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "horizontal-stack",
+              "cards": [
+                {
+                  "type": "horizontal-stack",
+                  "cards": [
+                    {
+                      "type": "gauge",
+                      "entity": "sensor.p1_meter_3c39e7284d28_active_voltage_l3",
+                      "needle": true,
+                      "min": 201,
+                      "max": 259,
+                      "segments": [
+                        {
+                          "from": 201,
+                          "to": 210,
+                          "color": "rgb(255, 0, 0)"
+                        },
+                        {
+                          "from": 211,
+                          "to": 220,
+                          "color": "rgb(255, 165, 0)"
+                        },
+                        {
+                          "from": 221,
+                          "to": 239,
+                          "color": "rgb(0, 255, 0)"
+                        },
+                        {
+                          "from": 240,
+                          "to": 249,
+                          "color": "rgb(255, 165, 0)"
+                        },
+                        {
+                          "from": 250,
+                          "to": 259,
+                          "color": "rgb(255, 0, 0)"
+                        }
+                      ],
+                      "name": "Maison L3"
+                    },
+                    {
+                      "type": "gauge",
+                      "entity": "sensor.p1_meter_3c39e7284d28_active_voltage_l1",
+                      "needle": true,
+                      "min": 201,
+                      "max": 259,
+                      "segments": [
+                        {
+                          "from": 201,
+                          "to": 210,
+                          "color": "rgb(255, 0, 0)"
+                        },
+                        {
+                          "from": 211,
+                          "to": 220,
+                          "color": "rgb(255, 165, 0)"
+                        },
+                        {
+                          "from": 221,
+                          "to": 239,
+                          "color": "rgb(0, 255, 0)"
+                        },
+                        {
+                          "from": 240,
+                          "to": 249,
+                          "color": "rgb(255, 165, 0)"
+                        },
+                        {
+                          "from": 250,
+                          "to": 259,
+                          "color": "rgb(255, 0, 0)"
+                        }
+                      ],
+                      "name": "Maison L1"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "entities",
+              "entities": [
+                {
+                  "entity": "counter.decrochage_onduleur_1"
+                },
+                {
+                  "entity": "counter.decrochage_onduleur_2"
+                },
+                {
+                  "entity": "sensor.energy_production_today",
+                  "name": "Production d'énergie estimée - aujourd'hui"
+                },
+                {
+                  "entity": "sensor.energy_production_today_remaining",
+                  "name": "Production d'énergie estimée - restante aujourd'hui"
+                },
+                {
+                  "entity": "sensor.energy_production_tomorrow",
+                  "name": "Estimation de la production d'énergie - demain"
+                },
+                {
+                  "entity": "sensor.power_production_now",
+                  "name": "Production d'électricité estimée - maintenant"
+                },
+                {
+                  "entity": "sensor.energy_current_hour",
+                  "name": "Production d'énergie estimée - cette heure"
+                }
+              ],
+              "title": "Solar production forecast"
+            }
+          ]
+        },
+        {
+          "theme": "Backend-selected",
+          "icon": "mdi:transmission-tower",
+          "title": "Power",
+          "path": "power",
+          "subview": true,
+          "type": "custom:vertical-layout",
+          "badges": [],
+          "cards": [
+            {
+              "type": "horizontal-stack",
+              "cards": [
+                {
+                  "type": "gauge",
+                  "entity": "sensor.p1_meter_3c39e7284d28_active_power",
+                  "needle": true,
+                  "severity": {
+                    "green": -10000,
+                    "yellow": 2000,
+                    "red": 13000
+                  },
+                  "min": -10000,
+                  "max": 15000,
+                  "name": "Net"
+                },
+                {
+                  "type": "gauge",
+                  "entity": "sensor.power_home",
+                  "needle": true,
+                  "max": 15000,
+                  "min": 0,
+                  "severity": {
+                    "green": 0,
+                    "yellow": 5000,
+                    "red": 13000
+                  },
+                  "name": "Maison"
+                },
+                {
+                  "type": "gauge",
+                  "entity": "sensor.solar_production",
+                  "needle": true,
+                  "max": 10000,
+                  "min": 0,
+                  "name": "Solaire",
+                  "severity": {
+                    "green": 0,
+                    "yellow": 6000,
+                    "red": 9000
+                  }
+                }
+              ]
+            },
+            {
+              "type": "horizontal-stack",
+              "cards": [
+                {
+                  "type": "gauge",
+                  "entity": "sensor.power_lights",
+                  "needle": true,
+                  "severity": {
+                    "green": 0,
+                    "yellow": 700,
+                    "red": 2000
+                  },
+                  "max": 2500
+                },
+                {
+                  "type": "gauge",
+                  "entity": "sensor.power_plugs",
+                  "needle": true,
+                  "max": 10000,
+                  "min": 0
+                },
+                {
+                  "type": "gauge",
+                  "entity": "sensor.power_heating",
+                  "needle": true,
+                  "max": 4000,
+                  "min": 0,
+                  "severity": {
+                    "green": 0,
+                    "yellow": 2000,
+                    "red": 3000
+                  }
+                }
+              ]
+            },
+            {
+              "type": "horizontal-stack",
+              "cards": [
+                {
+                  "type": "gauge",
+                  "entity": "sensor.power_electro",
+                  "needle": true,
+                  "max": 4000,
+                  "min": 0,
+                  "severity": {
+                    "green": 0,
+                    "yellow": 2000,
+                    "red": 3000
+                  }
+                },
+                {
+                  "type": "gauge",
+                  "entity": "sensor.power_tesla",
+                  "needle": true,
+                  "max": 11000,
+                  "min": 0,
+                  "severity": {
+                    "green": 0,
+                    "yellow": 5000,
+                    "red": 10000
+                  }
+                },
+                {
+                  "type": "gauge",
+                  "entity": "sensor.power_unmanaged",
+                  "needle": true,
+                  "max": 5000
+                }
+              ]
+            },
+            {
+              "type": "custom:power-distribution-card",
+              "title": "Title",
+              "entities": [
+                {
+                  "decimals": 2,
+                  "display_abs": true,
+                  "name": "solar",
+                  "unit_of_display": "W",
+                  "icon": "mdi:solar-power",
+                  "producer": true,
+                  "entity": "sensor.solar_production",
+                  "preset": "solar",
+                  "double_tap_action": {
+                    "undefined": {}
+                  },
+                  "icon_color": {
+                    "bigger": "green"
+                  },
+                  "arrow_color": {
+                    "bigger": "green"
+                  }
+                },
+                {
+                  "decimals": 2,
+                  "display_abs": true,
+                  "unit_of_display": "W",
+                  "consumer": true,
+                  "icon": "mdi:car-electric",
+                  "entity": "sensor.power_tesla",
+                  "preset": "car_charger",
+                  "double_tap_action": {
+                    "undefined": {
+                      "undefined": {
+                        "undefined": {
+                          "undefined": {
+                            "undefined": {}
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "icon_color": {
+                    "bigger": "",
+                    "smaller": "Red"
+                  },
+                  "arrow_color": {
+                    "bigger": "",
+                    "smaller": "Red"
+                  },
+                  "invert_value": true
+                },
+                {
+                  "decimals": 2,
+                  "display_abs": true,
+                  "unit_of_display": "W",
+                  "icon": "mdi:transmission-tower",
+                  "entity": "sensor.p1_meter_3c39e7284d28_active_power",
+                  "preset": "grid",
+                  "double_tap_action": {
+                    "undefined": {
+                      "undefined": {}
+                    }
+                  },
+                  "icon_color": {
+                    "bigger": "red",
+                    "equal": "green",
+                    "smaller": "green"
+                  },
+                  "arrow_color": {
+                    "bigger": "red",
+                    "equal": "green",
+                    "smaller": "green"
+                  }
+                },
+                {
+                  "decimals": 2,
+                  "display_abs": true,
+                  "unit_of_display": "W",
+                  "icon": "mdi:radiator",
+                  "consumer": true,
+                  "preset": "heating",
+                  "double_tap_action": {
+                    "undefined": {
+                      "undefined": {
+                        "undefined": {}
+                      }
+                    }
+                  },
+                  "invert_value": true,
+                  "entity": "sensor.power_heating",
+                  "color_threshold": "4.5",
+                  "icon_color": {
+                    "bigger": "red"
+                  }
+                },
+                {
+                  "decimals": 2,
+                  "display_abs": true,
+                  "name": "placeholder",
+                  "unit_of_display": "W",
+                  "preset": "placeholder"
+                },
+                {
+                  "decimals": 2,
+                  "display_abs": true,
+                  "name": "Lumières",
+                  "unit_of_display": "W",
+                  "consumer": true,
+                  "icon": "mdi:lightbulb",
+                  "entity": "sensor.power_lights",
+                  "preset": "consumer",
+                  "double_tap_action": {
+                    "undefined": {
+                      "undefined": {}
+                    }
+                  },
+                  "invert_value": true
+                },
+                {
+                  "decimals": 2,
+                  "display_abs": true,
+                  "name": "consumer",
+                  "unit_of_display": "W",
+                  "consumer": true,
+                  "icon": "mdi:power-plug",
+                  "entity": "sensor.power_plugs",
+                  "preset": "consumer",
+                  "double_tap_action": {}
+                }
+              ],
+              "center": {
+                "type": "bars",
+                "content": [
+                  {
+                    "preset": "autarky",
+                    "name": "autarky"
+                  },
+                  {
+                    "preset": "ratio",
+                    "name": "ratio"
+                  }
+                ]
+              },
+              "animation": "flash"
+            }
+          ]
+        },
+        {
+          "theme": "Backend-selected",
+          "title": "Volets et Vélux",
+          "path": "volets-et-velux",
+          "icon": "mdi:window-shutter",
+          "subview": true,
+          "badges": [],
+          "cards": [
+            {
+              "type": "custom:tabbed-card",
+              "options": {},
+              "tabs": [
+                {
+                  "card": {
+                    "type": "vertical-stack",
+                    "cards": [
+                      {
+                        "type": "horizontal-stack",
+                        "cards": [
+                          {
+                            "type": "custom:mushroom-cover-card",
+                            "entity": "cover.volet_tv_low_speed",
+                            "show_position_control": false,
+                            "show_tilt_position_control": false,
+                            "show_buttons_control": true,
+                            "name": "TV"
+                          },
+                          {
+                            "type": "custom:mushroom-cover-card",
+                            "entity": "cover.volet_canape_low_speed",
+                            "show_position_control": false,
+                            "show_tilt_position_control": false,
+                            "show_buttons_control": true,
+                            "name": "Canape"
+                          }
+                        ]
+                      },
+                      {
+                        "type": "horizontal-stack",
+                        "cards": [
+                          {
+                            "type": "custom:mushroom-cover-card",
+                            "entity": "cover.volet_salle_a_manger_low_speed",
+                            "show_position_control": false,
+                            "show_tilt_position_control": false,
+                            "show_buttons_control": true,
+                            "name": "SàM"
+                          },
+                          {
+                            "type": "custom:mushroom-cover-card",
+                            "entity": "cover.volet_cuisine_low_speed",
+                            "show_position_control": false,
+                            "show_tilt_position_control": false,
+                            "show_buttons_control": true,
+                            "name": "Cuisine"
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  "attributes": {
+                    "icon": "mdi:home-floor-0"
+                  }
+                },
+                {
+                  "card": {
+                    "type": "vertical-stack",
+                    "cards": [
+                      {
+                        "type": "horizontal-stack",
+                        "cards": [
+                          {
+                            "type": "custom:mushroom-cover-card",
+                            "entity": "cover.volet_poly_pelouse_low_speed",
+                            "show_position_control": false,
+                            "show_tilt_position_control": false,
+                            "show_buttons_control": true,
+                            "name": "Poly Pelouse"
+                          },
+                          {
+                            "type": "custom:mushroom-cover-card",
+                            "entity": "cover.volet_poly_route_low_speed",
+                            "show_position_control": false,
+                            "show_tilt_position_control": false,
+                            "show_buttons_control": true,
+                            "name": "Poly Route"
+                          }
+                        ]
+                      },
+                      {
+                        "type": "horizontal-stack",
+                        "cards": [
+                          {
+                            "type": "custom:mushroom-cover-card",
+                            "entity": "cover.volet_emma_route_low_speed",
+                            "show_position_control": false,
+                            "show_tilt_position_control": false,
+                            "show_buttons_control": true,
+                            "name": "Emma Route"
+                          },
+                          {
+                            "type": "custom:mushroom-cover-card",
+                            "entity": "cover.volet_emma_gauche_low_speed",
+                            "show_position_control": false,
+                            "show_tilt_position_control": false,
+                            "show_buttons_control": true,
+                            "name": "Emma Gauche"
+                          }
+                        ]
+                      },
+                      {
+                        "type": "horizontal-stack",
+                        "cards": [
+                          {
+                            "type": "custom:mushroom-cover-card",
+                            "entity": "cover.volet_louis_low_speed",
+                            "show_position_control": false,
+                            "show_tilt_position_control": false,
+                            "show_buttons_control": true,
+                            "name": "Louis"
+                          },
+                          {
+                            "type": "custom:mushroom-cover-card",
+                            "entity": "cover.volet_salle_de_bain_low_speed",
+                            "show_position_control": false,
+                            "show_tilt_position_control": false,
+                            "show_buttons_control": true,
+                            "name": "Sdb"
+                          }
+                        ]
+                      },
+                      {
+                        "type": "horizontal-stack",
+                        "cards": [
+                          {
+                            "type": "custom:mushroom-cover-card",
+                            "entity": "cover.volet_bureau_fabien",
+                            "show_position_control": false,
+                            "show_tilt_position_control": false,
+                            "show_buttons_control": true,
+                            "name": "Bureau"
+                          },
+                          {
+                            "type": "custom:mushroom-cover-card",
+                            "entity": "cover.volet_bureau_gillian_low_speed",
+                            "show_position_control": false,
+                            "show_tilt_position_control": false,
+                            "show_buttons_control": true,
+                            "name": "Ch Amis"
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  "attributes": {
+                    "icon": "mdi:home-floor-1"
+                  }
+                },
+                {
+                  "card": {
+                    "type": "vertical-stack",
+                    "cards": [
+                      {
+                        "type": "horizontal-stack",
+                        "cards": [
+                          {
+                            "type": "custom:mushroom-cover-card",
+                            "entity": "cover.volet_velux_chambre",
+                            "show_position_control": false,
+                            "show_tilt_position_control": false,
+                            "show_buttons_control": true,
+                            "name": "Vélux"
+                          },
+                          {
+                            "type": "custom:mushroom-cover-card",
+                            "entity": "cover.volet_chambre_low_speed",
+                            "show_position_control": false,
+                            "show_tilt_position_control": false,
+                            "show_buttons_control": true,
+                            "name": "Chambre"
+                          }
+                        ]
+                      },
+                      {
+                        "type": "horizontal-stack",
+                        "cards": [
+                          {
+                            "type": "custom:mushroom-cover-card",
+                            "entity": "cover.velux_escalier",
+                            "show_position_control": false,
+                            "show_tilt_position_control": false,
+                            "show_buttons_control": true,
+                            "name": "Escalier"
+                          },
+                          {
+                            "type": "custom:mushroom-cover-card",
+                            "entity": "cover.velux_chambre",
+                            "show_position_control": false,
+                            "show_tilt_position_control": false,
+                            "show_buttons_control": true,
+                            "name": "Chambre"
+                          }
+                        ]
+                      },
+                      {
+                        "type": "horizontal-stack",
+                        "cards": [
+                          {
+                            "type": "custom:mushroom-cover-card",
+                            "entity": "cover.velux_sdd_gauche",
+                            "show_position_control": false,
+                            "show_tilt_position_control": false,
+                            "show_buttons_control": true,
+                            "name": "SDD Gauche"
+                          },
+                          {
+                            "type": "custom:mushroom-cover-card",
+                            "entity": "cover.velux_sdd_droite",
+                            "show_position_control": false,
+                            "show_tilt_position_control": false,
+                            "show_buttons_control": true,
+                            "name": "SDD Droite"
+                          }
+                        ]
+                      },
+                      {
+                        "type": "horizontal-stack",
+                        "cards": [
+                          {
+                            "type": "custom:mushroom-entity-card",
+                            "entity": "input_datetime.velux_aeration_duration",
+                            "icon": "mdi:timer-cog"
+                          },
+                          {
+                            "type": "custom:mushroom-entity-card",
+                            "entity": "timer.velux",
+                            "tap_action": {
+                              "action": "call-service",
+                              "service": "script.start_aeration",
+                              "target": {}
+                            }
+                          },
+                          {
+                            "type": "entity",
+                            "entity": "timer.velux",
+                            "state_color": true
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  "attributes": {
+                    "icon": "mdi:home-floor-2"
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "title": "Home Dashboards",
+      "version": 1
+    }
+  }
+}

@@ -1,0 +1,232 @@
+{
+  "version": 1,
+  "minor_version": 1,
+  "key": "lovelace.dashboard_tv",
+  "data": {
+    "config": {
+      "views": [
+        {
+          "title": "TV Salon",
+          "path": "tv-salon",
+          "icon": "mdi:television-classic",
+          "badges": [],
+          "cards": [
+            {
+              "type": "custom:mushroom-title-card",
+              "title": "Télécommande TV Polyvalent",
+              "subtitle": "Sony Bravia 8"
+            },
+            {
+              "type": "custom:mushroom-media-player-card",
+              "entity": "media_player.tv_salon",
+              "use_media_info": true,
+              "show_volume_level": true,
+              "media_controls": [
+                "play_pause",
+                "prev",
+                "next"
+              ],
+              "volume_controls": [
+                "volume_buttons",
+                "volume_mute"
+              ]
+            },
+            {
+              "type": "grid",
+              "columns": 3,
+              "square": false,
+              "cards": [
+                {
+                  "type": "custom:mushroom-entity-card",
+                  "entity": "script.lancer_netflix",
+                  "icon": "mdi:netflix",
+                  "name": "Netflix",
+                  "tap_action": {
+                    "action": "perform-action",
+                    "perform_action": "script.lancer_netflix"
+                  },
+                  "layout": "vertical",
+                  "primary_info": "name",
+                  "secondary_info": "none",
+                  "icon_image": true,
+                  "fill_container": true
+                },
+                {
+                  "type": "custom:mushroom-entity-card",
+                  "entity": "script.lancer_disney",
+                  "icon": "mdi:disney",
+                  "name": "Disney+",
+                  "tap_action": {
+                    "action": "perform-action",
+                    "perform_action": "script.lancer_disney"
+                  },
+                  "layout": "vertical"
+                },
+                {
+                  "type": "custom:mushroom-entity-card",
+                  "entity": "script.lancer_plex",
+                  "icon": "mdi:plex",
+                  "name": "Plex",
+                  "tap_action": {
+                    "action": "perform-action",
+                    "perform_action": "script.lancer_plex"
+                  },
+                  "layout": "vertical"
+                },
+                {
+                  "type": "custom:mushroom-entity-card",
+                  "entity": "script.lancer_prime",
+                  "name": "Prime Video",
+                  "tap_action": {
+                    "action": "perform-action",
+                    "perform_action": "script.lancer_prime"
+                  },
+                  "layout": "vertical"
+                },
+                {
+                  "type": "custom:mushroom-entity-card",
+                  "entity": "script.lancer_youtube",
+                  "name": "YouTube",
+                  "tap_action": {
+                    "action": "perform-action",
+                    "perform_action": "script.lancer_youtube"
+                  },
+                  "layout": "vertical"
+                },
+                {
+                  "type": "custom:mushroom-entity-card",
+                  "entity": "script.lancer_apple_tv",
+                  "name": "Apple TV",
+                  "tap_action": {
+                    "action": "perform-action",
+                    "perform_action": "script.lancer_apple_tv"
+                  },
+                  "layout": "vertical"
+                }
+              ]
+            },
+            {
+              "type": "grid",
+              "columns": 3,
+              "square": true,
+              "cards": [
+                {
+                  "type": "custom:mushroom-chips-card",
+                  "alignment": "center",
+                  "chips": []
+                },
+                {
+                  "type": "custom:button-card",
+                  "icon": "mdi:arrow-up",
+                  "tap_action": {
+                    "action": "call-service",
+                    "service": "remote.send_command",
+                    "target": {
+                      "entity_id": "remote.tv_salon_remote"
+                    },
+                    "data": {
+                      "command": "Up"
+                    }
+                  }
+                },
+                {
+                  "type": "custom:mushroom-chips-card",
+                  "chips": []
+                },
+                {
+                  "type": "custom:button-card",
+                  "icon": "mdi:arrow-left",
+                  "tap_action": {
+                    "action": "call-service",
+                    "service": "remote.send_command",
+                    "data": {
+                      "command": "Left"
+                    }
+                  }
+                },
+                {
+                  "type": "custom:button-card",
+                  "icon": "mdi:checkbox-marked-circle",
+                  "name": "OK",
+                  "tap_action": {
+                    "action": "call-service",
+                    "service": "remote.send_command",
+                    "data": {
+                      "command": "Confirm"
+                    }
+                  }
+                },
+                {
+                  "type": "custom:button-card",
+                  "icon": "mdi:arrow-right",
+                  "tap_action": {
+                    "action": "call-service",
+                    "service": "remote.send_command",
+                    "data": {
+                      "command": "Right"
+                    }
+                  }
+                },
+                {
+                  "type": "custom:mushroom-chips-card",
+                  "chips": []
+                },
+                {
+                  "type": "custom:button-card",
+                  "icon": "mdi:arrow-down",
+                  "tap_action": {
+                    "action": "call-service",
+                    "service": "remote.send_command",
+                    "data": {
+                      "command": "Down"
+                    }
+                  }
+                },
+                {
+                  "type": "custom:mushroom-chips-card",
+                  "chips": []
+                },
+                {
+                  "type": "custom:button-card",
+                  "icon": "mdi:home",
+                  "name": "Home",
+                  "tap_action": {
+                    "action": "call-service",
+                    "service": "remote.send_command",
+                    "data": {
+                      "command": "Home"
+                    }
+                  }
+                },
+                {
+                  "type": "custom:button-card",
+                  "icon": "mdi:arrow-left-bold",
+                  "name": "Back",
+                  "tap_action": {
+                    "action": "call-service",
+                    "service": "remote.send_command",
+                    "data": {
+                      "command": "Back"
+                    }
+                  }
+                },
+                {
+                  "type": "custom:button-card",
+                  "icon": "mdi:power",
+                  "name": "Power",
+                  "tap_action": {
+                    "action": "call-service",
+                    "service": "media_player.toggle",
+                    "target": {
+                      "entity_id": "media_player.tv_salon"
+                    }
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

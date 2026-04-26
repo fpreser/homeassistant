@@ -1,0 +1,27 @@
+#####################################################################
+#                      NOTIFY
+#####################################################################
+notify_fabien:
+  alias: Notify Fabien
+  sequence:
+    - service: notify.mobile_app_iphone_16_pro_de_fabien
+      data:
+        title: '{{ title }}'
+        message: '{{ message }}'
+        data:
+          push:
+            sound:
+              name: >
+                {% if (sound is defined) and (sound != '') %}                  
+                  {{ sound }}                  
+                {% else %}
+                  "default"
+                {% endif %}
+              critical: >
+                {% if (critical is defined) and (critical != '') %}
+                  {{ critical }}
+                {% else %}
+                  0
+                {% endif %}
+            volume: 5.0
+  mode: single

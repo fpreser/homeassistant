@@ -1,0 +1,162 @@
+#####################################################################
+#     T E S L A   S M A R T   C H A R G E   -   S E N S O R S
+#####################################################################
+#
+# Calcul de l'amperage optimal pour la recharge Tesla
+# en fonction de la production solaire et de la consommation maison.
+#
+# Installation : Wall Connector Tesla branche en triphase 3x230V sans neutre.
+# Puissance triphasee :  P_total = sqrt(3) * V_ligne * I_phase  (cos phi ~= 1)
+# Conversion amps :      I_phase = P_total / (sqrt(3) * V_ligne)
+# A 28A : ~11 150 W ; a 40A (limite reseau) : ~15 930 W.
+#
+# Formule surplus :
+#   surplus_W = tesla_power - p1_active_power
+#   (p1 positif = achat reseau  → reduit le surplus)
+#   (p1 negatif = injection     → augmente le surplus)
+#   optimal_amps = surplus_W / (sqrt(3) * tension)
+#
+# tesla_power = sqrt(3) * voltage * tesla_amps
+#   tesla_amps vient de number.f_r_i_d_a_y_charge_current (commande HA)
+#   plutot que du sensor API Fleet (polling 30-60s = oscillations).
+#   Garde : switch=on ET cable=on, sinon 0 (valeur obsolete au rebranchement).
+#
+# Sensors :
+#   - Tesla Max Amp Grid  : amperage max avant disjoncteur (15 kW effectif)
+#     Formule : (grid_limit - margin - other_power) / (sqrt(3) * tension)
+#     Borne : [0, input_number.tesla_max_amps] A (defaut 28A)
+#
+#   - Tesla Optimized Amp : amperage cible solaire pur
+#     Base uniquement sur le surplus P1 (injection reseau).
+#     Pas de garde sur la production solaire : si P1 < 0, il y a
+#     forcement production (pas d'autre injecteur sur l'installation).
+#     Borne par Max Amp Grid (qui integre deja tesla_max_amps).
+#     Borne : [0, input_number.tesla_max_amps] A (defaut 28A)
+#
+# Note : sensor.solar_total est defini dans power_and_energy.yaml
+#        (le unique_id est sensor.solar_total_power mais l'entity_id
+#         reel est sensor.solar_total — derive du nom "Solar Total")
+#
+# Utilise par : automation.tesla_smart_charge_suivi_amperage
+#               automation.tesla_smart_charge_grid_protect
+#               automation.tesla_smart_charge_pause_solaire
+#               automation.tesla_smart_charge_resume_solaire
+#               automation.tesla_night_charge_grid_adjust
+#               automation.tesla_night_charge_resume_grid
+#
+#####################################################################
+
+- sensor:
+
+  - name: "Tesla Max Amp Grid"
+    unique_id: sensor.tesla_max_amp_grid
+    availability: "{{ true }}"
+    state: >-
+      {% set voltage    = states('sensor.p1_meter_3c39e7284d28_active_voltage_l1') | float(230) %}
+      {% set p1_power   = states('sensor.p1_meter_3c39e7284d28_active_power') | float(0) %}
+      {# tesla_amps : valeur commandee (HA) plutot que lue via API Fleet (polling lent) #}
+      {# Garde sur switch ET cable pour eviter une valeur obsolete au rebranchement    #}
+      {% if is_state('switch.f_r_i_d_a_y_charge', 'on')
+            and is_state('binary_sensor.f_r_i_d_a_y_charge_cable', 'on') %}
+        {% set tesla_amps = states('number.f_r_i_d_a_y_charge_current') | float(0) %}
+      {% else %}
+        {% set tesla_amps = 0 %}
+      {% endif %}
+      {% set grid_limit = states('input_number.tesla_grid_limit') | int(15500) %}
+      {% set margin     = 500 %}
+      {% set max_user_amps = states('input_number.tesla_max_amps') | int(28) %}
+      {# Wall Connector branche sur les 3 phases (3x230V sans neutre)                 #}
+      {# P_triphase = sqrt(3) * V_ligne * I_phase  (cos phi = 1 pour charge Tesla)    #}
+      {% set sqrt3 = 1.732 %}
+
+      {# Marge disponible sur le reseau avant disjoncteur                              #}
+      {# p1_power   = soutirage total triphase (inclut la Tesla)                       #}
+      {# tesla_power = ce que la Tesla consomme deja (W total, 3 phases)               #}
+      {# headroom   = limite - (soutirage sans Tesla)                                  #}
+      {% set tesla_power = sqrt3 * voltage * tesla_amps %}
+      {% set other_power = p1_power - tesla_power %}
+      {% set headroom_w  = grid_limit - margin - other_power %}
+      {# Conversion W total -> A par phase : I = P / (sqrt(3) * V_ligne)               #}
+      {# Borne haute = input_number.tesla_max_amps (limite installation configurable)  #}
+      {% set max_amps    = (headroom_w / (sqrt3 * voltage)) | round(0) | int %}
+      {{ [0, [max_amps, max_user_amps] | min] | max }}
+    unit_of_measurement: "A"
+    device_class: current
+    state_class: measurement
+    icon: mdi:transmission-tower-import
+
+  - name: "Tesla Derniere Commande Amperage"
+    unique_id: sensor.tesla_last_amp_command
+    # Renvoie le last_changed de number.f_r_i_d_a_y_charge_current en ISO.
+    # Avec device_class: timestamp, HA affiche "il y a X min" sur le dashboard.
+    # Le last_changed se met a jour uniquement si la VALEUR change vraiment
+    # (set_value 10 sur etat=10 n'incremente pas) — c'est l'info recherchee.
+    state: >-
+      {% set s = states.number.f_r_i_d_a_y_charge_current %}
+      {% if s and s.last_changed %}
+        {{ s.last_changed.isoformat() }}
+      {% endif %}
+    availability: >-
+      {{ states.number.f_r_i_d_a_y_charge_current is not none }}
+    device_class: timestamp
+    icon: mdi:timer-sand
+
+  - name: "Tesla Optimized Amp"
+    unique_id: sensor.tesla_optimized_amp
+    availability: "{{ true }}"
+    state: >-
+      {% set voltage    = states('sensor.p1_meter_3c39e7284d28_active_voltage_l1') | float(230) %}
+      {% set p1_power   = states('sensor.p1_meter_3c39e7284d28_active_power') | float(0) %}
+      {# tesla_amps : valeur commandee (HA) plutot que lue via API Fleet (polling lent) #}
+      {# Garde sur switch ET cable pour eviter une valeur obsolete au rebranchement    #}
+      {% if is_state('switch.f_r_i_d_a_y_charge', 'on')
+            and is_state('binary_sensor.f_r_i_d_a_y_charge_cable', 'on') %}
+        {% set tesla_amps = states('number.f_r_i_d_a_y_charge_current') | float(0) %}
+      {% else %}
+        {% set tesla_amps = 0 %}
+      {% endif %}
+      {% set max_grid   = states('sensor.tesla_max_amp_grid') | int(5) %}
+      {# Wall Connector branche sur les 3 phases (3x230V sans neutre) #}
+      {% set sqrt3 = 1.732 %}
+
+      {# Puissance Tesla triphasee : P = sqrt(3) * V_ligne * I_phase (W total) #}
+      {% set tesla_power = sqrt3 * voltage * tesla_amps %}
+
+      {# Surplus disponible = ce que la Tesla consomme + ce que le reseau "recupere"
+         Si p1 < 0 (injection), on a plus de marge.
+         Si p1 > 0 (soutirage), on doit reduire. #}
+      {% set surplus_w = -p1_power + tesla_power %}
+
+      {# Conversion W total -> A par phase : I = P / (sqrt(3) * V_ligne) #}
+      {% set opt = (surplus_w / (sqrt3 * voltage)) | round(0) | int %}
+      {# Double borne : surplus solaire ET limite reseau #}
+      {{ [0, [opt, max_grid] | min] | max }}
+    unit_of_measurement: "A"
+    device_class: current
+    state_class: measurement
+    icon: mdi:current-ac
+
+#####################################################################
+#       T E S L A   D E R N I E R   F E T C H   A P I
+#####################################################################
+# Trigger time_pattern (toutes les 15s) qui lit last_reported du sensor
+# batterie. last_reported (HA 2024.8+) est mis a jour a CHAQUE report du
+# coordinator Fleet API, meme si la valeur est identique — contrairement
+# a last_updated qui ne bouge que si state/attrs changent.
+#
+# Pourquoi pas un event trigger sur state_reported ? HA bloque l'abonne-
+# ment a cet event via l'event trigger (firehose, perf). Le polling
+# /15s est le compromis : feedback rapide apres "Update sans wake"
+# sans surcharger HA.
+#####################################################################
+- trigger:
+    - platform: time_pattern
+      seconds: "/15"
+  sensor:
+    - name: "Tesla Dernier Fetch API"
+      unique_id: sensor.tesla_dernier_fetch_api
+      state: >-
+        {% set s = states.sensor.f_r_i_d_a_y_niveau_de_batterie %}
+        {{ s.last_reported.isoformat() if s and s.last_reported else none }}
+      device_class: timestamp
+      icon: mdi:cloud-download

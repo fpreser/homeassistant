@@ -1,0 +1,60 @@
+#####################################################################
+#                  T R A J E T S   M A T I N
+#####################################################################
+#
+# Calcule le temps de trajet du matin pour Fabien et Gillian
+# en agrégeant les segments de route depuis l'intégration Waze.
+#
+# Trajet Fabien (3 segments) :
+#   Maison → École Emma → École Louis → Travail Fabien
+#
+# Trajet Gillian (1 segment) :
+#   Maison → Travail Gillian
+#
+# Attributs : detail par segment en minutes
+# Disponibilite : conditionnee aux sensors Waze actifs
+#
+#####################################################################
+
+  - sensor:
+      # ==============================================================
+      # Trajet matin Fabien : maison → école Emma → école Louis → travail Fabien
+      # ==============================================================
+      - name: "Temps trajet matin Fabien"
+        unique_id: sensor.temps_trajet_matin_fabien
+        icon: mdi:car-clock
+        unit_of_measurement: "min"
+        device_class: duration
+        state: >
+          {% set seg1 = state_attr('sensor.trajet_maison_ecole_emma', 'duration') | float(0) %}
+          {% set seg2 = state_attr('sensor.trajet_ecole_emma_ecole_louis', 'duration') | float(0) %}
+          {% set seg3 = state_attr('sensor.trajet_ecole_louis_travail_fabien', 'duration') | float(0) %}
+          {{ (seg1 + seg2 + seg3) | round(0) }}
+        availability: >
+          {{ state_attr('sensor.trajet_maison_ecole_emma', 'duration') is number
+             and state_attr('sensor.trajet_ecole_emma_ecole_louis', 'duration') is number
+             and state_attr('sensor.trajet_ecole_louis_travail_fabien', 'duration') is number }}
+        attributes:
+          maison_vers_emma_min: >
+            {{ state_attr('sensor.trajet_maison_ecole_emma', 'duration') | float(0) | round(0) }}
+          emma_vers_louis_min: >
+            {{ state_attr('sensor.trajet_ecole_emma_ecole_louis', 'duration') | float(0) | round(0) }}
+          louis_vers_travail_fabien_min: >
+            {{ state_attr('sensor.trajet_ecole_louis_travail_fabien', 'duration') | float(0) | round(0) }}
+
+      # ==============================================================
+      # Trajet matin Gillian : maison → travail Gillian (direct)
+      # ==============================================================
+      - name: "Temps trajet matin Gillian"
+        unique_id: sensor.temps_trajet_matin_gillian
+        icon: mdi:briefcase-clock
+        unit_of_measurement: "min"
+        device_class: duration
+        state: >
+          {% set direct = state_attr('sensor.trajet_maison_travail_gillian', 'duration') | float(0) %}
+          {{ direct | round(0) }}
+        availability: >
+          {{ state_attr('sensor.trajet_maison_travail_gillian', 'duration') is number }}
+        attributes:
+          maison_vers_travail_gillian_min: >
+            {{ state_attr('sensor.trajet_maison_travail_gillian', 'duration') | float(0) | round(0) }}

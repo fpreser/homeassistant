@@ -1,0 +1,117 @@
+#####################################################################
+#          T E M P E R A T U R E S   P I E C E S
+#####################################################################
+#
+# Expose les temperatures de chaque piece depuis les thermostats
+# Evohome/Honeywell comme des sensors independants.
+#
+# Source  : attribut current_temperature des entites climate.*
+# Integration : Honeywell Home / Resideo (evohome)
+#
+# Sensors :
+#   - Mode systeme Evohome (Auto, Away, DayOff, etc.)
+#   - Hall entree, WC bas, Salon, Salle a manger, Cuisine
+#   - Hall de nuit, Polyvalent
+#   - Ch. Emma, Ch. Louis, Bureau Fabien, Ch. Amis, Salle de bain
+#   - Temperature chauffe-eau (Viessmann Vicare)
+#
+#####################################################################
+
+- sensor:
+    - name: "Mode Système Evohome"
+      unique_id: honeywell-mode-systeme
+      state: >-
+        {{ state_attr('climate.home', 'status')['system_mode_status']['mode'] }}
+      icon: mdi:thermostat
+
+    - name: "Hall d'entrée Temperature"
+      unique_id: honeywell-1
+      state: >-
+        {{ states.climate.hall_entree.attributes['current_temperature'] | float }}
+      unit_of_measurement: "°C"
+      device_class: temperature
+
+    - name: "WC Bas Temperature"
+      unique_id: honeywell-2
+      state: >-
+        {{ states.climate.wc_bas.attributes['current_temperature'] | float }}
+      unit_of_measurement: "°C"
+      device_class: temperature
+
+    - name: "Salon Temperature"
+      unique_id: honeywell-3
+      state: >-
+        {{ states.climate.salon.attributes['current_temperature'] | float }}
+      unit_of_measurement: "°C"
+      device_class: temperature
+
+    - name: "Salle à Manger Temperature"
+      unique_id: honeywell-4
+      state: >-
+        {{ states.climate.salle_a_manger.attributes['current_temperature'] | float }}
+      unit_of_measurement: "°C"
+      device_class: temperature
+
+    - name: "Cuisine Temperature"
+      unique_id: honeywell-5
+      state: >-
+        {{ states.climate.cuisine.attributes['current_temperature'] | float }}
+      unit_of_measurement: "°C"
+      device_class: temperature
+
+    - name: "Hall de Nuit Temperature"
+      unique_id: honeywell-6
+      state: >-
+        {{ states.climate.hall_nuit.attributes['current_temperature'] | float }}
+      unit_of_measurement: "°C"
+      device_class: temperature
+
+    - name: "Polyvalent Temperature"
+      unique_id: honeywell-7
+      state: >-
+        {{ states.climate.polyvalent.attributes['current_temperature'] | float }}
+      unit_of_measurement: "°C"
+      device_class: temperature
+
+    - name: "Chambre Emma Temperature"
+      unique_id: honeywell-8
+      state: >-
+        {{ states.climate.ch_emma.attributes['current_temperature'] | float }}
+      unit_of_measurement: "°C"
+      device_class: temperature
+
+    - name: "Chambre Louis Temperature"
+      unique_id: honeywell-9
+      state: >-
+        {{ states.climate.ch_louis.attributes['current_temperature'] | float }}
+      unit_of_measurement: "°C"
+      device_class: temperature
+
+    - name: "Bureau Fabien Temperature"
+      unique_id: honeywell-10
+      state: >-
+        {{ states.climate.bureau_fabien.attributes['current_temperature'] | float }}
+      unit_of_measurement: "°C"
+      device_class: temperature
+
+    - name: "Chambre Amis Temperature"
+      unique_id: honeywell-11
+      state: >-
+        {{ states.climate.chambre_amis.attributes['current_temperature'] | float }}
+      unit_of_measurement: "°C"
+      device_class: temperature
+
+    - name: "Salle de Bain Temperature"
+      unique_id: honeywell-12
+      state: >-
+        {{ states.climate.salle_de_bain.attributes['current_temperature'] | float }}
+      unit_of_measurement: "°C"
+      device_class: temperature
+
+    - name: "Temperature Chauffe-eau"
+      unique_id: temp-chauffe-eau
+      state: >-
+        {{ state_attr('water_heater.vicare_water', 'current_temperature') | float(0) | round(1) }}
+      unit_of_measurement: "°C"
+      device_class: temperature
+      icon: mdi:water-boiler

@@ -1,0 +1,19 @@
+# In your Home Assistant configuration.yaml or a separate file included in your configuration
+frontend:
+  themes:
+    borderless:
+      # Remove borders from all cards
+      ha-card-border-radius: "0px"
+      ha-card-box-shadow: "none"
+      # Remove borders from header
+      header-height: "0px"
+      # Remove divider lines
+      divider-color: "rgba(0, 0, 0, 0)"
+      # Make background transparent
+      card-background-color: "rgba(0, 0, 0, 0)"
+      # Remove spacing between cards
+      masonry-view-card-margin: "0px"
+      # Additional customizations to ensure complete border removal
+      paper-card-background-color: "rgba(0, 0, 0, 0)"
+      paper-listbox-background-color: "rgba(0, 0, 0, 0)"
+      paper-dialog-background-color: "rgba(0, 0, 0, 0)"

@@ -1,0 +1,286 @@
+#####################################################################
+#          P U I S S A N C E   &   E N E R G I E
+#####################################################################
+#
+# Sensors de puissance instantanee et d'energie aggreges.
+# Format moderne template (HA 2025.12+).
+#
+# Sources :
+#   - P1 Meter HomeWizard  : soutirage / injection reseau
+#   - Onduleurs SMA x2     : production solaire (sb5_0_1av_41_*)
+#   - Prises Shelly/Nous   : consommation par circuit
+#   - Fleet API Tesla      : charge vehicule
+#
+# Puissances (W) :
+#   - Lights Power    : eclairage (21 circuits Shelly)
+#   - Plugs Power     : prises mesurees (VMC, PC, TV, UPS, pompe)
+#   - Heating Power   : chauffage electrique (SDB, douche, grenier)
+#   - Electro Power   : electromenager buanderie (seche-linge + lav.)
+#   - Tesla Power     : charge vehicule
+#   - Home Power      : consommation totale (reseau + solaire)
+#   - Unmanaged Power : delta non affecte a un circuit connu
+#
+# Energie (kWh) :
+#   - Consommation Nette  : delta P1 vs releve officiel
+#   - Releves officiels HP/HC injection/prelevement (valeurs figees)
+#
+# Utilitaires :
+#   - Tension Onduleur 1 & 2 (fallback 230V si unavailable)
+#   - Tesla Charging Amp     (0 si non en charge)
+#   - Date dernier releve officiel
+#
+#####################################################################
+
+- sensor:
+    
+  - name: "Lights Power"
+    unique_id: sensor.power_lights
+    default_entity_id: sensor.power_lights
+    state: >-
+      {{
+        [
+          'sensor.jardin_passage_light_power',
+          'sensor.terasse_light_power',
+          'sensor.terasse_bois_light_power',
+          'sensor.salon_table_light_power',
+          'sensor.salon_exterieur_light_power',
+          'sensor.salon_prises_power',
+          'sensor.salle_a_manger_exterieur_light_power',
+          'sensor.salle_a_manger_table_light_power',
+          'sensor.cuisine_passage_light_power',
+          'sensor.cuisine_ilot_light_power',
+          'sensor.cuisine_evier_light_power',
+          'sensor.hall_d_entree_porte_entree_light_power',
+          'sensor.hall_d_entree_escalier_light_power',
+          'sensor.hall_d_entree_light_power',
+          'sensor.hall_de_nuit_veilleuses_escalier_light_power',
+          'sensor.hall_de_nuit_light_power',
+          'sensor.escalier_pallier_2eme_light_power',
+          'sensor.grenier_light_power',
+          'sensor.chambre_grenier_entree_light_power',
+          'sensor.chambre_grenier_principal_light_power',
+          'sensor.salle_de_douche_light_power'
+        ] | map('states') | map('float', 0) | sum | round(1)
+      }}
+    unit_of_measurement: "W"
+    device_class: power
+    state_class: measurement
+    icon: mdi:lightbulb-group
+
+  - name: "Date dernier relevé officiel"
+    unique_id: sensor.date_dernier_releve_officiel
+    default_entity_id: sensor.date_dernier_releve_officiel
+    state: "2025-01-01"
+    icon: mdi:calendar-check
+
+  - name: "Officiel Heures pleines (Injection)"
+    unique_id: sensor.officiel_heures_pleines_injection
+    default_entity_id: sensor.officiel_heures_pleines_injection
+    state: 27308
+    unit_of_measurement: "kWh"
+    device_class: energy
+    state_class: total
+    icon: mdi:transmission-tower-export
+
+  - name: "Officiel Heures creuses (Injection)"
+    unique_id: sensor.officiel_heures_creuses_injection
+    default_entity_id: sensor.officiel_heures_creuses_injection
+    state: 9545
+    unit_of_measurement: "kWh"
+    device_class: energy
+    state_class: total
+    icon: mdi:transmission-tower-export
+
+  - name: "Officiel Heures pleines (Prélèvement)"
+    unique_id: sensor.officiel_heures_pleines_prelevement
+    default_entity_id: sensor.officiel_heures_pleines_prelevement
+    state: 16049
+    unit_of_measurement: "kWh"
+    device_class: energy
+    state_class: total
+    icon: mdi:transmission-tower-import
+
+  - name: "Officiel Heures creuses (Prélèvement)"
+    unique_id: sensor.officiel_heures_creuses_prelevement
+    default_entity_id: sensor.officiel_heures_creuses_prelevement
+    state: 22066
+    unit_of_measurement: "kWh"
+    device_class: energy
+    state_class: total
+    icon: mdi:transmission-tower-import
+
+  - name: "Consommation Nette"
+    unique_id: sensor.net_energy
+    default_entity_id: sensor.net_energy
+    state: >-
+      {% set import_hp = states('sensor.p1_meter_3c39e7284d28_total_power_import_t1') | float(0) %}
+      {% set import_hc = states('sensor.p1_meter_3c39e7284d28_total_power_import_t2') | float(0) %}
+      {% set export_hp = states('sensor.p1_meter_3c39e7284d28_total_power_export_t1') | float(0) %}
+      {% set export_hc = states('sensor.p1_meter_3c39e7284d28_total_power_export_t2') | float(0) %}
+      {% set off_import_hp = states('sensor.officiel_heures_pleines_prelevement') | float(0) %}
+      {% set off_import_hc = states('sensor.officiel_heures_creuses_prelevement') | float(0) %}
+      {% set off_export_hp = states('sensor.officiel_heures_pleines_injection') | float(0) %}
+      {% set off_export_hc = states('sensor.officiel_heures_creuses_injection') | float(0) %}
+      {{
+        (
+          (import_hp - off_import_hp) + 
+          (import_hc - off_import_hc) - 
+          (export_hp - off_export_hp) - 
+          (export_hc - off_export_hc)
+        ) | round(2)
+      }}
+    unit_of_measurement: "kWh"
+    device_class: energy
+    state_class: total
+    icon: mdi:home-lightning-bolt
+
+  - name: "Tension Onduleur 1"
+    unique_id: sensor.sb5_0_1av_41_208_voltage_l1_safe
+    default_entity_id: sensor.sb5_0_1av_41_208_voltage_l1_safe
+    state: >-
+      {{ states('sensor.sb5_0_1av_41_208_voltage_l1') | float(default=230) | round(1) }}
+    unit_of_measurement: "V"
+    device_class: voltage
+    state_class: measurement
+    icon: mdi:flash
+
+  - name: "Tension Onduleur 2"
+    unique_id: sensor.sb5_0_1av_41_345_voltage_l1_safe
+    default_entity_id: sensor.sb5_0_1av_41_345_voltage_l1_safe
+    state: >-
+      {{ states('sensor.sb5_0_1av_41_345_voltage_l1') | float(default=230) | round(1) }}
+    unit_of_measurement: "V"
+    device_class: voltage
+    state_class: measurement
+    icon: mdi:flash
+
+  - name: "Tesla Charging Amp"
+    unique_id: sensor.tesla_current_charging_amp
+    default_entity_id: sensor.tesla_current_charging_amp
+    state: >-
+      {% set amp = states('sensor.f_r_i_d_a_y_charger_current') | int(0) %}
+      {{ amp if amp > 0 else 0 }}
+    unit_of_measurement: "A"
+    device_class: current
+    state_class: measurement
+    icon: mdi:current-ac
+
+  - name: "Plugs Power"
+    unique_id: sensor.power_plugs
+    default_entity_id: sensor.power_plugs
+    state: >-
+      {{
+        (
+          states('sensor.grenier_vmc_power') | float(0) +
+          states('sensor.bureau_fabien_pc_power') | float(0) +
+          states('sensor.prise_ups_power') | float(0) +
+          states('sensor.salon_prise_tv_power') | float(0) +
+          states('sensor.jardin_pompe_a_eau_power') | float(0)
+        ) | round(1)
+      }}
+    unit_of_measurement: "W"
+    device_class: power
+    state_class: measurement
+    icon: mdi:power-plug
+
+  - name: "Tesla Power"
+    unique_id: sensor.power_tesla
+    default_entity_id: sensor.power_tesla
+    # Tesla Fleet expose charger_power en kW (0 a l'arret) -> conversion W.
+    # Garde unavailable/unknown pour eviter un 0 trompeur quand la voiture
+    # est hors ligne (Fleet API endormi).
+    state: >-
+      {% set p = states('sensor.f_r_i_d_a_y_charger_power') %}
+      {% if p in ['unavailable', 'unknown', 'none', None] %}
+        0
+      {% else %}
+        {{ (p | float(0) * 1000) | round(1) }}
+      {% endif %}
+    unit_of_measurement: "W"
+    device_class: power
+    state_class: measurement
+    icon: mdi:car-electric
+
+  - name: "Solar Total"
+    unique_id: sensor.solar_total_power
+    default_entity_id: sensor.solar_total_power
+    state: >-
+      {{
+        (
+          states('sensor.sb5_0_1av_41_208_grid_power') | float(0) +
+          states('sensor.sb5_0_1av_41_345_grid_power') | float(0)
+        ) | round(0) | int
+      }}
+    unit_of_measurement: "W"
+    device_class: power
+    state_class: measurement
+    icon: mdi:solar-panel
+
+  - name: "Home Power"
+    unique_id: sensor.power_home
+    default_entity_id: sensor.power_home
+    state: >-
+      {{
+        (
+          states('sensor.p1_meter_3c39e7284d28_active_power') | float(0) +
+          states('sensor.sb5_0_1av_41_208_grid_power') | float(0) +
+          states('sensor.sb5_0_1av_41_345_grid_power') | float(0)
+        ) | round(1)
+      }}
+    unit_of_measurement: "W"
+    device_class: power
+    state_class: measurement
+    icon: mdi:home-lightning-bolt-outline
+
+  - name: "Heating Power"
+    unique_id: sensor.power_heating
+    default_entity_id: sensor.power_heating
+    state: >-
+      {{
+        (
+          states('sensor.salle_de_bain_radiateur_power') | float(0) +
+          states('sensor.salle_de_douche_radiateur_power') | float(0) +
+          states('sensor.chambre_grenier_climatisation_power') | float(0)
+        ) | round(1)
+      }}
+    unit_of_measurement: "W"
+    device_class: power
+    state_class: measurement
+    icon: mdi:radiator
+
+  - name: "Electro Power"
+    unique_id: sensor.power_electro
+    default_entity_id: sensor.power_electro
+    # A completer si d'autres appareils exposent un sensor _power :
+    # + states('sensor.dishwasher_power') | float(0)
+    # + states('sensor.prise_nas_power') | float(0)
+    state: >-
+      {{
+        (
+          states('sensor.buanderie_seche_linge_power') | float(0) +
+          states('sensor.buanderie_machine_a_laver_power') | float(0)
+        ) | round(1)
+      }}
+    unit_of_measurement: "W"
+    device_class: power
+    state_class: measurement
+    icon: mdi:washing-machine
+
+  - name: "Unmanaged Power"
+    unique_id: sensor.power_unmanaged
+    default_entity_id: sensor.power_unmanaged
+    state: >-
+      {{
+        (
+          states('sensor.power_home') | float(0) -
+          states('sensor.power_lights') | float(0) -
+          states('sensor.power_heating') | float(0) -
+          states('sensor.power_electro') | float(0) -
+          states('sensor.power_plugs') | float(0) -
+          states('sensor.power_tesla') | float(0)
+        ) | round(1)
+      }}
+    unit_of_measurement: "W"
+    device_class: power
+    state_class: measurement
+    icon: mdi:help-rhombus

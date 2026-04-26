@@ -1,0 +1,41 @@
+# Icones personnalisees
+
+# Tesla Smart Charge
+automation.tesla_smart_charge_refresh_donnees:
+  icon: mdi:car-electric
+automation.tesla_smart_charge_activation:
+  icon: mdi:car-electric
+automation.tesla_smart_charge_activation_en_attente:
+  icon: mdi:car-electric
+automation.tesla_smart_charge_desactivation:
+  icon: mdi:car-electric
+automation.tesla_smart_charge_demarrage_auto:
+  icon: mdi:car-electric
+automation.tesla_smart_charge_arret_auto:
+  icon: mdi:car-electric
+automation.tesla_smart_charge_suivi_amperage:
+  icon: mdi:car-electric
+automation.tesla_smart_charge_pause_solaire:
+  icon: mdi:car-electric
+automation.tesla_smart_charge_resume_solaire:
+  icon: mdi:car-electric
+automation.tesla_smart_charge_protection_reseau:
+  icon: mdi:car-electric
+
+# Tesla Night Charge
+automation.tesla_night_charge_evaluation:
+  icon: mdi:car-electric
+automation.tesla_night_charge_demarrage:
+  icon: mdi:car-electric
+automation.tesla_night_charge_soc_atteint:
+  icon: mdi:car-electric
+automation.tesla_night_charge_suivi_reseau:
+  icon: mdi:car-electric
+automation.tesla_night_charge_fin_hc:
+  icon: mdi:car-electric
+automation.tesla_night_charge_resume_grid:
+  icon: mdi:car-electric
+
+# Awtrix Tesla
+automation.awtrix_tesla_charging:
+  icon: mdi:car-electric

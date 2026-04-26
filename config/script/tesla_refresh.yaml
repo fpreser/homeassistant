@@ -1,0 +1,59 @@
+#####################################################################
+#                   T E S L A   R E F R E S H
+#####################################################################
+#
+# Reveille la Tesla et force la mise a jour des entites cles.
+#
+# Utilise par :
+#   - automation.tesla_smart_charge_refresh
+#   - automation.tesla_smart_charge_refresh_wifi
+#   - automation.tesla_smart_charge_activation
+#   - automation.tesla_smart_charge_start
+#   - automation.tesla_smart_charge_stop
+#   - automation.tesla_night_charge_evaluation
+#   - automation.tesla_night_charge_start
+#
+#####################################################################
+tesla_refresh:
+  alias: Tesla - Refresh donnees
+  sequence:
+    - service: button.press
+      target:
+        entity_id: button.f_r_i_d_a_y_wake
+    - delay:
+        seconds: 15
+    - service: homeassistant.update_entity
+      target:
+        entity_id:
+          - sensor.f_r_i_d_a_y_niveau_de_batterie
+          - sensor.f_r_i_d_a_y_vitesse_de_charge
+          - sensor.f_r_i_d_a_y_charger_current
+  mode: single
+
+#####################################################################
+#                T E S L A   U P D A T E   N O   W A K E
+#####################################################################
+# Force un poll du coordinator Fleet API sans wake.
+# Utile quand la voiture est deja en charge ou en ligne — recupere les
+# vraies valeurs sans consommer la batterie 12V.
+# Si la voiture dort, le coordinator retourne le cache (no-op).
+#
+# Utilise par :
+#   - bouton "Update sans Wake" du dashboard Tesla
+#   - automation.tesla_smart_charge_refresh_load_jump
+#####################################################################
+tesla_update_no_wake:
+  alias: Tesla - Update sans wake
+  sequence:
+    - service: homeassistant.update_entity
+      target:
+        entity_id:
+          - sensor.f_r_i_d_a_y_niveau_de_batterie
+          - sensor.f_r_i_d_a_y_vitesse_de_charge
+          - sensor.f_r_i_d_a_y_charger_current
+          - sensor.f_r_i_d_a_y_charger_power
+          - number.f_r_i_d_a_y_charge_limit
+          - number.f_r_i_d_a_y_charge_current
+          - binary_sensor.f_r_i_d_a_y_charge_cable
+          - binary_sensor.f_r_i_d_a_y_status
+  mode: single

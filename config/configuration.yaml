@@ -1,0 +1,229 @@
+# configuration.yaml
+
+# Core Configuration
+default_config:
+
+homeassistant:
+  customize: !include customize.yaml
+
+# === INPUT HELPERS ===
+input_boolean:
+  tesla_night_charge_pending:
+    name: "Tesla charge nocturne programmee"
+    icon: mdi:battery-clock
+
+# Helpers Tesla : pas de cle `initial` = HA restaure la derniere valeur
+# au redemarrage (modif dashboard persiste). Les fallbacks dans les
+# templates et automations restent en place pour le tout premier boot.
+input_number:
+  tesla_soc_cible:
+    name: "Tesla SoC cible minimum"
+    min: 20
+    max: 90
+    step: 5
+    unit_of_measurement: "%"
+    icon: mdi:battery-charging-50
+
+  tesla_soc_solaire_max:
+    name: "Tesla SoC max solaire"
+    min: 50
+    max: 100
+    step: 5
+    unit_of_measurement: "%"
+    icon: mdi:white-balance-sunny
+
+  tesla_seuil_solaire:
+    name: "Seuil prevision solaire suffisante"
+    min: 10
+    max: 60
+    step: 5
+    unit_of_measurement: "kWh"
+    icon: mdi:solar-power-variant
+
+  tesla_max_amps:
+    name: "Tesla amperage max installation"
+    min: 5
+    max: 32
+    step: 1
+    unit_of_measurement: "A"
+    icon: mdi:current-ac
+
+  tesla_grid_limit:
+    name: "Limite puissance compteur"
+    min: 5000
+    max: 20000
+    step: 500
+    unit_of_measurement: "W"
+    icon: mdi:transmission-tower-import
+
+# Sert la clé publique Tesla Fleet API à /.well-known/appspecific/...
+tesla_pubkey:
+
+# Text to Speech
+tts:
+  - platform: google_translate
+    language: "fr"
+    cache: true
+
+# Logging
+logger:
+  default: warning
+  logs:
+    homeassistant.components.command_line: info    
+
+# Recorder
+recorder:
+  auto_purge: true
+  purge_keep_days: 10
+  commit_interval: 5
+  exclude:
+    entities:
+      # Existant
+      - automation.awtrix_consommation_nette
+      - sensor.current_app
+      - event.hall_d_entree_remote_controller_hall_d_entree_230_button_2
+      # Tensions onduleurs (haute fréquence, peu utile en historique)
+      - sensor.tension_onduleur_1
+      - sensor.tension_onduleur_2
+      # Capteurs Tesla intermédiaires (valeurs calculées, pas d'historique utile)
+      - sensor.tesla_max_amp_grid
+      - sensor.tesla_optimized_amp
+      - sensor.tesla_heures_creuses
+      - sensor.tesla_charge_nocturne_necessaire
+      - sensor.tesla_duree_charge_nocturne_estimee
+      # Trafic routier (éphémère)
+      - sensor.temps_trajet_matin_fabien
+      - sensor.temps_trajet_matin_gillian
+      # Métadonnées gaz (quasi-statiques, inutile en historique continu)
+      - sensor.timestamp_extraction
+      - sensor.date_releve
+
+# Logbook
+logbook:
+  exclude:
+    entities:
+      - automation.awtrix_consommation_nette
+      - sensor.current_app
+
+# HomeKit filter
+homekit:
+  filter:
+    include_domains:
+      - light
+      - switch      
+      - climate
+      - cover      
+    exclude_domains:
+      - sensor
+      - binary_sensor
+      - button
+      - device_tracker
+      - media_player.*
+    exclude_entities:
+      - camera.tony_map
+
+# Integrations
+evohome:
+  username: !secret evohome_username
+  password: !secret evohome_password
+  scan_interval: 180
+
+spotcast:
+  sp_dc: !secret primary_sp_dc
+  sp_key: !secret primary_sp_key
+  country: BE
+  accounts:
+    gillie:
+      sp_dc: !secret gillian_sp_dc
+      sp_key: !secret gillian_sp_key
+    lou_p:
+      sp_dc: !secret louis_sp_dc
+      sp_key: !secret louis_sp_key
+    emma_preser:
+      sp_dc: !secret emma_sp_dc
+      sp_key: !secret emma_sp_key
+
+emulated_roku:
+  servers:
+    - name: Home Assistant
+      listen_port: 8060
+
+python_script:
+
+# Command line sensors
+command_line:
+  - sensor:
+      name: "Antargaz"
+      json_attributes:
+        - client
+        - solde_restant
+        - montant_echu
+        - derniere_facture
+        - adresse
+        - numero_citerne
+        - niveau
+        - date_lecture
+        - date_derniere_livraison
+        - volume_citerne
+        - type_gaz
+        - timestamp
+      value_template: "{{ value_json.niveau }}"
+      command: "python3 /config/python_scripts/poll_antargazremote.py"
+      scan_interval: 86400
+      command_timeout: 240
+      unique_id: 'antargaz'
+
+  - sensor:
+      name: "Prochaines Poubelles"
+      json_attributes:
+        - organiques
+        - ordures
+        - pmc
+        - papier
+        - timestamp
+      value_template: >-
+        {% set dates = [value_json.organiques, value_json.ordures, value_json.pmc, value_json.papier] | reject('none') | list %}
+        {{ dates | min | default('Aucune') }}
+      command: "python3 /config/python_scripts/collecte_poubelles.py"
+      scan_interval: 86400
+      command_timeout: 180
+      unique_id: 'prochaines_poubelles'
+
+# Statistics sensors
+# P1 Power Delta 2min : variation de la conso maison sur 2 min.
+# Permet de detecter un saut soudain (demarrage charge Tesla non encore
+# vu par la Fleet API par ex.) sans dependre du seuil absolu.
+# Utilise par : automation.tesla_smart_charge_refresh_load_jump
+sensor:
+  - platform: statistics
+    name: "P1 Power Delta 2min"
+    unique_id: p1_power_delta_2min
+    entity_id: sensor.p1_meter_3c39e7284d28_active_power
+    state_characteristic: change
+    sampling_size: 200
+    max_age:
+      minutes: 2
+
+http:
+  server_port: 8123
+  use_x_forwarded_for: false
+  trusted_proxies: []
+  ip_ban_enabled: false
+
+prometheus:
+  namespace: hass
+  filter:
+    include_domains:
+      - light
+      - binary_sensor
+      - sensor
+
+# Automation and Scripting
+automation: !include automations.yaml
+automation manual: !include_dir_merge_list automation
+script: !include scripts.yaml
+script manual: !include_dir_merge_named script
+scene: !include scenes.yaml
+
+# === TEMPLATE SENSORS MODERNES (format 2025.12+) ===
+template: !include_dir_merge_list template_sensors

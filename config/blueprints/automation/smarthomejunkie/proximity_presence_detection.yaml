@@ -1,0 +1,117 @@
+##########
+# This Blueprint is created by Smart Home Junkie
+# (c) copyright 2024 by Smart Home Junkie. You may not copy, reproduce, distribute, transmit, modify, create derivative works,
+# or in any other way exploit any part of copyrighted material without the prior written permission from Smart Home Junkie
+#
+# Installation instructions:
+# - Copy this file to your Home Assistant Server in the folder: /config/blueprints/smarthomejunkie
+# - Go to developer Tools -> Yaml tab
+# - Click on Automations
+# - You can now create an automation based on this blueprint
+##########
+
+blueprint:
+  name: Proximity Presence Detection
+  description: Switch Heating Automatically based on if whether someone is home or not
+  domain: automation
+  author: Smart Home Junkie
+  input:
+    nearest_distance:
+      name: Nearest Distance
+      description: Select the proximity nearest distance entity
+      selector:
+        entity:
+          filter:
+            - integration: proximity
+            - domain: sensor
+    nearest_direction_of_travel:
+      name: Nearest Direction Of Travel
+      description: Select the proximity nearest direction of travel entity
+      selector:
+        entity:
+          filter:
+            - integration: proximity
+            - domain: sensor
+            - device_class: enum
+    home_zone:
+      name: Home Zone
+      description: Choose your Home Zone
+      selector:
+        entity:
+          filter:
+            - domain: zone
+    radius:
+      name: Radius
+      description: Enter the radius in the unit of measurement of your distance entity
+      default: 5000
+    climate_entities:
+      name: Climate entities
+      description: Select your climate entities
+      selector:
+        entity:
+          filter:
+            - domain: climate
+          multiple: true
+    away_temperature:
+      name: Away temperature
+      description: Enter the climate temperature when nobody is home
+      default: 15
+    home_temperature:
+      name: Home temperature
+      description: Enter the climate temperature when someone is home
+      default: 18
+
+mode: single
+
+triggers:
+  - trigger: numeric_state
+    entity_id: !input nearest_distance
+    below: !input radius
+    id: Approaching
+  - trigger: numeric_state
+    entity_id: !input home_zone
+    above: 0
+    id: Approaching
+  - trigger: state
+    entity_id: !input home_zone
+    to: "0"
+    id: Leaving
+  - trigger: numeric_state
+    entity_id: !input nearest_distance
+    above: !input radius
+    id: Leaving
+
+actions:
+  - choose:
+      - conditions:
+          - condition: and
+            conditions:
+              - condition: trigger
+                id:
+                  - Approaching
+              - condition: or
+                conditions:
+                  - condition: state
+                    entity_id: !input nearest_direction_of_travel
+                    state: towards
+                  - condition: state
+                    entity_id: !input nearest_direction_of_travel
+                    state: arrived
+        sequence:
+          - action: climate.set_temperature
+            metadata: {}
+            data:
+              temperature: !input home_temperature
+            target:
+              entity_id: !input climate_entities
+      - conditions:
+          - condition: trigger
+            id:
+              - Leaving
+        sequence:
+          - action: climate.set_temperature
+            metadata: {}
+            data:
+              temperature: !input away_temperature
+            target:
+              entity_id: !input climate_entities

@@ -1,0 +1,881 @@
+#####################################################################
+#                       S M A R T      C H A R G E
+#####################################################################
+#
+# Recharge intelligente de la Tesla Model Y "F.R.I.D.A.Y"
+# Adapte l'amperage en temps reel au surplus solaire.
+#
+# Concepts :
+#   input_boolean.tesla_smart_charge = MODE actif (intention)
+#   switch.f_r_i_d_a_y_charge        = charge en cours (etat reel)
+#
+# Contenu :
+#   0. Refresh donnees       (arrivee a la maison via Fleet API)
+#  0b. Refresh donnees WiFi  (connexion WiFi via Netgear)
+#  0c. Refresh sur saut conso (delta P1 > 3kW + voiture awake + API dit pas charge)
+#  0d. Refresh sur chute conso (delta P1 < -3kW + voiture home/awake + API dit charge)
+#   1. Activation du mode    (toggle ON + surplus solaire)
+#  1b. Activation en attente (toggle ON sans soleil → notif)
+#   2. Desactivation du mode (toggle OFF)
+#   3. Demarrage auto        (cable, solaire, charge manuelle)
+#   4. Arret auto            (debranche, arret manuel, charge finie)
+#   5. Suivi amperage        (toutes les 2 min)
+#   6. Pause solaire         (surplus < 5A pendant 3 min)
+#   7. Resume solaire        (surplus >= 5A pendant 3 min)
+#   8. Protection reseau     (soutirage > tesla_grid_limit - 500W marge)
+#   9. Reset limite SoC max  (cable debranche ou nuit tombee)
+#  10. Sync helper SoC max   (modification utilisateur depuis le dashboard)
+#  11. Refresh apres amps    (poll Fleet API 10s apres set ampérage)
+#
+# Helpers de limite de charge :
+#   - input_number.tesla_soc_solaire_max : SoC max en mode solaire (defaut 80%)
+#     Force au demarrage des autos 1 et 3, restaure a la fin (auto 9).
+#   - input_number.tesla_soc_cible       : SoC cible en HC (defaut 50%)
+#     Force au demarrage HC, restaure a tesla_soc_solaire_max a la fin HC.
+#
+#####################################################################
+
+#####################################################################
+# 0. REFRESH DONNEES (arrivee a la maison)
+#####################################################################
+# Quand la Tesla arrive a la maison, force un refresh des donnees
+# Fleet API pour avoir des valeurs fraiches (batterie, cable, etc.).
+#####################################################################
+- id: 'tesla_smart_charge_refresh'
+  alias: Tesla Smart Charge - Refresh donnees
+
+  trigger:
+    - platform: state
+      entity_id: device_tracker.f_r_i_d_a_y_location
+      to: home
+  action:
+    - delay:
+        minutes: 3
+    - service: script.tesla_refresh
+  mode: single
+
+#####################################################################
+# 0b. REFRESH DONNEES (connexion WiFi via Netgear)
+#####################################################################
+# Quand la Tesla se connecte au WiFi maison (detection Netgear),
+# force un refresh des donnees Fleet API. Plus rapide que le
+# device_tracker Fleet API (polling 30-60 s) — declenche un refresh
+# au plus tot apres l'entree au garage.
+# Delai 1 min 30 : laisse le temps a la voiture de stabiliser sa
+# connexion WiFi avant de reveiller l'API.
+#####################################################################
+- id: 'tesla_smart_charge_refresh_wifi'
+  alias: Tesla Smart Charge - Refresh donnees (WiFi)
+
+  trigger:
+    - platform: state
+      entity_id: device_tracker.tesla_y
+      to: home
+  action:
+    - delay:
+        minutes: 1
+        seconds: 30
+    - service: script.tesla_refresh
+  mode: single
+
+#####################################################################
+# 0c. REFRESH SUR SAUT DE CONSO (desync charge)
+#####################################################################
+# Detecte un demarrage de charge non encore reporte par la Fleet API :
+# si la conso maison saute (delta > 3 kW sur 2 min) ALORS QUE
+#   - la voiture est awake (status on)
+#   - l'API dit qu'on ne charge pas (charging != charging/starting)
+# alors c'est probablement un desync. On force un poll Fleet API
+# (sans wake puisque la voiture est deja online).
+#
+# Pas de condition sur charge_cable : ce sensor vient aussi de la
+# Fleet API et peut etre stale — c'est justement ce qu'on cherche
+# a rafraichir.
+# Le sensor sensor.p1_power_delta_2min est defini dans configuration.yaml.
+#####################################################################
+- id: 'tesla_smart_charge_refresh_load_jump'
+  alias: Tesla Smart Charge - Refresh sur saut conso
+
+  trigger:
+    - platform: numeric_state
+      entity_id: sensor.p1_power_delta_2min
+      above: 3000
+  condition:
+    - condition: state
+      entity_id: binary_sensor.f_r_i_d_a_y_status
+      state: 'on'
+    - condition: template
+      value_template: >-
+        {{ states('sensor.f_r_i_d_a_y_charging') not in ['charging', 'starting'] }}
+  action:
+    - service: script.tesla_update_no_wake
+  mode: single
+
+#####################################################################
+# 0d. REFRESH SUR CHUTE DE CONSO (desync charge arretee)
+#####################################################################
+# Symetrique de 0c : detecte un arret de charge non encore reporte par
+# la Fleet API. Si la conso maison chute (delta < -3 kW sur 2 min)
+# ALORS QUE
+#   - la voiture est awake (status on)
+#   - la voiture est a la maison (location home)
+#   - l'API dit qu'on charge (charging in [charging, starting])
+# alors c'est probablement un desync. On force un poll Fleet API.
+#
+# Difference avec 0c : ici on ajoute la condition "location home"
+# car une chute de conso peut venir d'autre chose (gros appareil
+# qui s'arrete) — la condition "API dit charge" + "location home"
+# limite les faux positifs.
+#####################################################################
+- id: 'tesla_smart_charge_refresh_load_drop'
+  alias: Tesla Smart Charge - Refresh sur chute conso
+
+  trigger:
+    - platform: numeric_state
+      entity_id: sensor.p1_power_delta_2min
+      below: -3000
+  condition:
+    - condition: state
+      entity_id: binary_sensor.f_r_i_d_a_y_status
+      state: 'on'
+    - condition: state
+      entity_id: device_tracker.f_r_i_d_a_y_location
+      state: home
+    - condition: template
+      value_template: >-
+        {{ states('sensor.f_r_i_d_a_y_charging') in ['charging', 'starting'] }}
+  action:
+    - service: script.tesla_update_no_wake
+  mode: single
+
+#####################################################################
+# 1. ACTIVATION DU MODE
+#####################################################################
+# Toggle ON : demarre la charge seulement si les conditions sont
+# reunies (dont surplus solaire >= 5A). Sinon le mode est actif
+# et les triggers auto (3) prendront le relais quand le soleil arrive.
+#####################################################################
+- id: 'tesla_smart_charge_activation'
+  alias: Tesla Smart Charge - Activation
+
+  trigger:
+    - platform: state
+      entity_id: input_boolean.tesla_smart_charge
+      to: 'on'
+  condition:
+    - condition: state
+      entity_id: input_boolean.tesla_night_charge_pending
+      state: 'off'
+    - condition: state
+      entity_id: device_tracker.f_r_i_d_a_y_location
+      state: home
+    - condition: state
+      entity_id: binary_sensor.f_r_i_d_a_y_charge_cable
+      state: 'on'
+    - condition: state
+      entity_id: switch.f_r_i_d_a_y_charge
+      state: 'off'
+    - condition: template
+      value_template: >-
+        {{ states('sensor.f_r_i_d_a_y_niveau_de_batterie') | int
+           < (states('number.f_r_i_d_a_y_charge_limit') | int - 1) }}
+    - condition: numeric_state
+      entity_id: sensor.tesla_optimized_amp
+      above: 4
+  action:
+    - service: script.tesla_refresh
+    - delay:
+        seconds: 5
+    - service: input_boolean.turn_off
+      target:
+        entity_id: input_boolean.awtrix_toggle_tesla
+    - delay:
+        seconds: 3
+    # Force la limite Tesla a la valeur du helper SoC max solaire
+    # avant chaque demarrage : garantit que la limite suit toujours
+    # la preference utilisateur, meme apres une charge HC qui a pu
+    # la modifier (filet en cas de defaut des autos NightCharge 2/4/5).
+    - service: number.set_value
+      target:
+        entity_id: number.f_r_i_d_a_y_charge_limit
+      data:
+        value: "{{ states('input_number.tesla_soc_solaire_max') | int(80) }}"
+    - service: switch.turn_on
+      target:
+        entity_id: switch.f_r_i_d_a_y_charge
+    - service: number.set_value
+      target:
+        entity_id: number.f_r_i_d_a_y_charge_current
+      data:
+        value: '5'
+    - service: script.notify_fabien
+      data:
+        title: Tesla Smart Charge
+        message: >-
+          {% set bat = states('sensor.f_r_i_d_a_y_niveau_de_batterie') | int(0) %}
+          {% set limit = states('number.f_r_i_d_a_y_charge_limit') | int(0) %}
+          {% set solaire = states('sensor.solar_total') | int(0) %}
+          Smart Charge active. Batterie : {{ bat }}% (limite {{ limit }}%).
+          Production solaire : {{ solaire }}W.
+  mode: single
+
+#####################################################################
+# 1b. ACTIVATION SANS SOLEIL (notification)
+#####################################################################
+# Toggle ON mais surplus insuffisant : notifie que le mode est actif
+# et que la charge demarrera automatiquement quand le soleil arrive.
+#####################################################################
+- id: 'tesla_smart_charge_activation_waiting'
+  alias: Tesla Smart Charge - Activation en attente
+
+  trigger:
+    - platform: state
+      entity_id: input_boolean.tesla_smart_charge
+      to: 'on'
+  condition:
+    - condition: state
+      entity_id: input_boolean.tesla_night_charge_pending
+      state: 'off'
+    - condition: state
+      entity_id: device_tracker.f_r_i_d_a_y_location
+      state: home
+    - condition: state
+      entity_id: binary_sensor.f_r_i_d_a_y_charge_cable
+      state: 'on'
+    - condition: state
+      entity_id: switch.f_r_i_d_a_y_charge
+      state: 'off'
+    - condition: template
+      value_template: >-
+        {{ states('sensor.f_r_i_d_a_y_niveau_de_batterie') | int
+           < (states('number.f_r_i_d_a_y_charge_limit') | int - 1) }}
+    - condition: numeric_state
+      entity_id: sensor.tesla_optimized_amp
+      below: 5
+  action:
+    - service: script.notify_fabien
+      data:
+        title: Tesla Smart Charge
+        message: >-
+          {% set bat = states('sensor.f_r_i_d_a_y_niveau_de_batterie') | int(0) %}
+          {% set solaire = states('sensor.solar_total') | int(0) %}
+          Smart Charge actif mais surplus solaire insuffisant ({{ solaire }}W).
+          Batterie : {{ bat }}%. La charge demarrera automatiquement
+          quand le soleil sera suffisant.
+  mode: single
+
+#####################################################################
+# 2. DESACTIVATION DU MODE
+#####################################################################
+# Toggle OFF : arrete la charge si elle tourne, bascule Awtrix.
+# Ignore si une charge nocturne est en cours (pending=on) pour
+# ne pas interrompre celle-ci quand l'user desactive SmartCharge.
+#####################################################################
+- id: 'tesla_smart_charge_deactivation'
+  alias: Tesla Smart Charge - Desactivation
+
+  trigger:
+    - platform: state
+      entity_id: input_boolean.tesla_smart_charge
+      to: 'off'
+  condition:
+    - condition: state
+      entity_id: input_boolean.tesla_night_charge_pending
+      state: 'off'
+  action:
+    - choose:
+        - conditions:
+            - condition: state
+              entity_id: switch.f_r_i_d_a_y_charge
+              state: 'on'
+          sequence:
+            - service: switch.turn_off
+              target:
+                entity_id: switch.f_r_i_d_a_y_charge
+            - delay:
+                seconds: 3
+            - service: input_boolean.turn_on
+              target:
+                entity_id: input_boolean.awtrix_toggle_tesla
+            - service: script.notify_fabien
+              data:
+                title: Tesla Smart Charge
+                message: >-
+                  {% set bat = states('sensor.f_r_i_d_a_y_niveau_de_batterie') | int(0) %}
+                  {% set energy = states('sensor.f_r_i_d_a_y_charge_energy_added') | float(0) | round(1) %}
+                  Smart Charge desactive. Batterie : {{ bat }}%.
+                  {% if energy > 0 %}Energie ajoutee : {{ energy }} kWh.{% endif %}
+  mode: single
+
+#####################################################################
+# 3. DEMARRAGE AUTO
+#####################################################################
+# Demarre la charge quand un evenement pertinent survient :
+#   - Charge lancee manuellement (voiture ou app)
+#   - Cable branche
+#   - Surplus solaire disponible
+#####################################################################
+- id: 'tesla_smart_charge_start'
+  alias: Tesla Smart Charge - Demarrage auto
+
+  trigger:
+    - platform: numeric_state
+      entity_id: sensor.f_r_i_d_a_y_vitesse_de_charge
+      above: 0
+      id: manual_start
+    - platform: state
+      entity_id: binary_sensor.f_r_i_d_a_y_charge_cable
+      from: 'off'
+      to: 'on'
+      for:
+        seconds: 30
+      id: charger_plugin
+    - platform: numeric_state
+      entity_id: sensor.tesla_optimized_amp
+      above: 2
+      for:
+        minutes: 1
+      id: power_available
+  condition:
+    - condition: state
+      entity_id: input_boolean.tesla_smart_charge
+      state: 'on'
+    - condition: state
+      entity_id: input_boolean.tesla_night_charge_pending
+      state: 'off'
+    - condition: state
+      entity_id: device_tracker.f_r_i_d_a_y_location
+      state: home
+    - condition: state
+      entity_id: switch.f_r_i_d_a_y_charge
+      state: 'off'
+    - condition: template
+      value_template: >-
+        {{ states('sensor.f_r_i_d_a_y_niveau_de_batterie') | int
+           < (states('number.f_r_i_d_a_y_charge_limit') | int - 1) }}
+    # Evite un double demarrage avec Resume apres une pause solaire :
+    # si la pause a coupe la charge il y a moins de 5 min, on laisse
+    # le Resume gerer la reprise (seuil + hysteresis plus robustes).
+    - condition: template
+      value_template: >-
+        {% set last_pause = state_attr('automation.tesla_smart_charge_pause_solaire', 'last_triggered') %}
+        {{ last_pause is none or (now() - last_pause).total_seconds() > 300 }}
+  action:
+    - service: script.tesla_refresh
+    - delay:
+        seconds: 5
+    - service: input_boolean.turn_off
+      target:
+        entity_id: input_boolean.awtrix_toggle_tesla
+    - delay:
+        seconds: 3
+    # Force la limite Tesla a la valeur du helper SoC max solaire
+    # avant chaque demarrage : garantit que la limite suit toujours
+    # la preference utilisateur, meme apres une charge HC qui a pu
+    # la modifier (filet en cas de defaut des autos NightCharge 2/4/5).
+    - service: number.set_value
+      target:
+        entity_id: number.f_r_i_d_a_y_charge_limit
+      data:
+        value: "{{ states('input_number.tesla_soc_solaire_max') | int(80) }}"
+    - service: switch.turn_on
+      target:
+        entity_id: switch.f_r_i_d_a_y_charge
+    - service: number.set_value
+      target:
+        entity_id: number.f_r_i_d_a_y_charge_current
+      data:
+        value: '5'
+    - service: script.notify_fabien
+      data:
+        title: Tesla Smart Charge
+        message: >-
+          {% set reasons = {
+            'manual_start': 'charge manuelle detectee',
+            'charger_plugin': 'cable branche',
+            'power_available': 'surplus solaire disponible'
+          } %}
+          {% set bat = states('sensor.f_r_i_d_a_y_niveau_de_batterie') | int(0) %}
+          {% set limit = states('number.f_r_i_d_a_y_charge_limit') | int(0) %}
+          {% set solaire = states('sensor.solar_total') | int(0) %}
+          Smart Charge demarre ({{ reasons.get(trigger.id, trigger.id) }}).
+          Batterie : {{ bat }}% (limite {{ limit }}%).
+          Production solaire : {{ solaire }}W.
+  mode: single
+
+#####################################################################
+# 4. ARRET AUTO
+#####################################################################
+# Arrete la charge quand :
+#   - Cable debranche
+#   - Charge arretee manuellement
+#   - Amperage tombe a 0 (charge terminee)
+#####################################################################
+- id: 'tesla_smart_charge_stop'
+  alias: Tesla Smart Charge - Arret auto
+
+  trigger:
+    - platform: state
+      entity_id: cover.f_r_i_d_a_y_trappe_de_charge
+      to: closed
+      for:
+        minutes: 1
+      id: charger_plugout
+    - platform: numeric_state
+      entity_id: sensor.f_r_i_d_a_y_vitesse_de_charge
+      below: 1
+      for:
+        minutes: 1
+      id: manual_stop
+    - platform: numeric_state
+      entity_id: sensor.f_r_i_d_a_y_charger_current
+      below: 1
+      for:
+        minutes: 1
+      id: amps_too_low
+  condition:
+    - condition: state
+      entity_id: input_boolean.tesla_smart_charge
+      state: 'on'
+    - condition: state
+      entity_id: input_boolean.tesla_night_charge_pending
+      state: 'off'
+    - condition: state
+      entity_id: switch.f_r_i_d_a_y_charge
+      state: 'on'
+  action:
+    - service: switch.turn_off
+      target:
+        entity_id: switch.f_r_i_d_a_y_charge
+    - delay:
+        seconds: 3
+    - service: input_boolean.turn_on
+      target:
+        entity_id: input_boolean.awtrix_toggle_tesla
+    - service: script.notify_fabien
+      data:
+        title: Tesla Smart Charge
+        message: >-
+          {% set reasons = {
+            'charger_plugout': 'cable debranche',
+            'manual_stop': 'arret manuel',
+            'amps_too_low': 'charge terminee'
+          } %}
+          {% set bat = states('sensor.f_r_i_d_a_y_niveau_de_batterie') | int(0) %}
+          {% set energy = states('sensor.f_r_i_d_a_y_charge_energy_added') | float(0) | round(1) %}
+          Smart Charge arrete ({{ reasons.get(trigger.id, trigger.id) }}).
+          Batterie : {{ bat }}%.
+          {% if energy > 0 %}Energie ajoutee : {{ energy }} kWh.{% endif %}
+    - service: script.tesla_refresh
+  mode: single
+
+#####################################################################
+# 5. SUIVI AMPERAGE (state-change avec garde de stabilite)
+#####################################################################
+# Ajuste l'amperage au surplus solaire.
+# Toujours active — les conditions empechent toute action
+# quand la charge est arretee ou le mode desactive.
+#
+# Trigger : sensor.tesla_optimized_amp stable depuis 30s
+#   → reagit aux vraies variations, ignore les oscillations courtes
+#   (nuages passagers, pics de consommation brefs).
+#
+# Protections rate-limit Fleet API :
+#   - for: 30s sur le trigger (filtre le bruit)
+#   - Commande uniquement si |target - current| >= 1A
+#   - Cooldown 60s entre commandes
+#   → dans le pire cas : ~30-40 ordres/h par ciel tres variable,
+#     5-15 ordres/h en regime normal.
+#####################################################################
+- id: 'tesla_smart_charge_update_amps'
+  alias: Tesla Smart Charge - Suivi amperage
+
+  trigger:
+    - platform: state
+      entity_id: sensor.tesla_optimized_amp
+      for:
+        seconds: 30
+  condition:
+    - condition: state
+      entity_id: input_boolean.tesla_smart_charge
+      state: 'on'
+    - condition: state
+      entity_id: input_boolean.tesla_night_charge_pending
+      state: 'off'
+    - condition: state
+      entity_id: switch.f_r_i_d_a_y_charge
+      state: 'on'
+    - condition: state
+      entity_id: device_tracker.f_r_i_d_a_y_location
+      state: home
+    - condition: template
+      value_template: >-
+        {% set target = states('sensor.tesla_optimized_amp') | int(0) %}
+        {% set current = states('number.f_r_i_d_a_y_charge_current') | int(0) %}
+        {{ (target - current) | abs >= 1 }}
+    - condition: template
+      value_template: >-
+        {% set last = state_attr('automation.tesla_smart_charge_suivi_amperage', 'last_triggered') %}
+        {{ last is none or (now() - last).total_seconds() > 60 }}
+  action:
+    - service: number.set_value
+      target:
+        entity_id: number.f_r_i_d_a_y_charge_current
+      data:
+        value: >-
+          {% set opt = states('sensor.tesla_optimized_amp') | int(0) %}
+          {% set max_amps = states('input_number.tesla_max_amps') | int(28) %}
+          {{ [5, [opt, max_amps] | min] | max }}
+  mode: single
+
+#####################################################################
+# 6. PAUSE SOLAIRE
+#####################################################################
+# Surplus < 5A pendant 3 min : pause temporaire de la charge.
+# Le suivi amperage (5) ne fait rien car switch = off.
+# Le resume (7) relancera quand le surplus revient.
+#####################################################################
+- id: 'tesla_smart_charge_pause'
+  alias: Tesla Smart Charge - Pause solaire
+
+  trigger:
+    # Cas normal : surplus tombe sous 5A apres avoir charge (transition)
+    - platform: numeric_state
+      entity_id: sensor.tesla_optimized_amp
+      below: 5
+      for:
+        minutes: 3
+    # Cas demarrage sans soleil : la charge vient de s'activer mais
+    # tesla_optimized_amp etait deja a 0 → pas de transition detectable.
+    # On attend 3 min apres le switch ON et on verifie le surplus.
+    - platform: state
+      entity_id: switch.f_r_i_d_a_y_charge
+      to: 'on'
+      for:
+        minutes: 3
+  condition:
+    - condition: state
+      entity_id: input_boolean.tesla_smart_charge
+      state: 'on'
+    - condition: state
+      entity_id: input_boolean.tesla_night_charge_pending
+      state: 'off'
+    - condition: state
+      entity_id: switch.f_r_i_d_a_y_charge
+      state: 'on'
+    - condition: state
+      entity_id: device_tracker.f_r_i_d_a_y_location
+      state: home
+    - condition: numeric_state
+      entity_id: sensor.tesla_optimized_amp
+      below: 5
+  action:
+    - service: switch.turn_off
+      target:
+        entity_id: switch.f_r_i_d_a_y_charge
+  mode: single
+
+#####################################################################
+# 7. RESUME SOLAIRE
+#####################################################################
+# Surplus >= 5A pendant 3 min : reprend la charge.
+# Re-applique aussi charge_limit = tesla_soc_solaire_max : defense
+# contre une derive cote Tesla pendant la pause (modif via app, commande
+# Fleet API perdue avec voiture endormie, etc.). Sans ce filet, la
+# voiture peut s'arreter prematurement a une vieille limite (ex 63%).
+#####################################################################
+- id: 'tesla_smart_charge_resume'
+  alias: Tesla Smart Charge - Resume solaire
+
+  trigger:
+    - platform: numeric_state
+      entity_id: sensor.tesla_optimized_amp
+      above: 4
+      for:
+        minutes: 3
+  condition:
+    - condition: state
+      entity_id: input_boolean.tesla_smart_charge
+      state: 'on'
+    - condition: state
+      entity_id: input_boolean.tesla_night_charge_pending
+      state: 'off'
+    - condition: state
+      entity_id: switch.f_r_i_d_a_y_charge
+      state: 'off'
+    - condition: state
+      entity_id: device_tracker.f_r_i_d_a_y_location
+      state: home
+  action:
+    # Re-applique la limite SoC max solaire avant turn_on (defense
+    # contre une derive cote Tesla pendant la pause).
+    - service: number.set_value
+      target:
+        entity_id: number.f_r_i_d_a_y_charge_limit
+      data:
+        value: "{{ states('input_number.tesla_soc_solaire_max') | int(80) }}"
+    - service: switch.turn_on
+      target:
+        entity_id: switch.f_r_i_d_a_y_charge
+    - delay:
+        seconds: 5
+    - service: number.set_value
+      target:
+        entity_id: number.f_r_i_d_a_y_charge_current
+      data:
+        value: >-
+          {% set opt = states('sensor.tesla_optimized_amp') | int(0) %}
+          {% set max_amps = states('input_number.tesla_max_amps') | int(28) %}
+          {{ [5, [opt, max_amps] | min] | max }}
+  mode: single
+
+#####################################################################
+# 8. PROTECTION RESEAU (reaction rapide)
+#####################################################################
+# Le suivi amperage (5) reagit en ~30-90s aux variations stables —
+# trop lent si un gros consommateur s'allume brutalement (four,
+# seche-linge, etc.).
+#
+# Cette automation reagit en < 20s quand le soutirage reseau depasse
+# (tesla_grid_limit - 500W de marge) et reduit immediatement
+# l'amperage Tesla au maximum admissible (sensor.tesla_max_amp_grid).
+# Avec defaut 15 500W : declenchement a 15 000W.
+#
+# Si le max admissible tombe sous 5A, la charge est mise en pause.
+# Ne s'active PAS en charge nocturne (tesla_night_charge_pending=on)
+# car celle-ci a sa propre gestion reseau (automations 3 et 3b).
+#####################################################################
+- id: 'tesla_smart_charge_grid_protect'
+  alias: Tesla Smart Charge - Protection reseau
+
+  trigger:
+    # Trigger derive de tesla_grid_limit pour rester aligne si l'user
+    # ajuste la limite via l'UI (template re-evalue a chaque change
+    # du sensor P1 et de l'input_number).
+    - platform: template
+      value_template: >-
+        {{ states('sensor.p1_meter_3c39e7284d28_active_power') | float(0)
+           > (states('input_number.tesla_grid_limit') | float(15500) - 500) }}
+      for:
+        seconds: 10
+  condition:
+    - condition: state
+      entity_id: input_boolean.tesla_night_charge_pending
+      state: 'off'
+    - condition: state
+      entity_id: switch.f_r_i_d_a_y_charge
+      state: 'on'
+    - condition: state
+      entity_id: device_tracker.f_r_i_d_a_y_location
+      state: home
+  action:
+    - choose:
+        # Si le max admissible est trop bas, pause la charge
+        - conditions:
+            - condition: numeric_state
+              entity_id: sensor.tesla_max_amp_grid
+              below: 5
+          sequence:
+            - service: switch.turn_off
+              target:
+                entity_id: switch.f_r_i_d_a_y_charge
+            - service: script.notify_fabien
+              data:
+                title: Tesla Protection Reseau
+                message: >-
+                  {% set p1 = states('sensor.p1_meter_3c39e7284d28_active_power') | int(0) %}
+                  {% set limite = states('input_number.tesla_grid_limit') | int(15500) %}
+                  Charge Tesla mise en pause — soutirage reseau {{ p1 }}W
+                  (limite {{ limite }}W). Reprise auto quand le surplus revient.
+      # Sinon, reduit au max admissible
+      default:
+        - service: number.set_value
+          target:
+            entity_id: number.f_r_i_d_a_y_charge_current
+          data:
+            value: >-
+              {% set max_grid = states('sensor.tesla_max_amp_grid') | int(5) %}
+              {{ [5, max_grid] | max }}
+  mode: single
+
+#####################################################################
+# 9. RESET LIMITE EN FIN DE CHARGE SOLAIRE
+#####################################################################
+# Restaure number.f_r_i_d_a_y_charge_limit a la valeur du helper
+# tesla_soc_solaire_max quand :
+#   - le cable est debranche pendant 30s (la voiture part)
+#   - le soleil se couche (sun.sun -> below_horizon)
+#
+# Filet de securite : si une charge HC a modifie la limite a la cible
+# HC et que les autos NightCharge 2/4/5 n'ont pas reset (ex. plantage),
+# cette auto restaure la valeur normale solaire.
+#
+# Note sur le choix sun.sun plutot que tarif T2 :
+# Le tarif HC inclut aussi la plage midi 11h-17h en Wallonie 2026.
+# Utiliser le tarif resetterait la limite a 11h alors que le surplus
+# solaire est encore exploitable l'apres-midi.
+#####################################################################
+- id: 'tesla_smart_charge_reset_limit'
+  alias: Tesla Smart Charge - Reset limite SoC max solaire
+
+  trigger:
+    - platform: state
+      entity_id: binary_sensor.f_r_i_d_a_y_charge_cable
+      to: 'off'
+      for:
+        seconds: 30
+      id: cable
+    - platform: state
+      entity_id: sun.sun
+      to: 'below_horizon'
+      id: nuit
+  condition:
+    # N'agit que si la limite actuelle differe du helper (sinon noop).
+    - condition: template
+      value_template: >-
+        {{ states('number.f_r_i_d_a_y_charge_limit') | int(0)
+           != states('input_number.tesla_soc_solaire_max') | int(80) }}
+    # Pas pendant une charge HC active (l'auto 1 NightCharge a fixe
+    # la limite a la cible HC volontairement).
+    - condition: state
+      entity_id: input_boolean.tesla_night_charge_pending
+      state: 'off'
+  action:
+    - service: number.set_value
+      target:
+        entity_id: number.f_r_i_d_a_y_charge_limit
+      data:
+        value: "{{ states('input_number.tesla_soc_solaire_max') | int(80) }}"
+    - service: script.notify_fabien
+      data:
+        title: Tesla Smart Charge
+        message: >-
+          {% set reasons = {
+            'cable': 'cable debranche',
+            'nuit': 'coucher du soleil'
+          } %}
+          {% set bat = states('sensor.f_r_i_d_a_y_niveau_de_batterie') | int(0) %}
+          {% set lim = states('input_number.tesla_soc_solaire_max') | int(80) %}
+          Limite de charge restauree a {{ lim }}% ({{ reasons.get(trigger.id, trigger.id) }}).
+          Batterie : {{ bat }}%.
+  mode: single
+
+#####################################################################
+# 10. SYNC HELPER tesla_soc_solaire_max
+#####################################################################
+# Quand l'utilisateur modifie le helper depuis le dashboard, propage
+# immediatement la valeur a number.f_r_i_d_a_y_charge_limit (Tesla).
+#
+# Si la voiture est branchee + maitre on + pending off + home, et
+# que la batterie est < nouvelle limite avec un surplus suffisant,
+# relance immediatement la charge (sinon il faudrait attendre l'auto 7
+# Resume solaire et son hysteresis 3 min).
+#
+# Bloquee pendant une charge HC (pending=on) : la HC utilise tesla_soc_cible,
+# le helper sera applique automatiquement a la fin HC par les auto 2/4/5.
+#####################################################################
+- id: 'tesla_smart_charge_sync_soc_max'
+  alias: Tesla Smart Charge - Sync helper SoC max solaire
+
+  trigger:
+    - platform: state
+      entity_id: input_number.tesla_soc_solaire_max
+  condition:
+    - condition: state
+      entity_id: input_boolean.tesla_night_charge_pending
+      state: 'off'
+  action:
+    - service: number.set_value
+      target:
+        entity_id: number.f_r_i_d_a_y_charge_limit
+      data:
+        value: "{{ states('input_number.tesla_soc_solaire_max') | int(80) }}"
+    # Si conditions de charge solaire reunies et batterie < nouvelle limite,
+    # relance immediatement (sinon Tesla redemarrera elle-meme a la cible).
+    - choose:
+        - conditions:
+            - condition: state
+              entity_id: input_boolean.tesla_smart_charge
+              state: 'on'
+            - condition: state
+              entity_id: device_tracker.f_r_i_d_a_y_location
+              state: home
+            - condition: state
+              entity_id: binary_sensor.f_r_i_d_a_y_charge_cable
+              state: 'on'
+            - condition: state
+              entity_id: switch.f_r_i_d_a_y_charge
+              state: 'off'
+            - condition: template
+              value_template: >-
+                {{ states('sensor.f_r_i_d_a_y_niveau_de_batterie') | int(0)
+                   < states('input_number.tesla_soc_solaire_max') | int(80) - 1 }}
+            - condition: numeric_state
+              entity_id: sensor.tesla_optimized_amp
+              above: 4
+          sequence:
+            - service: switch.turn_on
+              target:
+                entity_id: switch.f_r_i_d_a_y_charge
+            - delay:
+                seconds: 5
+            - service: number.set_value
+              target:
+                entity_id: number.f_r_i_d_a_y_charge_current
+              data:
+                value: >-
+                  {% set opt = states('sensor.tesla_optimized_amp') | int(0) %}
+                  {% set max_amps = states('input_number.tesla_max_amps') | int(28) %}
+                  {{ [5, [opt, max_amps] | min] | max }}
+            - service: script.notify_fabien
+              data:
+                title: Tesla Smart Charge
+                message: >-
+                  {% set lim = states('input_number.tesla_soc_solaire_max') | int(80) %}
+                  {% set bat = states('sensor.f_r_i_d_a_y_niveau_de_batterie') | int(0) %}
+                  {% set surplus = states('sensor.tesla_optimized_amp') | int(0) %}
+                  Limite solaire mise a {{ lim }}%, charge relancee a {{ surplus }}A.
+                  Batterie : {{ bat }}%.
+      default:
+        - service: script.notify_fabien
+          data:
+            title: Tesla Smart Charge
+            message: >-
+              {% set lim = states('input_number.tesla_soc_solaire_max') | int(80) %}
+              Limite solaire mise a jour : {{ lim }}%.
+  mode: single
+
+#####################################################################
+# 11. REFRESH DONNEES APRES SET AMPERAGE
+#####################################################################
+# 10s apres chaque commande number.set_value sur l'amperage,
+# force un poll Fleet API pour recuperer les vraies valeurs (amperage
+# reel, puissance, batterie, limite). Permet de detecter rapidement
+# une divergence (commande perdue, modif manuelle via app Tesla).
+#
+# mode: restart : si plusieurs set_value s'enchainent (ex. protection
+# reseau qui reajuste plusieurs fois), seul le dernier set declenche
+# un refresh — pas de spam Fleet API.
+#
+# Pas de risque de wake : pendant une charge active, la voiture est
+# toujours online (elle communique avec le wall connector). Le set
+# amperage = commande de charge => voiture forcement eveillee.
+#####################################################################
+- id: 'tesla_refresh_after_amps'
+  alias: Tesla - Refresh donnees apres set amperage
+
+  trigger:
+    - platform: state
+      entity_id: number.f_r_i_d_a_y_charge_current
+  action:
+    - delay:
+        seconds: 10
+    - service: homeassistant.update_entity
+      target:
+        entity_id:
+          - number.f_r_i_d_a_y_charge_current
+          - number.f_r_i_d_a_y_charge_limit
+          - sensor.f_r_i_d_a_y_charger_current
+          - sensor.f_r_i_d_a_y_charger_power
+          - sensor.f_r_i_d_a_y_niveau_de_batterie
+  mode: restart

@@ -1,0 +1,41 @@
+#####################################################################
+# @CCOSTAN
+# Original Repo : https://github.com/CCOSTAN/Home-AssistantConfig
+## Plays the number of cuckoos per hour and 1 on the half hour.
+# More Info and Video: https://www.vcloudinfo.com/2017/11/building-digital-cuckoo-clock-with-home.html
+#####################################################################
+- alias: Cuckoo Clock
+  id: 33dcd8e2-e87c-4d18-82bc-b7f9b53a1624
+  mode: restart
+  trigger:
+    - platform: time_pattern
+      minutes: 0
+    - platform: time_pattern
+      minutes: 30
+
+  condition:
+    - condition: time
+      after: "09:29:00"
+      before: "21:30:00"
+
+  action:
+    - service: script.prepare_google_sans_son
+      data:
+        media_player: "media_player.cuisine"
+    - service: script.amp_settings
+      data:
+        media_player: "media_player.cuisine"
+        volume_level: 0.40
+
+    - wait_template: "{{ not is_state('media_player.cuisine', 'playing') }}"
+
+    - service: media_player.play_media
+      data:
+        entity_id: media_player.cuisine
+        media_content_id: >
+          {% if now().strftime("%M")|int == 30 %}
+          /media/local/cuckoo/cuckoo-clock-01.wav
+          {% else %}
+          /media/local/cuckoo/cuckoo-clock-{{now().strftime("%I")}}.wav
+          {% endif %}
+        media_content_type: audio/mp4

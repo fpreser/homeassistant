@@ -1,0 +1,110 @@
+#####################################################################
+# Affichage niveau de charge sur Awtrix Light
+#####################################################################
+# Affiche l'amperage de charge + une barre de progression batterie/limite
+# tant que la Tesla charge. L'app apparait quand le switch passe a ON
+# et disparait quand il passe a OFF.
+#####################################################################
+- id: '1683385558569818'
+  alias: Awtrix Tesla Charging
+  description: ''
+  mode: queued
+  trigger:
+    - platform: state
+      entity_id: switch.f_r_i_d_a_y_charge
+      to: "on"
+      id: "On"
+    - platform: state
+      entity_id: switch.f_r_i_d_a_y_charge
+      to: "off"
+      id: "Off"
+    - platform: state
+      entity_id: sensor.f_r_i_d_a_y_charger_current
+      id: Changes
+  action:
+    - variables:
+        my_display: 'awtrix_dd33c0'
+        app_name: 'TeslaCharge'
+        my_text: >
+          {{ states('sensor.f_r_i_d_a_y_charger_current') | int(0) }} Amps
+        my_icon: 1018
+        text_case: 2
+        text_color: '[255,255,255]'
+        my_progress: >
+          {% set bat = states('sensor.f_r_i_d_a_y_niveau_de_batterie') | float(0) %}
+          {% set lim = states('number.f_r_i_d_a_y_charge_limit') | float(80) %}
+          {{ (bat / lim * 100) | int if lim > 0 else 0 }}
+    - choose:
+    #####################################################################
+    # Charge demarre : affiche l'app
+    #####################################################################
+      - conditions:
+        - condition: trigger
+          id: "On"
+        sequence:
+          - service: mqtt.publish
+            data:
+              qos: 0
+              retain: false
+              topic: "{{my_display}}/custom/{{app_name}}"
+              payload: |-
+                {
+                  "text": "{{ my_text }}",
+                  "color": {{text_color}},
+                  "textCase": {{text_case}},
+                  "icon": "{{my_icon}}",
+                  "progress": "{{my_progress}}"
+                }
+          - service: mqtt.publish
+            data:
+              qos: 0
+              retain: false
+              topic: "{{my_display}}/switch"
+              payload: |-
+                {
+                  "name": "{{app_name}}"
+                }
+    #####################################################################
+    # Charge s'arrete : retire l'app
+    #####################################################################
+      - conditions:
+          - condition: trigger
+            id: "Off"
+        sequence:
+          - service: mqtt.publish
+            data:
+              qos: 0
+              retain: false
+              topic: "{{my_display}}/custom/{{app_name}}"
+    #####################################################################
+    # Mise a jour amperage en cours de charge
+    #####################################################################
+      - conditions:
+          - condition: and
+            conditions:
+              - condition: trigger
+                id: Changes
+              - condition: state
+                entity_id: switch.f_r_i_d_a_y_charge
+                state: "on"
+              - condition: not
+                conditions:
+                  - condition: state
+                    entity_id: sensor.f_r_i_d_a_y_charger_current
+                    state:
+                      - unavailable
+                      - unknown
+        sequence:
+          - service: mqtt.publish
+            data:
+              qos: 0
+              retain: false
+              topic: "{{my_display}}/custom/{{app_name}}"
+              payload: |-
+                {
+                  "text": "{{ my_text }}",
+                  "color": {{text_color}},
+                  "textCase": {{text_case}},
+                  "icon": "{{my_icon}}",
+                  "progress": "{{my_progress}}"
+                }

@@ -1,0 +1,25 @@
+- id: '983749379adf'
+  alias: Welcome Home
+  description: 'Allume quand on arrive'
+  trigger:
+  - platform: state
+    entity_id:
+       - person.fabien
+       - person.gillian
+       - person.louis
+       - person.emma       
+    to: home
+  condition:
+    - condition: sun
+      after: sunset
+      enabled: true
+    - condition: state  
+      entity_id: light.jardin_exterieur_porte
+      state: 'off'      
+  action:
+  - service: light.turn_on
+    entity_id: light.jardin_exterieur_porte
+  - delay: '00:02:00'
+  - service: light.turn_off
+    entity_id: light.jardin_exterieur_porte    
+  mode: single

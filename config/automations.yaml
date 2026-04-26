@@ -1,0 +1,1370 @@
+- id: '1677435885832'
+  alias: Compte Cycles Pompe A Eau
+  description: ''
+  trigger:
+  - platform: numeric_state
+    entity_id: sensor.jardin_pompe_a_eau_power
+    above: 50
+  condition: []
+  action:
+  - service: counter.increment
+    data: {}
+    target:
+      entity_id: counter.cycles_pompe_a_eau
+  mode: single
+- id: '1677435984102'
+  alias: Reset Compteur Cycles Pompe à Eau
+  description: ''
+  trigger:
+  - platform: time
+    at: 00:00:00
+  condition: []
+  action:
+  - service: counter.reset
+    data: {}
+    target:
+      entity_id: counter.cycles_pompe_a_eau
+  - service: counter.reset
+    data: {}
+    target:
+      entity_id: counter.decrochage_onduleur_1
+  - service: counter.reset
+    data: {}
+    target:
+      entity_id: counter.decrochage_onduleur_2
+  mode: single
+- id: '1677596616845'
+  alias: Home Assistant Startup
+  description: ''
+  triggers:
+  - event: start
+    trigger: homeassistant
+  conditions: []
+  actions:
+  - data:
+      object_id: my_lights
+      name: Mes lumières
+      entities: '{{ states.light | rejectattr (''attributes.entity_id'', ''defined'')
+        | selectattr (''attributes.friendly_name'', ''defined'') | rejectattr (''attributes.friendly_name'',
+        ''search'', ''Binary'') | rejectattr (''attributes.friendly_name'', ''search'',
+        ''FGD'') | rejectattr (''attributes.friendly_name'', ''search'', ''awtrix'')
+        | rejectattr  (''attributes.friendly_name'', ''search'', ''microwave'') |
+        rejectattr (''attributes.friendly_name'', ''search'', ''oven'')   | map (attribute=''entity_id'')
+        | join('','') }}'
+    action: group.set
+  - data:
+      object_id: my_climates
+      name: Mes Chauffages
+      entities: '{{ states.climate |selectattr(''attributes.current_temperature'',
+        ''defined'') | selectattr(''attributes.temperature'', ''defined'') | rejectattr(''attributes.friendly_name'',''contains'',''Vitodens'')
+        | rejectattr(''attributes.friendly_name'',''contains'',''F.R.I.D.A.Y'') |
+        map (attribute=''entity_id'') | join ('','')}}'
+    action: group.set
+  - data: {}
+    target:
+      entity_id: button.f_r_i_d_a_y_wake
+    action: button.press
+  - delay:
+      seconds: 15
+  - target:
+      entity_id: sensor.f_r_i_d_a_y_niveau_de_batterie
+    action: homeassistant.update_entity
+  mode: single
+- id: '1681121951553'
+  alias: Aération Vélux
+  description: ''
+  trigger:
+  - platform: state
+    entity_id:
+    - timer.velux
+    to: active
+    id: Aeration Start
+  - platform: state
+    entity_id:
+    - timer.velux
+    to: idle
+    id: Aeration Finish
+  condition: []
+  action:
+  - choose:
+    - conditions:
+      - condition: trigger
+        id: Aeration Start
+      sequence:
+      - service: script.notify_fabien
+        data:
+          message: Début aeration
+          title: Velux auto
+      - service: cover.open_cover
+        data: {}
+        target:
+          entity_id:
+          - cover.velux_sdd_droite
+          - cover.velux_sdd_gauche
+          - cover.velux_escalier
+          - cover.velux_chambre
+    - conditions:
+      - condition: trigger
+        id: Aeration Finish
+      sequence:
+      - service: script.notify_fabien
+        data:
+          message: Fin aeration
+          title: Velux auto
+      - service: cover.close_cover
+        data: {}
+        target:
+          entity_id:
+          - cover.velux_sdd_droite
+          - cover.velux_sdd_gauche
+          - cover.velux_escalier
+          - cover.velux_chambre
+  mode: single
+- id: '1681937831048'
+  alias: Awtrix Test Notificaiton
+  description: ''
+  use_blueprint:
+    path: smarthomejunkie/awtrix_create_notification.yaml
+    input:
+      text_case: '2'
+      awtrix_display: 7d296d7d5932219d74226900a66541e9
+      toggle_helper: input_boolean.test_notification
+      notification_text: This is a test notification
+      my_icon: '87'
+      text_color:
+      - 30
+      - 81
+      - 184
+      show_rainbow: true
+      hold_notification: true
+      duration: '10'
+      push_icon: '2'
+      awtrix_displays:
+      - 7d296d7d5932219d74226900a66541e9
+- id: '1683215864258'
+  alias: Surveillance surtension Onduleurs
+  description: Envoies une alerte quand un onduleur est en surtension
+  trigger:
+  - platform: numeric_state
+    entity_id: sensor.sb5_0_1av_41_208_voltage_l1
+    for:
+      hours: 0
+      minutes: 5
+      seconds: 0
+    above: 253
+    id: Surtension Onduleur 208
+  - platform: numeric_state
+    entity_id: sensor.sb5_0_1av_41_208_voltage_l1
+    above: 263.7
+    id: Pic tension Onduleur 208
+  - platform: numeric_state
+    entity_id: sensor.sb5_0_1av_41_345_voltage_l1
+    for:
+      hours: 0
+      minutes: 5
+      seconds: 0
+    above: 253
+    id: Surtension Onduleur 345
+  - platform: numeric_state
+    entity_id: sensor.sb5_0_1av_41_345_voltage_l1
+    above: 262.8
+    id: Pic tension Onduleur 345
+  condition: []
+  action:
+  - choose:
+    - conditions:
+      - condition: trigger
+        id: Surtension Onduleur 208
+      sequence:
+      - service: script.notify_fabien
+        data:
+          message: Surtension onduleur 208 depuis 5 mins
+          title: Surtension onduleur
+    - conditions:
+      - condition: trigger
+        id: Pic tension Onduleur 208
+      sequence:
+      - service: script.notify_fabien
+        data:
+          message: Pic surtension onduleur 208
+          title: Surtension onduleur
+    - conditions:
+      - condition: trigger
+        id: Surtension Onduleur 345
+      sequence:
+      - service: script.notify_fabien
+        data:
+          message: Surtension onduleur 345 depuis 5 mins
+          title: Surtension onduleur
+    - conditions:
+      - condition: trigger
+        id: Pic tension Onduleur 345
+      sequence:
+      - service: script.notify_fabien
+        data:
+          message: Pic surtension 345
+          title: Surtension onduleur
+  mode: single
+- id: '1683305511388'
+  alias: Awtrix Toggle Date App
+  description: Will enable or disable the Date App on the awtrix light
+  use_blueprint:
+    path: smarthomejunkie/awtrix_toggle_stock_app.yaml
+    input:
+      awtrix_display: 7d296d7d5932219d74226900a66541e9
+      toggle_helper: input_boolean.awtrix_toggle_date
+      stock_app: Date
+      awtrix_displays:
+      - 7d296d7d5932219d74226900a66541e9
+- id: '1683306348066'
+  alias: Awtrix toggle Temperature
+  description: ''
+  use_blueprint:
+    path: smarthomejunkie/awtrix_toggle_stock_app.yaml
+    input:
+      awtrix_display: 7d296d7d5932219d74226900a66541e9
+      toggle_helper: input_boolean.awtrix_toggle_temperature
+      stock_app: Temperature
+      awtrix_displays:
+      - 7d296d7d5932219d74226900a66541e9
+- id: '1683306377486'
+  alias: Awtrix Toggle Humidity
+  description: ''
+  use_blueprint:
+    path: smarthomejunkie/awtrix_toggle_stock_app.yaml
+    input:
+      awtrix_display: 7d296d7d5932219d74226900a66541e9
+      toggle_helper: input_boolean.awtrix_toggle_humidity
+      stock_app: Humidity
+      awtrix_displays:
+      - 7d296d7d5932219d74226900a66541e9
+- id: '1683306407545'
+  alias: Awtrix Toggle Battery
+  description: ''
+  use_blueprint:
+    path: smarthomejunkie/awtrix_toggle_stock_app.yaml
+    input:
+      awtrix_display: 7d296d7d5932219d74226900a66541e9
+      toggle_helper: input_boolean.awtrix_toggle_battery
+      stock_app: Battery
+      awtrix_displays:
+      - 7d296d7d5932219d74226900a66541e9
+- id: '1683306856097'
+  alias: Awtrix Toggle Time App
+  description: ''
+  use_blueprint:
+    path: smarthomejunkie/awtrix_toggle_stock_app.yaml
+    input:
+      awtrix_display: 7d296d7d5932219d74226900a66541e9
+      toggle_helper: input_boolean.awtrix_toggle_time
+      stock_app: Time
+      awtrix_displays:
+      - 7d296d7d5932219d74226900a66541e9
+- id: '1683307687979'
+  alias: Awtrix Set App Display Duration
+  description: ''
+  use_blueprint:
+    path: smarthomejunkie/awtrix_set_transition_time.yaml
+    input:
+      awtrix_display: 7d296d7d5932219d74226900a66541e9
+      apptime_helper: input_number.awtrix_app_time_display_duration
+      awtrix_displays:
+      - 7d296d7d5932219d74226900a66541e9
+- id: '1683385558568'
+  alias: Awtrix Consommation Nette
+  description: ''
+  use_blueprint:
+    path: noumaios/noumaios_awtrix_create_sensor_app.yaml
+    input:
+      text_case: '0'
+      awtrix_display: 7d296d7d5932219d74226900a66541e9
+      toggle_helper: input_boolean.awtrix_toggle_consommation_nette
+      my_sensor: sensor.p1_meter_3c39e7284d28_active_power
+      my_icon_above_0: '52465'
+      my_icon_below_0: '52464'
+      my_sensor_show_unit: true
+      push_icon: '0'
+      my_template_icon: '{{ iif(states (my_sensor) | int > 0, 52465, 52464)}}'
+      my_template_sensor: '{{states(my_sensor) |int |abs }} W'
+- id: '1683385958248'
+  alias: Awtrix Temperature Exterieure
+  description: ''
+  use_blueprint:
+    path: noumaios/noumaios_awtrix_create_sensor_app.yaml
+    input:
+      text_case: '0'
+      awtrix_display: 7d296d7d5932219d74226900a66541e9
+      toggle_helper: input_boolean.awtrix_toggle_temperature_exterieure
+      my_sensor: sensor.vicare_outside_temperature
+      my_icon_above_0: '48841'
+      my_icon_below_0: '48843'
+      my_sensor_show_unit: true
+      push_icon: '2'
+      my_template_icon: '{{ iif(states (my_sensor) | int > 0, 48841, 48843)}}'
+- id: '1683386140820'
+  alias: Awtrix Tesla
+  description: ''
+  use_blueprint:
+    path: smarthomejunkie/awtrix_create_sensor_app.yaml
+    input:
+      text_case: '0'
+      awtrix_display: 7d296d7d5932219d74226900a66541e9
+      toggle_helper: input_boolean.awtrix_toggle_tesla
+      my_sensor: sensor.f_r_i_d_a_y_niveau_de_batterie
+      my_icon: '15635'
+      push_icon: '2'
+      awtrix_displays:
+      - 7d296d7d5932219d74226900a66541e9
+- id: '1683454889095'
+  alias: Awtrix Dishwasher
+  description: ''
+  use_blueprint:
+    path: smarthomejunkie/awtrix_create_sensor_app.yaml
+    input:
+      text_case: '0'
+      awtrix_display: 7d296d7d5932219d74226900a66541e9
+      toggle_helper: input_boolean.awtrix_toggle_dishwasher
+      my_sensor: sensor.dishwasher_remaining_time
+      my_icon: '17590'
+      push_icon: '2'
+      awtrix_displays:
+      - 7d296d7d5932219d74226900a66541e9
+- id: '1683455187001'
+  alias: Awtrix on off Lave Vaiselle
+  description: Active / Désactive l'application Awtrix Lave Vaisselle en fonction
+    activité
+  trigger:
+  - platform: state
+    entity_id:
+    - sensor.dishwasher_status
+    to: running
+    id: Lave Vaisselle Actif
+  - platform: state
+    entity_id:
+    - sensor.dishwasher_status
+    id: Lave Vaisselle Inactif
+    from: running
+  condition: []
+  action:
+  - choose:
+    - conditions:
+      - condition: trigger
+        id: Lave Vaisselle Actif
+      sequence:
+      - service: input_boolean.turn_on
+        data: {}
+        target:
+          entity_id: input_boolean.awtrix_toggle_dishwasher
+    - conditions:
+      - condition: trigger
+        id: Lave Vaisselle Inactif
+      sequence:
+      - service: input_boolean.turn_off
+        data: {}
+        target:
+          entity_id: input_boolean.awtrix_toggle_dishwasher
+  mode: single
+- id: '1683472328417'
+  alias: Awtrix Tony
+  description: ''
+  use_blueprint:
+    path: smarthomejunkie/awtrix_create_sensor_app.yaml
+    input:
+      text_case: '2'
+      awtrix_display: 7d296d7d5932219d74226900a66541e9
+      toggle_helper: input_boolean.awtrix_toggle_tony
+      my_sensor: sensor.tony_status
+      my_icon: '52393'
+      push_icon: '0'
+      awtrix_displays:
+      - 7d296d7d5932219d74226900a66541e9
+- id: '1683564320803'
+  alias: Awtrix Availability or Unavailability
+  description: Exécute une action quand Awtrix devient indispo ou revient disponible
+  trigger:
+  - platform: state
+    entity_id:
+    - light.matrix
+    to: unavailable
+    id: Unavailable
+  - platform: state
+    entity_id:
+    - light.matrix
+    to: 'on'
+    id: Available
+  condition: []
+  action:
+  - choose:
+    - conditions:
+      - condition: trigger
+        id: Unavailable
+      sequence:
+      - service: script.notify_fabien
+        data:
+          message: Awtrix est devenu indisponible
+          title: Awtrix indisponible
+  - choose:
+    - conditions:
+      - condition: trigger
+        id: Available
+      sequence:
+      - service: "{% set entity_ids = expand(states) | selectattr('entity_id', 'match',
+          '^input_boolean\\\\.') | selectattr('entity_id', 'search', 'awtrix') | list
+          | map(attribute='entity_id') | list %}\n{% for entity_id in entity_ids %}\n
+          \ {% set index = loop.index0 %}\n  {% set toggle_service = { 'service':
+          'input_boolean.toggle', 'data': { 'entity_id': entity_id } } %}\n  {% set
+          delay_service = { 'service': 'delay', 'data': { 'seconds': 2 } } %}\n  -
+          service: script.execute\n    data_template:\n      sequence:\n        -
+          '{{ toggle_service }}'\n        - '{{ delay_service }}'\n{% endfor %}\n"
+      - service: "{% set entity_ids = expand(states) | selectattr('entity_id', 'match',
+          '^input_boolean\\\\.') | selectattr('entity_id', 'search', 'awtrix') | list
+          | map(attribute='entity_id') | list %}\n{% for entity_id in entity_ids %}\n
+          \ {% set index = loop.index0 %}\n  {% set toggle_service = { 'service':
+          'input_boolean.toggle', 'data': { 'entity_id': entity_id } } %}\n  {% set
+          delay_service = { 'service': 'delay', 'data': { 'seconds': 2 } } %}\n  -
+          service: script.execute\n    data_template:\n      sequence:\n        -
+          '{{ toggle_service }}'\n        - '{{ delay_service }}'\n{% endfor %}            \n"
+  mode: single
+- id: '1683573543248'
+  alias: Awtrix Mercedes
+  description: Show the tank level of the mercedes
+  use_blueprint:
+    path: smarthomejunkie/awtrix_create_sensor_app.yaml
+    input:
+      text_case: '0'
+      awtrix_display: 7d296d7d5932219d74226900a66541e9
+      toggle_helper: input_boolean.awtrix_toggle_mercedes
+      my_sensor: sensor.wdc1569081j634452_fuel_level
+      push_icon: '2'
+      my_icon: '16135'
+      awtrix_displays:
+      - 7d296d7d5932219d74226900a66541e9
+- id: '1684684909909'
+  alias: Sonnette appuyée
+  description: Lance un son sur google home quand qqn sonne à la porte
+  triggers:
+  - type: turned_on
+    device_id: c51528090ce967acd046482cbbd12ab6
+    entity_id: binary_sensor.sonnette_visitor
+    domain: binary_sensor
+    trigger: device
+  conditions: []
+  actions:
+  - action: camera.snapshot
+    metadata: {}
+    data:
+      filename: /config/www/tmp/snapshot-doorbell.jpg
+    target:
+      entity_id: camera.sonnette_sub
+  - data:
+      volume_level: 0.5
+    target:
+      entity_id:
+      - media_player.all
+    action: media_player.volume_set
+  - data:
+      enqueue: replace
+      media:
+        media_content_id: media-source://media_source/local/doorbell.mp3
+        media_content_type: music
+        metadata: {}
+    target:
+      device_id:
+      - 8c8316ebf4d897840c1debf0bc12c42b
+      - edacc47678d6b1905ed52fa1e3cf9c8e
+      - 8f2c67d66673ee06f291fff7e8391106
+      - 230e667d38b40ebe5627c6a841107b9e
+      - 0530124217cd7ebbad60c43579fc3c06
+      - bd31a4147ac4c2c2197f4d3069d26882
+      - b48e20a5aba2a3f935998c61dcee5e61
+      - e93c18a33cdb83f58ad703e88ead008e
+    action: media_player.play_media
+  - data:
+      enqueue: replace
+      media:
+        media_content_id: media-source://media_source/local/Vecna Clock - Sound -
+          Stranger Things ! Notification.mp3
+        media_content_type: music
+        metadata: {}
+    target:
+      device_id: c9b7108b55780120c452a2a59e7fc230
+    action: media_player.play_media
+  - action: notify.mobile_app_iphone_16_pro_de_fabien
+    data:
+      message: Quelqu'un a sonné à la porte
+      title: Qqn a sonné
+      data:
+        image: /local/tmp/snapshot-doorbell.jpg
+        entity_id: camera.sonnette
+        actions:
+        - action: URI
+          title: Open Reolink App
+          uri: app://com.mcu.reolink
+        - action: URI
+          title: View Camera in HA
+          uri: /lovelace/cameras
+  - if:
+    - condition: state
+      entity_id: person.louis
+      state: home
+    then:
+    - data:
+        title: Sonnette
+        message: Quelqu'un a sonné
+        critical: 1
+      action: script.notify_louis
+  - if:
+    - condition: state
+      entity_id: person.gillian
+      state: home
+    then:
+    - data:
+        title: Sonnette
+        message: Quelqu'un a sonné
+        critical: 1
+      action: script.notify_gillian
+  - if:
+    - condition: state
+      entity_id: person.emma
+      state: home
+    then:
+    - data:
+        title: Sonnette
+        message: Quelqu'un a sonné
+        critical: 1
+      action: script.notify_emma
+  mode: single
+- id: '1686510399988'
+  alias: Awtrix App Machine à laver
+  description: ''
+  use_blueprint:
+    path: smarthomejunkie/awtrix_create_sensor_app.yaml
+    input:
+      awtrix_display: 7d296d7d5932219d74226900a66541e9
+      toggle_helper: input_boolean.awtrix_toggle_machine_a_laver
+      my_sensor: sensor.washing_machine_time_to_complete
+      my_icon: '53355'
+      awtrix_displays:
+      - 7d296d7d5932219d74226900a66541e9
+- id: '1686510479414'
+  alias: Awtrix On Off Machine à laver
+  description: Active / Désactive application Awtrix Machine à Laver en fonction activité
+  triggers:
+  - entity_id:
+    - sensor.bosch_wav28gh0fg_68a40e728c79_bsh_common_status_operationstate
+    id: Machine à laver Active
+    trigger: state
+    to: Run
+  - entity_id:
+    - sensor.bosch_wav28gh0fg_68a40e728c79_bsh_common_status_operationstate
+    id: Machine à laver Inactive
+    to: Finished
+    trigger: state
+  conditions: []
+  actions:
+  - choose:
+    - conditions:
+      - condition: trigger
+        id: Machine à laver Active
+      sequence:
+      - data: {}
+        target:
+          entity_id: input_boolean.awtrix_toggle_machine_a_laver
+        action: input_boolean.turn_on
+    - conditions:
+      - condition: trigger
+        id: Machine à laver Inactive
+      sequence:
+      - data: {}
+        target:
+          entity_id: input_boolean.awtrix_toggle_machine_a_laver
+        action: input_boolean.turn_off
+  mode: single
+- id: '1693550338074'
+  alias: Monitor UPS
+  description: ''
+  trigger:
+  - platform: numeric_state
+    entity_id: sensor.ups_charge_de_la_batterie
+    below: 50
+    id: Half
+  - platform: numeric_state
+    entity_id: sensor.ups_charge_de_la_batterie
+    below: 10
+    id: Empty
+  - platform: state
+    entity_id:
+    - sensor.ups_code_d_etat
+    id: PowerFailure
+    to: OB DISCHRG
+  - platform: state
+    entity_id:
+    - sensor.ups_code_d_etat
+    to: OL CHRG
+    id: PowerRestored
+    from: OB DISCHRG
+  - platform: state
+    entity_id:
+    - sensor.ups_code_d_etat
+    to: OL
+    id: Full
+    from: OL CHRG
+  condition: []
+  action:
+  - choose:
+    - conditions:
+      - condition: trigger
+        id:
+        - Full
+      sequence:
+      - service: script.notify_fabien
+        data:
+          title: UPS
+          message: Batterie chargée totalement
+    - conditions:
+      - condition: trigger
+        id:
+        - Half
+      sequence:
+      - service: script.notify_fabien
+        data:
+          title: UPS
+          message: Batterie chargée à {{ states ('sensor.ups_charge_de_la_batterie')
+            }} %
+    - conditions:
+      - condition: trigger
+        id:
+        - Empty
+      sequence:
+      - service: script.notify_fabien
+        data:
+          title: UPS
+          message: Batterie chargée à {{ states ('sensor.ups_charge_de_la_batterie')
+            }} %
+          critical: 1
+    - conditions:
+      - condition: trigger
+        id:
+        - PowerFailure
+      sequence:
+      - service: script.notify_fabien
+        data:
+          title: UPS
+          message: 'Coupure courant.  Stauts ups : {{ (''sensor.ups_etat'') }}'
+    - conditions:
+      - condition: trigger
+        id:
+        - PowerRestored
+      sequence:
+      - service: script.notify_fabien
+        data:
+          title: UPS
+          message: 'Coupure courant.  Stauts ups : {{ (''sensor.ups_etat'') }}'
+  mode: single
+- id: '1693763793991'
+  alias: Monitor Citerne
+  description: ''
+  trigger:
+  - platform: state
+    entity_id:
+    - sensor.gaz_tank_level
+  condition: []
+  action:
+  - service: script.notify_fabien
+    data:
+      message: Le niveau de la citerne est maintenant de {{ states ('sensor.gaz_tank_level')}}%
+        avec un relevé du {{ states ('sensor.gaz_tank_level_date')}} parsé le  {{
+        states ('sensor.gaz_scrape_timestamp')}}
+      title: Citerne Gaz
+  mode: single
+- id: '1694459425376'
+  alias: Min Max Consommaiton Nette
+  description: Stocke le nombre min de kWH en suprlus
+  triggers:
+  - value_template: '{{ states(''sensor.net_energy'') | float(default=0) < states(''input_number.min_consommation_nette'')
+      | float(default=0) }}'
+    id: Min
+    trigger: template
+  - value_template: '{{ states(''sensor.net_energy'') | float(default=0) > states(''input_number.max_consommation_nette'')
+      | float(default=0) }}'
+    id: Max
+    trigger: template
+  conditions: []
+  actions:
+  - choose:
+    - conditions:
+      - condition: trigger
+        id:
+        - Min
+      sequence:
+      - target:
+          entity_id: input_number.min_consommation_nette
+        data:
+          value: '{{ states(''sensor.net_energy'') | float(default=0) }}'
+        action: input_number.set_value
+      - target:
+          entity_id: input_datetime.min_consommation_nette_timestamp
+        data:
+          datetime: '{{ now().strftime(''%Y-%m-%d %H:%M:%S'') }}'
+        action: input_datetime.set_datetime
+    - conditions:
+      - condition: trigger
+        id:
+        - Max
+      sequence:
+      - target:
+          entity_id: input_number.max_consommation_nette
+        data:
+          value: '{{ states(''sensor.net_energy'') | float(default=0) }}'
+        action: input_number.set_value
+      - target:
+          entity_id: input_datetime.max_consommation_nette_timestamp
+        data:
+          datetime: '{{ now().strftime(''%Y-%m-%d %H:%M:%S'') }}'
+        action: input_datetime.set_datetime
+  mode: single
+- id: '1696787122958'
+  alias: Update Antargaz
+  description: Update releves jauge Antargaz
+  trigger:
+  - platform: time
+    at: '7:00:00'
+  - platform: time
+    at: '14:00:00'
+  - platform: time
+    at: '22:00:00'
+  action:
+  - service: homeassistant.update_entity
+    data:
+      entity_id: sensor.antargaz
+  mode: single
+- id: '1703866571952'
+  alias: Fibaro-Button-Ilot-Cuisine
+  description: Action lancée quand button 1 cliqué
+  trigger:
+  - platform: webhook
+    allowed_methods:
+    - POST
+    - PUT
+    local_only: true
+    webhook_id: Fibaro-Button-Ilot-Cuisine-Pressed
+    id: Pressed
+  - platform: webhook
+    allowed_methods:
+    - POST
+    - PUT
+    local_only: true
+    webhook_id: Fibaro-Button-Ilot-Cuisine-Released
+    id: Released
+  condition: []
+  action:
+  - choose:
+    - conditions:
+      - condition: trigger
+        id: Pressed
+      sequence:
+      - service: script.notify_fabien
+        data:
+          message: Pressed
+          title: Bouton Cuisine
+          sound: default
+    - conditions:
+      - condition: trigger
+        id: Released
+      sequence:
+      - service: script.notify_fabien
+        data:
+          message: Released
+          title: Bouton cuisine
+          sound: default
+  mode: single
+- id: '1704557698006'
+  alias: Rappel heure matin
+  description: Donnes l'heure qu'il est
+  trigger:
+  - platform: time_pattern
+    minutes: /1
+  condition: []
+  action:
+  - service: script.turn_on
+    target:
+      entity_id: script.google_home_resume
+    data:
+      variables:
+        action:
+        - alias: Send TTS message
+          service: tts.cloud_say
+          target:
+            entity_id: media_player.bureau_fabien
+          data:
+            message: Il est {{ now().hour}}:{{ '%02d' %now().minute}}
+  mode: single
+- id: '1713727368656'
+  alias: Décrochage des onduleurs
+  description: Compte décrochage des onduleurs
+  trigger:
+  - platform: template
+    value_template: '{{ states(''sensor.sb5_0_1av_41_208_grid_power'') | int == 0
+      or states(''sensor.sb5_0_1av_41_208_grid_power'') is undefined }}      '
+    id: Decrochage_1
+  - platform: template
+    value_template: '{{ states(''sensor.sb5_0_1av_41_345_grid_power'') | int == 0
+      or states(''sensor.sb5_0_1av_41_345_grid_power'') is undefined }}      '
+    id: Decrochage_2
+  condition:
+  - condition: sun
+    before: sunset
+  action:
+  - choose:
+    - conditions:
+      - condition: trigger
+        id:
+        - Decrochage_1
+      sequence:
+      - service: counter.increment
+        target:
+          entity_id: counter.decrochage_onduleur_1
+        data: {}
+    - conditions:
+      - condition: trigger
+        id:
+        - Decrochage_2
+      sequence:
+      - service: counter.increment
+        target:
+          entity_id: counter.decrochage_onduleur_2
+        data: {}
+  mode: single
+- id: '1722360860567'
+  alias: Harmony Home
+  description: Action lancée par Emulated Roku Home
+  trigger:
+  - platform: event
+    event_type: roku_command
+    event_data:
+      source_name: Home Assistant
+      type: keypress
+      key: Up
+    id: Up
+    alias: Up Event
+  - alias: Down Event
+    platform: event
+    event_type: roku_command
+    event_data:
+      source_name: Home Assistant
+      type: keypress
+      key: Down
+    id: Down
+  - alias: Left Event
+    platform: event
+    event_type: roku_command
+    event_data:
+      source_name: Home Assistant
+      type: keypress
+      key: Left
+    id: Left
+  - alias: Right Event
+    platform: event
+    event_type: roku_command
+    event_data:
+      source_name: Home Assistant
+      type: keypress
+      key: Right
+    id: Right
+  - platform: event
+    event_type: roku_command
+    event_data:
+      source_name: Home Assistant
+      type: keypress
+      key: Home
+    id: Home
+    alias: Home Event
+  - platform: event
+    event_type: roku_command
+    event_data:
+      source_name: Home Assistant
+      type: keypress
+      key: Play
+    alias: Play Event
+    id: Play
+  condition: []
+  action:
+  - choose:
+    - conditions:
+      - condition: trigger
+        id:
+        - Up
+      sequence:
+      - service: cover.open_cover
+        metadata: {}
+        data: {}
+        target:
+          entity_id:
+          - cover.volet_tv_low_speed
+          - cover.volet_canape
+    - conditions:
+      - condition: trigger
+        id:
+        - Down
+      sequence:
+      - service: cover.close_cover
+        metadata: {}
+        data: {}
+        target:
+          entity_id:
+          - cover.volet_canape
+          - cover.volet_tv
+    - conditions:
+      - condition: trigger
+        id:
+        - Left
+      sequence:
+      - service: cover.toggle
+        metadata: {}
+        data: {}
+        target:
+          entity_id:
+          - cover.volet_canape_low_speed
+          - cover.volet_tv_low_speed
+    - conditions:
+      - condition: trigger
+        id:
+        - Home
+      sequence:
+      - service: light.toggle
+        metadata: {}
+        data: {}
+        target:
+          device_id: 2950016d098e22e677548e12d68371c1
+    - conditions:
+      - condition: trigger
+        id:
+        - Play
+      sequence:
+      - service: light.turn_off
+        metadata: {}
+        data: {}
+        target:
+          area_id:
+          - cuisine
+          - hall_d_entree
+          - salle_a_manger
+          device_id:
+          - fe39203c2419710375eca5765c5be933
+          - 15bbdbb8252bc651670082da83fd1231
+    - conditions:
+      - condition: trigger
+        id:
+        - Right
+      sequence:
+      - service: cover.toggle
+        metadata: {}
+        data: {}
+        target:
+          entity_id: cover.volet_salle_a_manger_low_speed
+  mode: single
+- id: '1730208337109'
+  alias: Gillian arrive
+  description: ''
+  triggers:
+  - trigger: state
+    entity_id:
+    - sensor.home_direction_du_deplacement_de_gillian
+    attribute: options
+    to: towards
+  conditions:
+  - condition: numeric_state
+    entity_id: sensor.home_distance_gillian
+    below: 3000
+  actions:
+  - action: script.notify_fabien
+    data:
+      message: Gillian arrive
+      title: Gillian
+  mode: single
+- id: '1730209049725'
+  alias: Fermeture Volets
+  description: Fermeture volets à la tombée du soleil
+  triggers:
+  - trigger: sun
+    event: sunset
+    offset: 0:20:00
+  conditions: []
+  actions:
+  - action: scene.turn_on
+    metadata: {}
+    target:
+      entity_id: scene.fermeture_volets
+  mode: single
+- id: '1733673315711'
+  alias: XMAS Lights
+  description: Allume ou éteint les lumières de Noël
+  triggers:
+  - trigger: time
+    at: 06:00:00
+    id: xmas_on
+  - trigger: time
+    at: 08:00:00
+    id: xmas_off
+  - trigger: sun
+    event: sunset
+    id: xmas_on
+    offset: 00:20:00
+  - trigger: time
+    at: '22:30:00'
+    id: internal_xmas_off
+  - trigger: time
+    at: 01:00:00
+    id: xmas_off
+  conditions: []
+  actions:
+  - choose:
+    - conditions:
+      - condition: trigger
+        id:
+        - xmas_on
+      sequence:
+      - action: light.turn_on
+        metadata: {}
+        data: {}
+        target:
+          entity_id:
+          - light.guirlande_sapin
+          - light.buis_exterieur
+          - light.guirlande_escalier
+    - conditions:
+      - condition: trigger
+        id:
+        - xmas_off
+      sequence:
+      - action: light.turn_off
+        metadata: {}
+        data: {}
+        target:
+          entity_id:
+          - light.guirlande_sapin
+          - light.buis_exterieur
+          - light.guirlande_escalier
+    - conditions:
+      - condition: trigger
+        id:
+        - internal_xmas_off
+      sequence:
+      - action: light.turn_off
+        metadata: {}
+        data: {}
+        target:
+          entity_id:
+          - light.guirlande_sapin
+          - light.guirlande_escalier
+  mode: single
+- id: '1736108052116'
+  alias: Presence Toggle
+  description: Indique si qqn est à la maison sur base de geolocalisation
+  triggers:
+  - trigger: numeric_state
+    entity_id:
+    - sensor.home_distance_la_plus_proche
+    below: 5000
+    id: Approaching
+  - trigger: numeric_state
+    entity_id:
+    - zone.home
+    above: 0
+    id: Approaching
+  - trigger: state
+    entity_id:
+    - zone.home
+    to: '0'
+    id: Leaving
+  - trigger: numeric_state
+    entity_id:
+    - sensor.home_distance_la_plus_proche
+    above: 5000
+    id: Leaving
+  actions:
+  - choose:
+    - conditions:
+      - condition: and
+        conditions:
+        - condition: trigger
+          id:
+          - Approaching
+        - condition: or
+          conditions:
+          - condition: state
+            entity_id: sensor.home_nearest_direction_of_travel
+            state: towards
+          - condition: state
+            entity_id: sensor.home_nearest_direction_of_travel
+            state: arrived
+      sequence:
+      - action: script.notify_fabien
+        data:
+          message: Presence
+          title: Approaching - Hausse
+      - action: input_boolean.turn_on
+        data: {}
+        target:
+          entity_id: input_boolean.presence_toggle
+    - conditions:
+      - condition: trigger
+        id:
+        - Leaving
+      sequence:
+      - action: script.notify_fabien
+        data:
+          message: Presence
+          title: Leaving
+      - action: input_boolean.turn_off
+        data: {}
+        target:
+          entity_id: input_boolean.presence_toggle
+  mode: single
+- id: '1736712172223'
+  alias: Chauffage Auto
+  description: Change automatiquement le mode du chauffage selon la présence (via
+    le toggle)
+  triggers:
+  - trigger: state
+    entity_id: input_boolean.presence_toggle
+    to: 'on'
+    id: Home
+  - trigger: state
+    entity_id: input_boolean.presence_toggle
+    to: 'off'
+    id: Away
+  conditions: []
+  actions:
+  - choose:
+    - conditions:
+      - condition: trigger
+        id: Home
+      sequence:
+      - action: input_select.select_option
+        target:
+          entity_id: input_select.evohome_select
+        data:
+          option: Auto
+    - conditions:
+      - condition: trigger
+        id: Away
+      sequence:
+      - action: input_select.select_option
+        target:
+          entity_id: input_select.evohome_select
+        data:
+          option: Away
+  mode: single
+- id: '1739041902066'
+  alias: Restart Wifi on Saturday Morning
+  description: ''
+  triggers:
+  - trigger: time
+    at: 04:00:00
+  conditions: []
+  actions:
+  - action: script.restart_wifi
+    metadata: {}
+    data:
+      satellite: All
+  mode: single
+- id: '1762601588903'
+  alias: Awtrix Tank
+  description: ''
+  use_blueprint:
+    path: smarthomejunkie/awtrix_create_sensor_app.yaml
+    input:
+      text_case: '0'
+      awtrix_display: 7d296d7d5932219d74226900a66541e9
+      toggle_helper: input_boolean.awtrix_toggle_tank
+      my_sensor: sensor.gaz_tank_level
+      my_icon: '37739'
+      push_icon: '2'
+      awtrix_displays:
+      - 7d296d7d5932219d74226900a66541e9
+- id: '1762687569048'
+  alias: Change statut chauffage
+  description: Appliquer mode Evohome depuis liste déroulante
+  triggers:
+  - trigger: state
+    entity_id:
+    - input_select.evohome_select
+  conditions: []
+  actions:
+  - action: evohome.set_system_mode
+    data:
+      mode: '{{ states(''input_select.evohome_select'') }}'
+  - action: evohome.refresh_system
+    metadata: {}
+    data: {}
+  mode: single
+- id: '1765736572038'
+  alias: Bouton rouge Hall Entréee
+  description: Action lancée quand button 1 cliqué
+  triggers:
+  - allowed_methods:
+    - POST
+    - PUT
+    local_only: true
+    webhook_id: Fibaro-Button-Rouge-Pressed
+    id: Pressed
+    trigger: webhook
+  - allowed_methods:
+    - POST
+    - PUT
+    local_only: true
+    webhook_id: Fibaro-Button-Rouge-Held
+    id: Held
+    trigger: webhook
+  - allowed_methods:
+    - POST
+    - PUT
+    local_only: true
+    webhook_id: Fibaro-Button-Rouge-Pressed2times
+    id: Pressed2times
+    trigger: webhook
+  - allowed_methods:
+    - POST
+    - PUT
+    local_only: true
+    webhook_id: Fibaro-Button-Rouge-Released
+    id: Released
+    trigger: webhook
+  conditions: []
+  actions:
+  - action: light.toggle
+    metadata: {}
+    data: {}
+    target:
+      entity_id: light.hall_d_entree
+  mode: single
+- id: '1767190764655'
+  alias: Update Waze toutes les 5 mins
+  description: Rafraîchir trajets Waze toutes les 5 min le matin
+  triggers:
+  - minutes: /5
+    trigger: time_pattern
+  conditions:
+  - condition: time
+    weekday:
+    - mon
+    - tue
+    - wed
+    - thu
+    - fri
+    after: 06:00:00
+    before: '10:00:00'
+  actions:
+  - target:
+      entity_id:
+      - sensor.trajet_maison_ecole_emma
+      - sensor.trajet_ecole_emma_ecole_louis
+      - sensor.trajet_ecole_louis_travail
+      - sensor.trajet_maison_travail_gillian
+    action: homeassistant.update_entity
+  mode: single
+- id: '1767191706925'
+  alias: Awtrix Trajet Fabien
+  description: ''
+  use_blueprint:
+    path: smarthomejunkie/awtrix_create_sensor_app.yaml
+    input:
+      text_case: '0'
+      awtrix_display: 7d296d7d5932219d74226900a66541e9
+      toggle_helper: input_boolean.awtrix_toggle_trajet_matin_fabien
+      my_sensor: sensor.temps_trajet_matin_fabien
+      my_icon: '7092'
+      push_icon: '2'
+      awtrix_displays:
+      - 7d296d7d5932219d74226900a66541e9
+- id: '1767191786538'
+  alias: Awtrix Trajet Gillian
+  description: ''
+  use_blueprint:
+    path: smarthomejunkie/awtrix_create_sensor_app.yaml
+    input:
+      text_case: '0'
+      awtrix_display: 7d296d7d5932219d74226900a66541e9
+      toggle_helper: input_boolean.awtrix_toggle_trajet_matin_gillian
+      my_sensor: sensor.temps_trajet_matin_gillian
+      my_icon: '41395'
+      push_icon: '2'
+      awtrix_displays:
+      - 7d296d7d5932219d74226900a66541e9
+- id: '1767192637826'
+  alias: Activer Awtrix trajets matin
+  description: ''
+  triggers:
+  - at: 05:55:00
+    trigger: time
+  conditions:
+  - condition: time
+    weekday:
+    - mon
+    - tue
+    - wed
+    - thu
+    - fri
+  actions:
+  - target:
+      entity_id:
+      - input_boolean.awtrix_toggle_trajet_matin_gillian
+      - input_boolean.awtrix_toggle_trajet_matin_fabien
+    action: input_boolean.turn_on
+    data: {}
+- id: '1767192683729'
+  alias: Désactiver Awtrix trajets matin
+  description: Désactive les deux toggles pour arrêter l'affichage des trajets sur
+    Awtrix après 9h
+  triggers:
+  - at: 09:05:00
+    trigger: time
+  conditions:
+  - condition: time
+    weekday:
+    - mon
+    - tue
+    - wed
+    - thu
+    - fri
+  actions:
+  - target:
+      entity_id:
+      - input_boolean.awtrix_toggle_trajet_matin_fabien
+      - input_boolean.awtrix_toggle_trajet_matin_gillian
+    action: input_boolean.turn_off
+    data: {}
+  mode: single
+- id: '1768734536410'
+  alias: Hall entrée détection avec luminosité
+  description: Allume la lumière du hall sur mouvement seulement si sombre, et éteint
+    après absence de mouvement + délai
+  triggers:
+  - entity_id: binary_sensor.hall_entree_detecteur_de_mouvements
+    from: 'off'
+    to: 'on'
+    trigger: state
+  conditions:
+  - condition: numeric_state
+    entity_id: sensor.hall_entree_lumiere
+    below: 15
+  actions:
+  - target:
+      entity_id: light.hall_d_entree
+    action: light.turn_on
+  - wait_for_trigger:
+    - entity_id: binary_sensor.hall_entree_detecteur_de_mouvements
+      from: 'on'
+      to: 'off'
+      trigger: state
+  - delay:
+      hours: 0
+      minutes: 0
+      seconds: 30
+      milliseconds: 0
+  - target:
+      entity_id: light.hall_d_entree
+    action: light.turn_off
+  mode: restart
+  max_exceeded: silent

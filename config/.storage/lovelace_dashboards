@@ -1,0 +1,45 @@
+{
+  "version": 1,
+  "minor_version": 1,
+  "key": "lovelace_dashboards",
+  "data": {
+    "items": [
+      {
+        "show_in_sidebar": true,
+        "title": "Habergy",
+        "require_admin": false,
+        "mode": "storage",
+        "url_path": "lovelace-fabien",
+        "id": "lovelace_fabien",
+        "icon": "mdi:view-dashboard"
+      },
+      {
+        "id": "vscode",
+        "url_path": "vscode",
+        "icon": "mdi:microsoft-visual-studio-code",
+        "require_admin": false,
+        "title": "VS Code",
+        "mode": "storage",
+        "show_in_sidebar": true
+      },
+      {
+        "id": "map",
+        "icon": "mdi:map",
+        "title": "Map",
+        "url_path": "map",
+        "require_admin": false,
+        "mode": "storage",
+        "show_in_sidebar": true
+      },
+      {
+        "id": "dashboard_tv",
+        "show_in_sidebar": true,
+        "icon": "mdi:television-classic",
+        "title": "TV",
+        "require_admin": false,
+        "mode": "storage",
+        "url_path": "dashboard-tv"
+      }
+    ]
+  }
+}

@@ -1,0 +1,58 @@
+# Home Assistant secrets and sensitive data
+config/secrets.yaml
+config/ip_bans.yaml
+config/tesla_fleet.key
+config/com.tesla.3p.public-key.pem
+docker-compose.yaml
+
+# Local data files
+config/poubelles_data.json
+config/gas_tank_data.json
+
+# Home Assistant internal storage (tokens, keys, UUIDs)
+# Tout ignorer SAUF les dashboards Lovelace (config UI sans secrets)
+config/.storage/*
+!config/.storage/lovelace.dashboard_tv
+!config/.storage/lovelace.lovelace_fabien
+!config/.storage/lovelace.map
+!config/.storage/lovelace.vscode
+!config/.storage/lovelace_dashboards
+!config/.storage/lovelace_resources
+config/.storage/lovelace.*.bak*
+config/.cloud/
+
+# Home Assistant image cache
+config/image/
+
+# Home Assistant log and temporary files
+config/home-assistant.log
+config/home-assistant.log.*
+config/*.db
+config/*.db-shm
+config/*.db-wal
+config/home-assistant_v2.db*
+config/.ha_run.lock
+config/tts/
+config/.cache/
+config/www/tmp/
+config/www/.well-known/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor files
+.vscode/
+*.swp
+.claude/
+
+# Custom integrations (managed via HACS / forks locales)
+config/custom_components/
+
+# Tests locaux
+tests/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo

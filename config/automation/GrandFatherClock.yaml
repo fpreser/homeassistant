@@ -1,0 +1,38 @@
+- alias: GrandfatherClock
+  id: 22dcd8e2-e87c-4d18-82bc-c7f9b53a1624
+  mode: restart
+  trigger:
+    - platform: time_pattern
+      minutes: /15
+
+  condition:
+    - condition: time
+      after: '09:29:00'
+      before: '21:30:00'
+
+  action:
+    - service: script.ready_cast_with_set_volume
+      data: 
+        player: media_player.bureau_fabien
+        volume_level: 40
+
+    - wait_template: "{{ not is_state('media_player.bureau_fabien', 'playing') }}"
+
+    - service: media_player.play_media
+      data:
+          entity_id: media_player.bureau_fabien         
+          media_content_id: >
+            {% if now().strftime("%M")|int == 15 %}
+            media-source://media_source/local/gf_clock/Toll-1Quarter.mp3   
+            {% else %}
+              {% if now().strftime("%M")|int == 30 %}
+              media-source://media_source/local/gf_clock/Toll-2Quarter.mp3
+              {% else %}
+                {% if now().strftime("%M")|int == 45 %}
+                media-source://media_source/local/gf_clock/Toll-3Quarter.mp3
+                {% else %}
+                media-source://media_source/local/gf_clock/{{now().strftime("%I")}}-hour.mp3        
+                {% endif %}
+              {% endif %}
+            {% endif %}          
+          media_content_type: 'music'

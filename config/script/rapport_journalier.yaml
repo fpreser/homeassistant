@@ -1,0 +1,21 @@
+rapport_journalier:
+  alias: Rapport Journalier
+  icon: mdi:google-assistant
+  sequence:
+    - delay:
+        hours: 0
+        minutes: 0
+        seconds: 1
+        milliseconds: 0
+    - variables:
+        message: !include ../templates/speech/daily_briefing.yaml
+    - alias: TTS for speaker voice command
+      service: script.google_home_voice
+      data:
+        use_resume: true
+        action:
+          - alias: Send TTS message
+            service: tts.cloud_say
+            data:
+              message: "{{ message }}"
+        volume: 35

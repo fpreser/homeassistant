@@ -1,0 +1,48 @@
+- id: '1678641743054'
+  alias: Controle Radiateurs
+  description: ''
+  trigger:
+  - platform: numeric_state
+    entity_id: sensor.salle_de_bain_radiateur_power
+    for:
+      hours: 1
+      minutes: 0
+      seconds: 0
+    above: 100
+    id: radiateur_sdb_on
+  - platform: numeric_state
+    entity_id: sensor.salle_de_douche_radiateur_power
+    for:
+      hours: 0
+      minutes: 40
+      seconds: 0
+    above: 100
+    id: radiateur_sdd_on
+  condition: []
+  action: 
+    - choose:
+      - conditions:
+        - condition: trigger
+          id: radiateur_sdb_on
+        sequence:
+        - service: script.notify_fabien
+          data:
+            message: Le radiateur de la Salle de Bain est resté allumé
+            title: Radiateur On
+        - service: switch.turn_off
+          data: {}
+          target:
+            entity_id: switch.salle_de_bain_radiateur
+      - conditions:
+        - condition: trigger
+          id: radiateur_sdd_on
+        sequence:
+        - service: script.notify_fabien
+          data:
+            message: Le radiateur de la Salle de douche est resté allumé
+            title: Radiateur On
+        - service: switch.turn_off
+          data: {}
+          target:
+            entity_id: switch.salle_de_douche_radiateur      
+  mode: single

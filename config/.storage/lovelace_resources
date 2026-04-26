@@ -1,0 +1,74 @@
+{
+  "version": 1,
+  "minor_version": 1,
+  "key": "lovelace_resources",
+  "data": {
+    "items": [
+      {
+        "url": "/hacsfiles/lovelace-mushroom/mushroom.js?hacstag=444350375511",
+        "type": "module",
+        "id": "5c470ce805e94866b47a15fe029d60a6"
+      },
+      {
+        "url": "/hacsfiles/search-card/search-card.js?hacstag=19775918002",
+        "type": "module",
+        "id": "d5df4000171c4f46967d37ea32ab297d"
+      },
+      {
+        "url": "/hacsfiles/tabbed-card/tabbed-card.js?hacstag=452866308033",
+        "type": "module",
+        "id": "055dceff62e8410fb1a5947a26ea9f5b"
+      },
+      {
+        "url": "/hacsfiles/lovelace-layout-card/layout-card.js?hacstag=156434866247",
+        "type": "module",
+        "id": "fe215f17b0944d428b043942724de5d6"
+      },
+      {
+        "url": "/hacsfiles/mini-graph-card/mini-graph-card-bundle.js?hacstag=1512800620130",
+        "type": "module",
+        "id": "bcd5fb6e4b6c4279af514cdf64e69621"
+      },
+      {
+        "url": "/hacsfiles/stack-in-card/stack-in-card.js?hacstag=248954055020",
+        "type": "module",
+        "id": "89dd3827544c47e39dbb31c9b190b6b1"
+      },
+      {
+        "url": "/hacsfiles/flipdown-timer-card/flipdown-timer-card.js?hacstag=42308207104",
+        "type": "module",
+        "id": "d73253de25d94ccb85c049c482a389cf"
+      },
+      {
+        "url": "/hacsfiles/vertical-stack-in-card/vertical-stack-in-card.js?hacstag=142051833101",
+        "type": "module",
+        "id": "cfff558a7c4a414888fd6a192be1046c"
+      },
+      {
+        "url": "/hacsfiles/power-distribution-card/power-distribution-card.js?hacstag=283578257302",
+        "type": "module",
+        "id": "4901393b96e946ae9733775e127f6fb4"
+      },
+      {
+        "id": "8427eff81eb84183879b64e4d92eadc4",
+        "url": "/hacsfiles/mini-media-player/mini-media-player-bundle.js?hacstag=14852083811611",
+        "type": "module"
+      },
+      {
+        "id": "6024695f6dbd4f34908814d09d0683aa",
+        "url": "/hacsfiles/button-card/button-card.js?hacstag=146194325701",
+        "type": "module"
+      },
+      {
+        "id": "93d1796779bf43ac92ab7d7a7e52d2e5",
+        "url": "/hacsfiles/lovelace-card-mod/card-mod.js?hacstag=190927524421",
+        "type": "module"
+      },
+      {
+        "id": "db3f703293f84c86a4657df8bedc48ff",
+        "url": "/hacsfiles/swipe-card/swipe-card.js?hacstag=192732887500",
+        "type": "module"
+      }
+    ]
+  }
+}

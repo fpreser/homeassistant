@@ -1,0 +1,258 @@
+blueprint:
+  name: Noumaios Awtrix Create Sensor App
+  description: Show a Home Assistant Sensor on the Ulanzi Clock
+  domain: automation
+  author: Smart Home Junkie and Noumaios
+  input:
+    awtrix_display:
+      name: Awtrix Display
+      description: Select the target Awtrix display.
+      selector:
+        device:
+          model: "AWTRIX Light"
+    toggle_helper:
+      name: Toggle Helper
+      description: Select the Toggle Helper that will toggle the App on or off.
+      selector:
+        entity:
+          domain: input_boolean
+    my_sensor:
+      name: Sensor
+      description: Select the Sensor or Media Player for which you want to show the state on the Ulanzi clock. The app value will change when the value of this sensor changes.
+      selector:
+        entity:
+          domain:
+            - sensor
+            - media_player
+    my_template_sensor:
+      name: Template (Optional)
+      description: Enter a template to format your sensor the way you like it. (Advanced mode)
+      selector:
+        text:
+      default: ""
+    my_sensor_show_unit:
+      name: Sensor Show Unit
+      description: Show sensor unit
+      default: false
+      selector:
+        boolean:    
+    my_icon:
+      name: Icon
+      description: Enter the Icon Name or ID of the icon that you like to show
+      selector:
+        text:
+      default: ""    
+    my_template_icon:
+      name: Template (Optional)
+      description: Enter a template to choose your icon the way you like it. (Advanced mode)
+      selector:
+        text:
+      default: ""
+    push_icon:
+      name: Push Icon
+      description: Icon behavior
+      selector:
+        select:
+          options:
+            - label: "Icon doesn't move"
+              value: "0"
+            - label: "Icon moves with text and will not appear again"
+              value: "1"
+            - label: "Icon moves with text but appears again when the text starts"
+              value: "2"
+          mode: dropdown
+      default: "2"
+    text_case:
+      name: Text Case
+      description: Select how you would like your text to display.
+      selector:
+        select:
+          options:
+            - label: "Use global setting"
+              value: "0"
+            - label: "Force Uppercase"
+              value: "1"
+            - label: "Show as you entered it"
+              value: "2"
+          mode: dropdown
+      default: "0"
+    background_color:
+      name: Background Color
+      description: Select the Background color
+      selector:
+        color_rgb:
+      default: [0, 0, 0]
+    text_color:
+      name: Text Color
+      description: Select the Text color
+      selector:
+        color_rgb:
+      default: [255, 255, 255]
+    show_rainbow:
+      name: Rainbow Colors
+      description: Should the notification be shown in Rainbow colors?
+      selector:
+        boolean:
+      default: false
+    duration:
+      name: Duration (in seconds)
+      description: Sets how long the app should be displayed. 0 is global app time.
+      default: "0"
+    lifetime:
+      name: Lifetime (in seconds)
+      description: Sets how long the app should stay alive before it gets removed from the app cycle automatically. 0 is infinite lifetime.
+      default: "0"
+    switch_to_app:
+      name: Switch to app on value change
+      description: Should the clock switch to the app immediately when the value of the sensor changes? BEWARE! Setting this to On for a sensor that changes very frequently might flood your clock with MQTT messages and might cause reboots of the clock!
+      selector:
+        boolean:
+      default: false
+
+mode: queued
+
+trigger:
+  - platform: state
+    entity_id: !input toggle_helper
+    to: "on"
+    id: "On"
+  - platform: state
+    entity_id: !input toggle_helper
+    to: "off"
+    id: "Off"
+  - platform: state
+    entity_id: !input my_sensor
+    id: Changes
+
+variables:
+  device_id: !input awtrix_display
+  my_display: >
+    {{ iif( device_attr(device_id, 'name_by_user') != none, device_attr(device_id, 'name_by_user'), device_attr(device_id, 'name') ) }}
+  push_icon: !input push_icon
+  my_sensor: !input my_sensor
+  my_template_sensor: !input my_template_sensor
+  my_sensor_show_unit: !input my_sensor_show_unit
+  background_color: !input background_color
+  text_color: !input text_color
+  text_case: !input text_case
+  show_rainbow: !input show_rainbow
+  my_toggle_helper: toggle_helper
+  app_name: >
+    {{ my_sensor | trim }}
+  my_duration: !input duration
+  my_lifetime: !input lifetime
+  switch_to_app: !input switch_to_app
+  my_text: >
+    {{ iif(my_template_sensor == "", states(my_sensor,rounded= True, with_unit= my_sensor_show_unit), my_template_sensor)}}
+  my_icon: !input my_icon
+  my_template_icon: !input my_template_icon
+  my_displayed_icon: >
+    {{iif(my_template_icon =="", my_icon, my_template_icon)}}    
+
+action:
+  - choose:
+      - conditions:
+          - condition: trigger
+            id: "On"
+        sequence:
+          - service: mqtt.publish
+            data:
+              qos: 0
+              retain: false
+              topic: "{{my_display}}/custom/{{app_name}}"
+              payload: |-
+                {   
+                  "text": "{{ my_text }}",
+                  "background": {{ background_color }},
+                  "color": {{text_color}},
+                  "icon": "{{my_displayed_icon}}",
+                  "textCase": {{ text_case }},
+                  "pushIcon": {{ push_icon }},
+                  "rainbow": {{ iif(show_rainbow, "true", "false") }},
+                  "duration": {{ my_duration }},
+                  "lifetime": {{ my_lifetime }}
+                }
+          - delay:
+              hours: 0
+              minutes: 0
+              seconds: 1
+              milliseconds: 0        
+          - service: mqtt.publish
+            data:
+              qos: 0
+              retain: false
+              topic: "{{my_display}}/switch"
+              payload: |-
+                {   
+                  "name": "{{app_name}}"
+                }
+          - delay:
+              hours: 0
+              minutes: 0
+              seconds: 1
+              milliseconds: 0
+      - conditions:
+          - condition: trigger
+            id: "Off"
+        sequence:
+          - service: mqtt.publish
+            data:
+              qos: 0
+              retain: false
+              topic: "{{my_display}}/custom/{{app_name}}"
+          - delay:
+              hours: 0
+              minutes: 0
+              seconds: 1
+              milliseconds: 0        
+      - conditions:
+          - condition: and
+            conditions:
+              - condition: trigger
+                id: Changes
+              - condition: state
+                entity_id: !input toggle_helper
+                state: "on"
+              - condition: not
+                conditions:
+                  - condition: state
+                    entity_id: !input my_sensor
+                    state:
+                      - "off"
+                      - idle
+                      - unavailable
+                      - unknown
+        sequence:
+          - service: mqtt.publish
+            data:
+              qos: 0
+              retain: false
+              topic: "{{my_display}}/custom/{{app_name}}"
+              payload: |-
+                {   
+                  "text": "{{ my_text }}",
+                  "background": {{ background_color }},
+                  "color": {{text_color}},
+                  "icon": "{{my_displayed_icon}}",
+                  "textCase": {{ text_case }},
+                  "pushIcon": {{ push_icon }},
+                  "rainbow": {{ iif(show_rainbow, "true", "false") }},
+                  "duration": {{ my_duration }},
+                  "lifetime": {{ my_lifetime }}
+                }
+          - delay:
+              hours: 0
+              minutes: 0
+              seconds: 1
+              milliseconds: 0        
+          - condition: template
+            value_template: "{{ switch_to_app == true }}"
+          - service: mqtt.publish
+            data:
+              qos: 0
+              retain: false
+              topic: "{{my_display}}/switch"
+              payload: |-
+                {   
+                  "name": "{{app_name}}"
+                }

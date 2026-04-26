@@ -1,0 +1,33 @@
+- id: '1666985091454'
+  name: Sièste chambre grenier
+  entities:
+    light.chambre_grenier:
+      supported_color_modes:
+      - onoff
+      entity_id:
+      - light.chambre_grenier_entree
+      - light.chambre_grenier_principal
+      icon: mdi:lightbulb-group
+      friendly_name: Chambre Grenier
+      supported_features: 0
+      state: 'off'
+    cover.volet_velux_chambre:
+      current_position: 0
+      device_class: shutter
+      friendly_name: Volet Vélux chambre
+      supported_features: 15
+      state: closed
+    cover.volet_chambre_low_speed:
+      current_position: 0
+      device_class: shutter
+      friendly_name: Volet chambre Low speed
+      supported_features: 15
+      state: closed
+  icon: mdi:sleep
+  metadata:
+    cover.volet_chambre_low_speed:
+      entity_only: true
+    cover.volet_velux_chambre:
+      entity_only: true
+    light.chambre_grenier:
+      entity_only: true

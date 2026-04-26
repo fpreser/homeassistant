@@ -1,0 +1,38 @@
+####################################################################
+## Allumer Spot Garage avec Passage
+#####################################################################
+- alias: Spot Garage Auto
+  id: 32dcd8e2-e87c-4d18-82bc-b7f9b53a1625
+  description: Allume ou éteind le spot du garage
+  trigger:
+  - platform: state
+    entity_id: light.jardin_passage
+    from: 'off'
+    to: 'on'
+  - platform: state
+    entity_id: light.jardin_passage
+    from: 'on'
+    to: 'off'
+  condition: []
+  action:
+  - choose:
+    - conditions:
+      - condition: state
+        entity_id: light.jardin_passage
+        state: 'on'
+      sequence:
+      - service: light.turn_on
+        target:
+          entity_id:
+          - light.spot_garage
+    - conditions:
+      - condition: state
+        entity_id: light.jardin_passage
+        state: 'off'
+      sequence:
+      - service: light.turn_off
+        target:
+          entity_id:
+          - light.spot_garage
+    default: []
+  mode: single

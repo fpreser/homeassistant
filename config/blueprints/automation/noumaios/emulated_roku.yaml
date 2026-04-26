@@ -1,0 +1,159 @@
+blueprint:
+  name: Emulated Roku Automation Chooser
+  description: 'Control anything using emulated roku and a harmony remote"'
+  domain: automation
+  input:
+    emulated_roku:
+      name: Emulated Roku
+      description: Type the name of your emulated roku (can be found by going to Configuration, Integrations, Emulated Roku)
+#      selector:
+#        device:
+#          integration: 
+#          manufacturer: 
+#          model: 
+    Home:
+      name: Home
+      description: Action to run on press Home
+      default: []
+      selector:
+        action: {}
+    Rev:
+      name: Rev
+      description: Action to run on press Rev
+      default: []
+      selector:
+        action: {}
+    Fwd:
+      name: Fwd
+      description: Action to run on press Fwd
+      default: []
+      selector:
+        action: {}
+    Play:
+      name: Play
+      description: Action to run on press play
+      default: []
+      selector:
+        action: {}
+    Select:
+      name: Select
+      description: Action to run on press select
+      default: []
+      selector:
+        action: {}
+    Left:
+      name: Left
+      description: Action to run on press left
+      default: []
+      selector:
+        action: {}
+    Right:
+      name: Right
+      description: Action to run on press Right
+      default: []
+      selector:
+        action: {}
+    Down:
+      name: Down
+      description: Action to run on press down
+      default: []
+      selector:
+        action: {}
+    Up:
+      name: Up
+      description: Action to run on press Up
+      default: []
+      selector:
+        action: {}
+    Back:
+      name: Back
+      description: Action to run on press back
+      default: []
+      selector:
+        action: {}
+    InstantReplay:
+      name: InstantReplay
+      description: Action to run on press instant replay
+      default: []
+      selector:
+        action: {}
+    Info:
+      name: Info
+      description: Action to run on press info
+      default: []
+      selector:
+        action: {}
+    BackSpace:
+      name: BackSpace
+      description: Action to run on press backspace
+      default: []
+      selector:
+        action: {}
+    Search:
+      name: Search
+      description: Action to run on press search
+      default: []
+      selector:
+        action: {}
+    Enter:
+      name: Enter
+      description: Action to run on press enter
+      default: []
+      selector:
+        action: {}        
+mode: restart
+max_exceeded: silent
+trigger:
+- platform: event
+  event_type: roku_command
+  event_data:
+    source_name: !input 'emulated_roku'
+action:
+- variables:
+    event: '{{ trigger.event.data.key }}'
+- choose:
+  - conditions:
+    - '{{ event == "Home" }}'
+    sequence: !input 'Home'
+  - conditions:
+    - '{{ event == "Rev" }}'
+    sequence: !input 'Rev'
+  - conditions:
+    - '{{ event == "Fwd" }}'
+    sequence: !input 'Fwd'
+  - conditions:
+    - '{{ event == "Play" }}'
+    sequence: !input 'Play'
+  - conditions:
+    - '{{ event == "Select" }}'
+    sequence: !input 'Select'
+  - conditions:
+    - '{{ event == "Left" }}'
+    sequence: !input 'Left'
+  - conditions:
+    - '{{ event == "Right" }}'
+    sequence: !input 'Right'
+  - conditions:
+    - '{{ event == "Down" }}'
+    sequence: !input 'Down'
+  - conditions:
+    - '{{ event == "Up" }}'
+    sequence: !input 'Up'
+  - conditions:
+    - '{{ event == "Back" }}'
+    sequence: !input 'Back'
+  - conditions:
+    - '{{ event == "InstantReplay" }}'
+    sequence: !input 'InstantReplay'
+  - conditions:
+    - '{{ event == "Info" }}'
+    sequence: !input 'Info'
+  - conditions:
+    - '{{ event == "BackSpace" }}'
+    sequence: !input 'BackSpace'
+  - conditions:
+    - '{{ event == "Search" }}'
+    sequence: !input 'Search'
+  - conditions:
+    - '{{ event == "Enter" }}'
+    sequence: !input 'Enter'

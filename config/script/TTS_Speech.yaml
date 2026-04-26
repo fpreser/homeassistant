@@ -1,0 +1,52 @@
+call_tts:
+  alias: Call Text To Speech  
+  description: To avoid beep before text to speech
+  sequence:
+    - choose:
+        - conditions:
+            - condition: template
+              value_template: "{{ is_state('media_player.' ~ player, 'off') }}"
+          sequence:
+            - service: media_player.volume_mute
+              target:
+                entity_id: "{{ 'media_player.' ~ player }}"
+              data:
+                is_volume_muted: true
+            - service: media_player.turn_on
+              target:
+                entity_id: "{{ 'media_player.' ~ player }}"
+            - wait_template: "{{ is_state('media_player.' ~ player, 'idle') }}"
+            - service: media_player.volume_mute
+              target:
+                entity_id: "{{ 'media_player.' ~ player }}"
+              data:
+                is_volume_muted: false
+    - service: media_player.volume_mute
+      target:
+        entity_id: "{{ 'media_player.' ~ player }}"
+      data:
+        is_volume_muted: true
+    - delay:
+        hours: 0
+        minutes: 0
+        seconds: 0
+        milliseconds: 500
+    - service: media_player.volume_mute
+      target:
+        entity_id: "{{ 'media_player.' ~ player }}"
+      data:
+        is_volume_muted: false
+    - service: tts.cloud_say
+      data:
+        cache: false
+        entity_id: media_player.bureau_fabien
+        language: fr-FR
+        message: "{{ texte }}"
+        options:
+          voice: >
+            {% if (voix is defined) and (voix != '') %}                  
+              {{ voix }}                  
+            {% else %}
+              "Léa"
+            {% endif %}
+  mode: single

@@ -1,0 +1,40 @@
+#####################################################################
+#                    C I T E R N E   G A Z
+#####################################################################
+#
+# Expose les donnees de la citerne gaz propane Antargaz.
+#
+# Source     : integration Antargaz (scrape custom → sensor.antargaz)
+# Attributs  : niveau (%), date_lecture, timestamp
+#
+# Sensors :
+#   - Niveau Citerne       : niveau en % (device_class: battery)
+#   - Date Releve          : date du dernier releve chez Antargaz
+#   - Timestamp Extraction : horodatage de la derniere scrape
+#
+#####################################################################
+
+- sensor:
+  - name: "Niveau Citerne"
+    unique_id: sensor.gaz_tank_level
+    default_entity_id: sensor.gaz_tank_level
+    state: >-
+      {{ state_attr('sensor.antargaz', 'niveau') | int(0) }}
+    unit_of_measurement: "%"
+    device_class: battery
+    icon: mdi:propane-tank
+    state_class: measurement
+
+  - name: "Date Relevé"
+    unique_id: sensor.gaz_tank_level_date
+    default_entity_id: sensor.gaz_tank_level_date
+    state: >-
+      {{ state_attr('sensor.antargaz', 'date_lecture') | default('Inconnu') }}
+    icon: mdi:calendar-clock
+
+  - name: "Timestamp Extraction"
+    unique_id: sensor.gaz_scrape_timestamp
+    default_entity_id: sensor.gaz_scrape_timestamp
+    state: >-
+      {{ state_attr('sensor.antargaz', 'timestamp') | default('Inconnu') }}
+    icon: mdi:clock-outline

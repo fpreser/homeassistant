@@ -1,0 +1,52 @@
+ready_cast_with_set_volume:
+  description: Ensures a Google Home device is activated with a pre-set volume
+  sequence:
+    - choose:
+        - conditions:
+            - condition: template
+              value_template: '{{ is_state(''media_player.'' ~ player, ''off'') }}'
+          sequence:
+            - service: media_player.volume_mute
+              target:
+                entity_id: 'media_player.{{ player }}'
+              data:
+                is_volume_muted: true
+            - service: media_player.turn_on
+              target:
+                entity_id: 'media_player.{{ player }}'
+            - wait_template: '{{ is_state(''media_player.'' ~ player, ''idle'') }}'
+        - conditions:
+            - condition: template
+              value_template: '{{ is_state(''media_player.'' ~ player, ''idle'') }}'
+          sequence:
+            - service: media_player.volume_mute
+              target:
+                entity_id: 'media_player.{{ player }}'
+              data:
+                is_volume_muted: true
+            - service: media_player.play_media
+              target:
+                entity_id: 'media_player.{{ player }}'
+              data:
+                media_content_type: audio
+                media_content_id: 'media-source://media_source/local/1-minute-of-silence.mp3'
+            - wait_template: '{{ is_state(''media_player.'' ~ player, ''playing'') }}'
+            - service: media_player.volume_set
+              target:
+                entity_id: 'media_player.{{ player }}'
+              data:
+                volume_level: '{{ volume_level }}'
+            - service: media_player.volume_mute
+              target:
+                entity_id: 'media_player.{{ player }}'
+              data:
+                is_volume_muted: false
+            - service: tts.cloud_say
+              data:
+                language: fr-FR
+                entity_id: 'media_player.{{ player }}'
+                options:
+                  voice: YvetteNeural
+                message: Bonjour
+      default: []
+  mode: single

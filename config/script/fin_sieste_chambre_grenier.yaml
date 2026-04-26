@@ -1,0 +1,18 @@
+fin_sieste_chambre_grenier:
+  alias: Fin Sièste Chambre Grenier
+  sequence:
+  - service: cover.open_cover
+    data: {}
+    target:
+      entity_id:
+      - cover.volet_chambre_low_speed
+  - service: cover.open_cover
+    data: {}
+    target:
+      entity_id: cover.volet_velux_chambre
+  - service: climate.turn_off
+    data: {}
+    target:
+      entity_id: climate.chambre
+  mode: single
+  icon: mdi:sleep-off

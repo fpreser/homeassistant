@@ -1,0 +1,12 @@
+speech_engine_simplified:
+  sequence:
+    - service: tts.cloud_say
+      data:
+        entity_id: >-
+          {{ who }}
+        message: >-
+          {{ message }}
+        cache: true
+        language: fr-FR
+        options:
+          voice: YvetteNeural

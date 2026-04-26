@@ -1,0 +1,654 @@
+homeassistant:
+  customize:
+    script.google_home_resume:
+      # enter settings for the script here, all settings are optional, you can remove sections if you don't need them
+      # always leave the line with "settings: &settings" in!
+      settings: &settings
+        primary_spotcast: "fabien_preser"
+        radio_data:
+          NPO Radio 2:
+            picture: "http://192.168.1.10:8123/local/pictures/radio/npo_radio_2.png"
+            title: "Er is maar un NPO Radio 2"
+          Radio Veronica:
+            picture: "http://192.168.1.10:8123/local/pictures/radio/radio_veronica.png"
+            title: "WE. LOVE. MUSIC."
+          Willy:
+            picture: "http://192.168.1.10:8123/local/pictures/radio/willy.png"
+            title: "MUSIC MATTERS"
+          KINK:
+            picture: "http://192.168.1.10:8123/local/pictures/radio/kink.jpg"
+            title: "NO ALTERNATIVE"
+        
+        speaker_groups:
+          media_player.maison:
+            - media_player.ampli_salon
+            - media_player.cuisine
+            - media_player.chambre_emma
+            - media_player.chambre_louis
+            - media_player.salle_de_bain
+            - media_player.bureau_fabien
+            - media_player.chambre_amis
+            - media_player.bureau_gillian
+            - media_player.reveil_chambre_grenier
+            - media_player.sdd
+
+          media_player.rez:
+            - media_player.ampli_salon
+            - media_player.cuisine
+
+          media_player.premier:
+            - media_player.chambre_emma
+            - media_player.chambre_louis
+            - media_player.salle_de_bain
+            - media_player.bureau_fabien
+            - media_player.chambre_amis
+
+          media_player.deuxième:
+            - media_player.bureau_gillian
+            - media_player.reveil_chambre_grenier
+            - media_player.sdd
+
+        default_volume_level: 0.25
+        dummy_player: media_player.vlc_telnet
+        default_resume_delay:
+          seconds: 20
+        max_runtime:
+          minutes: 10
+        # settings for automation
+        stop_before_action: false
+        enable_automation: false
+        dashboard_cast: true
+        announce_volume_automation: 0.4
+      # settings for voice script
+      voice_settings: &voice_settings
+        check_for_title: "Bruit blanc"
+        use_resume: true
+
+group:
+
+script:
+  google_home_resume:
+    alias: "Google Home Resume"
+    description: Script for resuming Google Home speakers
+    icon: mdi:cast-audio
+    mode: parallel
+    fields:
+      target:
+        description: "Enter the targets in case they are not clear from the actions"
+        required: false
+        selector:
+          target:
+            entity:
+              integration: cast
+              domain: media_player
+            device:
+              integration: cast
+      action:
+        description: "Actions to be performed (only those using action: or service: will work)"
+        required: true
+        selector:
+          action:
+      resume_this_action:
+        description: "Set to false if you don't want to resume the actions started with this script (default is true)"
+        required: false
+        selector:
+          boolean:
+      resume_delay:
+        description: "Delay before resume when casting an image or dashboard. Default value is set by default_resume_delay variable or 20 seconds."
+        required: false
+        selector:
+          duration:
+    variables:
+      settings: *settings
+    sequence:
+      - alias: "Version number"
+        variables: &version
+          version: &ver 2025.5.0
+          settings: "{{ settings | default({}, true) }}"
+      - alias: "Failsafe to remove all groups if the script was not running"
+        if: >
+          {{ 
+            state_attr(this.entity_id, 'current') == 1
+            and integration_entities('group')
+                  | select('search', 'ghresume')
+                  | list | count > 0
+          }}
+        then:
+          - alias: "Which groups to remove"
+            variables:
+              groups_existing: >
+                {{ integration_entities('group') | select('search', 'ghresume') | list }}
+          - alias: "Loop to remove groups"
+            repeat:
+              for_each: "{{ groups_existing }}"
+              sequence:
+                - alias: "Remove one group"
+                  service: group.remove
+                  data:
+                    object_id: "{{ states[repeat.item].object_id }}"
+      - alias: "Set based on other scripts"
+        variables:
+          event_script: "{{ event_script | default(false) }}"
+          automation: "{{ automation | default(false) }}"
+      - alias: "Set variables for actions"
+        variables: &service_vars
+          actions: >
+            {% set action = action | default([]) %}
+            {% set services = iif(action is mapping,[ action ], action) | selectattr('service', 'defined') | list %}
+            {% set actions = iif(action is mapping,[ action ], action) | selectattr('action', 'defined') | list %}
+            {{ services + actions }}
+          no_action_count: >
+            {% set action = action | default([]) %}
+            {{ iif(action is mapping,[ action ], action) | count - actions | count }}
+      - alias: "Wrong actions provided"
+        choose:
+          - conditions: "{{ not (event_script or automation) and actions | count == 0 }}"
+            sequence:
+              - stop: "There were no actions defined, nothing is performed. The script script has been aborted."
+                error: true
+          - conditions: "{{ not (event_script or automation) and no_action_count > 0 }}"
+            sequence:
+              - service: system_log.write
+                data:
+                  level: "warning"
+                  logger: "{{ this.entity_id }}"
+                  message: >
+                    {{ no_action_count }} out of {{ actions | count }} items were not performed because they are not actions.
+      - alias: "Set variables to be used in the script"
+        variables: &generic_vars
+          start_time: "{{ start_time if start_time is defined else now() }}"
+          speaker_groups: "{{ settings.get('speaker_groups') | default({}, true) }}"
+          speaker_group_list: "{{ speaker_groups.keys() | list }}"
+          cast_entities: "{{ integration_entities('cast') }}"
+          spotify_entities: "{{ integration_entities('spotify') }}"
+          primary_spotcast_check: >
+            {%- set accounts = spotify_entities | map('replace', 'media_player.spotify_', '') | list %}
+            {{ spotify_entities | count <= 1 or settings.get('primary_spotcast') in accounts }}
+          ytube_music_entities: >
+            {{ integration_entities('ytube_music_player') | select('match', '^media_player.') | list }}
+          resume_active: >
+            {{ expand(integration_entities('group'))
+                | selectattr('entity_id', 'search', 'group.resume_active_ghresume')
+                | map(attribute='attributes.entity_id')
+                | map('list')
+                | sum(start=[])
+            }}
+          resume_action_false: >
+            {{ expand(integration_entities('group'))
+                | selectattr('entity_id', 'search', 'group.resume_action_false_ghresume')
+                | map(attribute='attributes.entity_id')
+                | map('list')
+                | sum(start=[])
+            }}
+      - alias: "Update Spotify data if there are Spotify entities"
+        if: "{{ spotify_entities | count > 0 }}"
+        then:
+          - alias: "Update Spotify entities"
+            service: homeassistant.update_entity
+            target:
+              entity_id: "{{ spotify_entities }}"
+      - alias: "Store data of media player entities and determine target_list"
+        variables:
+          data_source: resume_script
+      - variables:
+          player_data: >
+            {%- if player_data is undefined %}
+              {# general information for all entities #}
+              {%- set ns = namespace(info=[], groups_playing=[]) %}
+              {%- for entity in expand(cast_entities) %}
+                  {%- set members = speaker_groups[entity.entity_id]
+                                if speaker_groups is defined
+                                  and iif(speaker_groups)
+                                  and entity.entity_id in speaker_group_list
+                                else []
+                  %}
+                  {%- set screen = entity.attributes.device_class is not defined %}
+                  {%- set type = iif(members,'group',iif(screen,'screen','speaker')) %}
+                  {%- for group in speaker_group_list %}
+                    {%- set members = speaker_groups.items() | selectattr('0', 'eq', group) | map(attribute='1') | list | first %}
+                    {%- set members_playing = expand(members) | selectattr('state', 'eq', 'playing') | list | count == members | count %}
+                    {%- set content_list = expand(members) | selectattr('attributes.media_content_id', 'defined') | map(attribute='attributes.media_content_id') | list %}
+                    {%- set group_playing = members_playing and content_list | select('eq', content_list[0]) | list | count == content_list | count %}
+                    {%- set ns.groups_playing = ns.groups_playing + [ group ] if group_playing else ns.groups_playing %}
+                  {%- endfor %}
+                  {%- set groups_playing = ns.groups_playing %}
+                  {%- if type == 'speaker' %}
+                    {% set groups = speaker_groups.items() | selectattr('1', 'search', entity.entity_id) | map(attribute='0') | list %}
+                    {% set playing = groups | select('in', groups_playing) | list | count > 0 %}
+                    {% set type = 'playing_member' if playing else type %}
+                  {%- endif %}
+                  {%- set state = 'off' if type == 'group' and not entity.entity_id in groups_playing else entity.state %}
+                  {%- set general = dict(
+                                          data_source = data_source,
+                                          entity_id = entity.entity_id,
+                                          state = state,
+                                          type = type,
+                                          members = members
+                                          )
+                                    if type != 'playing_member'
+                                    else dict(entity_id = entity.entity_id, type = type, members=[])
+                  %}
+                  {# check if there is a Spotify account playing on this entity #}
+                  {%- set list_check = expand([ entity.entity_id ] + members) | map(attribute='name') | list %}
+                  {%- set spotify_entity = expand(spotify_entities)
+                                              | selectattr('state', 'eq', 'playing')
+                                              | selectattr('attributes.source', 'in', list_check)
+                                              | map(attribute='object_id')
+                                              | join
+                                              | replace('spotify_', '')
+                  %}
+                  {# add volume level #}
+                  {%- if not state in ['off', 'unavailable', 'unknown'] or type == 'playing_member' %}
+                    {%- set additional = dict(volume_level = entity.attributes.get('volume_level', settings.get('default_volume_level')) | round(2, default=0.25)) %}
+                  {%- else %}
+                    {%- set additional = {} %}
+                  {%- endif %}
+                  {# add metadata for playing entities #}
+                  {%- if type == 'playing_member'%}
+                  {%- elif (spotify_entity or
+                          (
+                            entity.state == 'playing'
+                            and expand(speaker_groups.items()
+                                        | selectattr('0', 'eq', entity.entity_id)
+                                        | list) 
+                                          | rejectattr('state', 'eq', 'playing')
+                                          | list
+                                          | count == 0
+                          )) and (type != 'group' or entity.entity_id in groups_playing)
+                  %}
+                    {%- set additional = dict(additional, **dict(
+                                              state = 'playing',
+                                              app_name = entity.attributes.get('app_name', 'no app'),
+                                              media_content_id = (entity.attributes.get('media_content_id', {}) | from_json).get('contentId', 'no media_content')
+                                                                  if entity.attributes.get('app_name') == 'Google Podcasts'
+                                                                  else entity.attributes.get('media_content_id', 'no media_content'),
+                                              media_position = (as_timestamp(now()) | round(2)
+                                                                - as_timestamp(entity.attributes.get('media_position_updated_at', now())) | round(2)
+                                                                + entity.attributes.get('media_position', 0)) | round(2)
+                                              ))
+                    %}
+                    {# add Spotify account #}
+                    {%- if entity.attributes.get('app_name') == 'Spotify' %}
+                      {%- set spotcast = spotify_entity if spotify_entity
+                                                and settings.primary_spotcast is defined
+                                                and spotify_entity != settings.primary_spotcast
+                                                and spotify_entities | count > 1
+                                                and primary_spotcast_check
+                                              else 'primary_account' %}
+                      {%- set additional = dict(additional,
+                                                **dict(state='playing',
+                                                        spotcast = spotcast
+                                                      )
+                                              ) 
+                      %}
+                    {# add information for ytube_music_player integration #}
+                    {%- elif entity.entity_id in expand(ytube_music_entities)
+                                                  | selectattr('state', 'eq', 'playing')
+                                                  | selectattr('attributes.remote_player_id', 'defined')
+                                                  | map(attribute='attributes.remote_player_id')
+                                                  | list
+                    %}
+                      {%- set additional = dict(additional,
+                                                **dict(app_name='Ytube Music Player',
+                                                        yt_player=expand(ytube_music_entities) | selectattr('attributes.remote_player_id', 'defined') | selectattr('attributes.remote_player_id', 'eq', entity.entity_id) | map(attribute='entity_id') | join,
+                                                        media_content_id = 'ytube_music'
+                                                      )
+                                              ) 
+                      %}
+                    {# add information for web streams (including TuneIn) #}
+                    {%- elif entity.attributes.get('app_name') not in ['Spotify', 'YouTube', 'YouTube Music'] %}
+                      {%- if entity.attributes.get('media_artist') in (settings.get('radio_data') | default({}, true)).keys() | list %}
+                        {%- set data = settings.radio_data[entity.attributes.media_artist] %}
+                        {%- set picture, title = data.get('picture'), data.get('title') %}
+                      {%- endif %}
+                      {%- set additional = dict(additional, **dict(
+                                                    media_artist = 'Google Podcasts' if entity.attributes.get('app_name') == 'Google Podcasts'
+                                                                    else entity.attributes.get('media_artist', 'no artist'),
+                                                    media_title = title if title is defined else entity.attributes.get('media_title', 'no title'),
+                                                    media_content_type = '' ~ entity.attributes.get('media_content_type', 'no type'),
+                                                    entity_picture = picture if picture is defined else entity.attributes.get('entity_picture', 'no pic')
+                                                    ))
+                      %}
+                    {%- endif %}
+                  {%- endif %}
+                  {# combine all data #}
+                  {%- set ns.info = ns.info + [ general | update(additional) ] %}
+              {%- endfor %}
+              {%- set info = ns.info %}
+              {# fill information for playing groups #}
+              {%- for group in groups_playing %}
+                {%- set members = speaker_groups.items() | selectattr('0', 'eq', group) | map(attribute='1') | list | first %}
+                {%- set first_member = expand(members) | selectattr('state', 'eq', 'playing') | first %}
+                {%- set additional = dict(
+                                      entity_id = group,
+                                      state = 'playing',
+                                      type = 'group',
+                                      members = members,
+                                      volume_level = first_member.attributes.get('volume_level', settings.get('default_volume_level')) | round(2, default=0.25),
+                                      app_name = first_member.attributes.get('app_name', 'no app'),
+                                      media_content_id = (first_member.attributes.get('media_content_id', {}) | from_json).get('contentId', 'no media_content')
+                                                          if first_member.attributes.get('app_name') == 'Google Podcasts'
+                                                          else first_member.attributes.get('media_content_id', 'no media_content'),
+                                      media_position = (as_timestamp(now()) | round(2)
+                                                        - as_timestamp(first_member.attributes.get('media_position_updated_at', now())) | round(2)
+                                                        + first_member.attributes.get('media_position', 0)) | round(2)
+                                      )
+                %}
+                {%- if first_member.attributes.get('app_name') == 'Spotify' %}
+                  {%- set list_check = expand([ group ] + members) | map(attribute='name') | list %}
+                  {%- set spotify_entity = expand(spotify_entities)
+                                              | selectattr('state', 'eq', 'playing')
+                                              | selectattr('attributes.source', 'in', list_check)
+                                              | map(attribute='object_id')
+                                              | join
+                                              | replace('spotify_', '')
+                  %}
+                  {%- set spotcast = spotify_entity if spotify_entity
+                                            and settings.primary_spotcast is defined
+                                            and spotify_entity != settings.primary_spotcast
+                                            and spotify_entities | count > 1
+                                            and primary_spotcast_check
+                                          else 'primary_account' %}
+                  {%- set additional = dict(additional,
+                                            **dict(spotcast = spotcast
+                                                  )
+                                          ) 
+                  %}
+                {%- elif group in expand(ytube_music_entities)
+                                      | selectattr('state', 'eq', 'playing')
+                                      | selectattr('attributes.remote_player_id', 'defined')
+                                      | map(attribute='attributes.remote_player_id')
+                                      | list
+                %}
+                  {%- set additional = dict(additional,
+                                            **dict(app_name='Ytube Music Player',
+                                                    yt_player=expand(ytube_music_entities) | selectattr('attributes.remote_player_id', 'defined') | selectattr('attributes.remote_player_id', 'eq', group) | map(attribute='entity_id') | join,
+                                                    media_content_id = 'ytube_music'
+                                                  )
+                                          ) 
+                  %}
+                {%- elif first_member.attributes.get('app_name') not in ['Spotify', 'YouTube', 'YouTube Music'] %}
+                  {%- if first_member.attributes.get('media_artist') in (settings.get('radio_data') | default({}, true)).keys() | list %}
+                    {%- set data = settings.radio_data[first_member.attributes.media_artist] %}
+                    {%- set picture, title = data.get('picture'), data.get('title') %}
+                  {%- endif %}
+                  {%- set additional = dict(additional, **dict(
+                                                media_artist = 'Google Podcasts' if first_member.attributes.get('app_name') == 'Google Podcasts'
+                                                                else first_member.attributes.get('media_artist', 'no artist'),
+                                                media_title = title if title is defined else first_member.attributes.get('media_title', 'no title'),
+                                                media_content_type = '' ~ first_member.attributes.get('media_content_type', 'no type'),
+                                                entity_picture = picture if picture is defined else first_member.attributes.get('entity_picture', 'no pic')
+                                                ))
+                  %}
+                {%- endif %}
+                {%- set info = info + [ additional ] %}
+              {%- endfor %}
+              {%- set player_data = info | selectattr('state', 'eq', 'playing') | list %}
+              {%- set player_data = player_data if player_data is defined else [] %}
+              {{ player_data }}
+            {%- else %}
+              {{ player_data }}
+            {%- endif %}
+          target_list: >
+            {%- set ignore_list = resume_active + resume_action_false %}
+            {%- set ignore_list = ignore_list if ignore_list is defined else [] %}
+            {# create list based on players_to_resume input #}
+              {%- set players_to_resume = players_to_resume | default([]) %}
+              {%- set players_to_resume = (players_to_resume | replace(' ' , '')).split(',') if players_to_resume is string else players_to_resume %}
+            {# create lists based on target input #}
+              {%- set a = target.area_id | default([]) %}
+              {%- set a = (a | replace(' ' , '')).split(',') if a is string else a %}
+              {%- set d = target.device_id | default([]) %}
+              {%- set d = (d | replace(' ' , '')).split(',') if d is string else d %}
+              {%- set e = target.entity_id | default([]) %}
+              {%- set e = (e | replace(' ' , '')).split(',') if e is string else e %}
+              {%- set e = expand(e) | map(attribute='entity_id') | list if expand(e) | selectattr('entity_id', 'defined') | list | count > 0 else e %}
+              {%- set e = expand(e) | map(attribute='entity_id') | select('in', cast_entities) | list if e | select('in', cast_entities) | list | count == 0 else e %}
+            {# create entity list based on device/area input #}
+              {# determine entities of areas #}
+                {%- set a = a | map('area_entities') | sum(start=[]) | select('in', cast_entities) | list %}
+              {# determine entities of devices #}
+                {%- set d = d | map('device_entities') | sum(start=[]) | select('in', cast_entities) | list %}
+            {# create list with all entities #}
+              {%- set target_list = (a + d + e + players_to_resume) | unique | list %}
+            {{ target_list | default(cast_entities, true) | reject('in', ignore_list) | list }}
+          all: "{{ target_list == integration_entities('cast') }}"
+      - alias: "Create resume_active group"
+        if: "{{ resume_active | select('in', target_list) | list | count == 0 }}"
+        then:
+          - service: group.set
+            data:
+              object_id: "resume_active_ghresume_{{ this.attributes.last_called | timestamp_local | replace(':', '') | replace('-', '') | replace(' ', '')[-8:] }}"
+              entities: "{{ target_list }}"
+              name: "Resume Active GHResume"
+              add_entities: true
+      - alias: "Create resume_action_false group"
+        if: "{{ resume_this_action | default(true) == false and resume_action_false | select('in', target_list) | list | count == 0 }}"
+        then:
+          - service: group.set
+            data:
+              object_id: "resume_action_false_ghresume_{{ this.attributes.last_called | timestamp_local | replace(':', '') | replace('-', '') | replace(' ', '')[-8:] }}"
+              entities: "{{ target_list }}"
+              name: "Resume Action False GHResume"
+              add_entities: true
+      - alias: "Stop media before action if configured"
+        if: "{{ settings.stop_before_action | default(false) }}"
+        then:
+          - service: media_player.media_stop
+            target:
+              entity_id: "{{ target_list }}"
+      - alias: "Interrupt YouTube music if needed"
+        if: >
+          {{ player_data | selectattr('entity_id', 'in', target_list) | selectattr('yt_player', 'defined') | list | count > 0 }}
+        then:
+          - service: ytube_music_player.call_method
+            data:
+              entity_id: >
+                {{ player_data | selectattr('entity_id', 'in', target_list) | selectattr('yt_player', 'defined') | map(attribute='yt_player') | list }}
+              command: interrupt_start
+      - alias: "Perform the actions"
+        repeat:
+          for_each: "{{ actions }}"
+          sequence:
+            - alias: "Perform one action"
+              action: "{{ repeat.item.action | default(repeat.item.service) }}"
+              data: "{{ repeat.item.data | default({}) }}"
+              target: "{{ repeat.item.target | default({}) }}"
+      - alias: "Determine resume delay"
+        variables:
+          resume_delay: "{{ resume_delay | default(settings.get('default_resume_delay', {'seconds': 20})) }}"
+      - alias: "Wait for resume delay"
+        delay: "{{ resume_delay }}"
+      - alias: "Resume players"
+        if: "{{ resume_this_action | default(true) }}"
+        then:
+          - alias: "Resume playing entities"
+            variables:
+              players_to_resume: "{{ player_data | selectattr('entity_id', 'in', target_list) | map(attribute='entity_id') | list }}"
+            if: "{{ players_to_resume | count > 0 }}"
+            then:
+              - alias: "Resume players"
+                service: script.turn_on
+                target:
+                  entity_id: script.google_home_resume
+                data:
+                  variables:
+                    player_data: "{{ player_data }}"
+                    players_to_resume: "{{ players_to_resume }}"
+                    action: []
+                    event_script: true
+      - alias: "Remove resume_active group"
+        if: "{{ resume_active | select('in', target_list) | list | count > 0 }}"
+        then:
+          - service: group.remove
+            data:
+              object_id: "{{ groups_existing | selectattr('entity_id', 'search', 'resume_active_ghresume') | map(attribute='object_id') | join }}"
+      - alias: "Remove resume_action_false group"
+        if: "{{ resume_action_false | select('in', target_list) | list | count > 0 }}"
+        then:
+          - service: group.remove
+            data:
+              object_id: "{{ groups_existing | selectattr('entity_id', 'search', 'resume_action_false_ghresume') | map(attribute='object_id') | join }}"
+
+template:
+  - binary_sensor:
+      - unique_id: 14f08591-c1ba-4364-8335-054eb5d0a822
+        name: "Resume Data Google Home Event"
+        state: "{{ states('input_number.resume_data_google_home_resume') | int > 0 }}"
+        attributes:
+          version: *ver
+          resume_data: >
+            {{ state_attr('input_text.resume_data_google_home_resume', 'resume_data') }}
+
+automation:
+  - alias: 00 - Google Home Automatic Resume
+    id: 417395bc-bd64-40a3-b20a-9062d426a01f
+    mode: parallel
+    max_exceeded: silent
+    trigger:
+      - platform: event
+        enabled: true
+        event_type: call_service
+        event_data:
+          domain: media_player
+          service: play_media
+        variables:
+          announce_volume: "{{ state_attr('script.google_home_resume', 'settings').get('announce_volume_automation') }}"
+        id: play
+      - platform: event
+        enabled: true
+        event_type: call_service
+        event_data:
+          domain: cast
+          service: show_lovelace_view
+        id: cast
+    variables:
+      version: *ver
+      settings: *settings
+      entities: >
+        {%- set e = trigger.event.data.service_data.entity_id %}
+        {%- set e = (e | replace(' ', '')) .split(',') if e is string else e %}
+        {%- set e = expand(e) | map(attribute='entity_id') | list %}
+        {%- set speaker_groups = settings.get('speaker_groups') | default({}, true) %}
+        {%- set members = speaker_groups.items() | selectattr('0', 'in', e) | map(attribute='1') | sum(start=[]) %}
+        {{ e + members }}
+    condition:
+      - alias: "Check if automation in enabled in script settings"
+        condition: template
+        value_template: "{{ settings.enable_automation | default(true) }}"
+      - alias: "Check if announce was set on the service call"
+        condition: template
+        value_template: "{{ trigger.id == 'cast' or trigger.event.data.service_data.get('announce', false) }}"
+      - alias: "Check if dashboard resume is enabled in case of dashboard cast trigger"
+        condition: template
+        value_template: "{{ trigger.id == 'play' or settings.get('dashboard_cast') | default(true) or settings.get('dashboard_cast') is none }}"
+    action:
+      - alias: Set variables to be used in the automation
+        variables: *generic_vars
+      - alias: "Failsafe to remove all groups if no resume scripts are not running"
+        if: >
+          {{ 
+            is_state_attr('script.google_home_resume', 'current', 0)
+            and integration_entities('group')
+                  | select('search', 'ghresume')
+                  | list | count > 0
+          }}
+        then:
+          - alias: "Which groups to remove"
+            variables:
+              groups_existing: >
+                {{ integration_entities('group') | select('search', 'ghresume') | list }}
+          - alias: "Loop to remove groups"
+            repeat:
+              for_each: "{{ groups_existing }}"
+              sequence:
+                - alias: "Remove one group"
+                  service: group.remove
+                  data:
+                    object_id: "{{ states[repeat.item].object_id }}"
+      - alias: "Check if target is already being resumed on in a group which is already being resumed"
+        condition: template
+        value_template: >
+          {%- set groups = states.group
+                    | selectattr('entity_id', 'search', 'resume_active_ghresume')
+                    | map(attribute='entity_id')
+                    | list
+          %}
+          {%- set active = expand(groups)
+                            | rejectattr('state', 'in', ['unknown', 'unavailable'])
+                            | map(attribute='entity_id')
+                            | unique
+                            | list
+          %}
+          {%- set members = speaker_groups.items() | selectattr('0', 'in', active) | map(attribute='1') | sum(start=[]) %}
+          {%- set active = active + members %}
+          {%- set target_members = speaker_groups.items() | selectattr('0', 'in', entities) | map(attribute='1') | sum(start=[]) %}
+          {%- set entities = (entities + target_members) | reject('in', speaker_group_list) | unique | list %}
+          {{ entities | reject('in', active) | list | count > 0 }}
+      - alias: Are there Spotify entities?
+        if: "{{ integration_entities('spotify') | count > 0 }}"
+        then:
+          - alias: Update Spotify entities
+            service: homeassistant.update_entity
+            target:
+              entity_id: "{{ integration_entities('spotify') }}"
+      - alias: Set data_source and determine target list
+        variables:
+          data_source: automation
+          target_list: >
+            {{ 
+              integration_entities('cast')
+                | select('in', entities)
+                | list
+            }}
+      - variables:
+          player_data: "{{ player_data }}"
+      - alias: "Interrupt YouTube music if needed"
+        if: >
+          {{ player_data | selectattr('entity_id', 'in', target_list) | selectattr('yt_player', 'defined') | list | count > 0 }}
+        then:
+          - service: ytube_music_player.call_method
+            data:
+              entity_id: >
+                {{ player_data | selectattr('entity_id', 'in', target_list) | selectattr('yt_player', 'defined') | map(attribute='yt_player') | list }}
+              command: interrupt_start
+      - if: "{{ trigger.id == 'play' and announce_volume is defined and iif(announce_volume) }}"
+        then:
+          - wait_template: "{{ is_state(entities|first, 'idle') }}"
+          - alias: Set volume for announcement
+            service: media_player.volume_set
+            target:
+              entity_id: "{{ entities }}"
+            data:
+              volume_level: "{{ announce_volume }}"
+      - alias: "Short delay"
+        delay: 0.5
+      - alias: "Check again if target is already being resumed"
+        condition: template
+        value_template: >
+          {%- set groups = states.group
+                    | selectattr('entity_id', 'search', 'resume_active_ghresume')
+                    | map(attribute='entity_id')
+                    | list
+          %}
+          {%- set active = expand(groups)
+                            | rejectattr('state', 'in', ['unknown', 'unavailable'])
+                            | map(attribute='entity_id')
+                            | unique
+                            | list
+          %}
+          {%- set members = speaker_groups.items() | selectattr('0', 'in', active) | map(attribute='1') | sum(start=[]) %}
+          {%- set active = active + members %}
+          {%- set target_members = speaker_groups.items() | selectattr('0', 'in', entities) | map(attribute='1') | sum(start=[]) %}
+          {%- set entities = (entities + target_members) | reject('in', speaker_group_list) | unique | list %}
+          {{ entities | reject('in', active) | list | count > 0 }}
+      - alias: Send actions using Google Home Resume script
+        service: script.turn_on
+        target:
+          entity_id: script.google_home_resume
+        data:
+          variables:
+            start_time: "{{ start_time }}"
+            automation: true
+            target_list: "{{ target_list }}"
+            player_data: "{{ player_data }}"

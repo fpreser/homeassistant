@@ -1,0 +1,108 @@
+#####################################################################
+#    T E S L A   C H A R G E   N O C T U R N E   -   S E N S O R S
+#####################################################################
+#
+# Sensors de decision pour la charge Tesla en heures creuses (HC).
+#
+# Logique de decision (evaluee a 21h) :
+#   batterie >= SoC cible           → non
+#   cable absent / voiture absente  → impossible
+#   demain est un jour de semaine   → oui_semaine (pas de solaire)
+#   prevision solaire < seuil       → oui_meteo
+#   sinon                           → non_solaire_suffisant
+#
+# Tarif actif : sensor.p1_meter_3c39e7284d28_active_tariff
+#   1 = heures pleines (T1)  |  2 = heures creuses (T2)
+#
+# Horaires HC Wallonie (depuis 01/01/2026) :
+#   HC (T2) : 22h-07h + 11h-17h (tous les jours)
+#   HP (T1) : 07h-11h + 17h-22h (tous les jours)
+#
+# Sensors :
+#   - Tesla Heures Creuses              : bool (tarif == 2)
+#   - Tesla Charge Nocturne Necessaire  : etat + attributs de decision
+#     Attributs : batterie, soc_cible, prevision_demain_kwh,
+#                 seuil_solaire_kwh, demain_est_semaine,
+#                 cable_branche, deficit_pct
+#   - Tesla Duree Charge Nocturne Estimee : minutes estimees
+#     Formule : kWh_deficit / puissance_charge * 60
+#
+# Utilise par : automation.tesla_night_charge_*
+#
+#####################################################################
+
+- sensor:
+
+  - name: "Tesla Heures Creuses"
+    unique_id: sensor.tesla_heures_creuses
+    state: >-
+      {% set tarif = states('sensor.p1_meter_3c39e7284d28_active_tariff') | int(0) %}
+      {{ tarif == 2 }}
+    icon: >-
+      {% set tarif = states('sensor.p1_meter_3c39e7284d28_active_tariff') | int(0) %}
+      {{ 'mdi:clock-check' if tarif == 2 else 'mdi:clock-alert' }}
+
+  - name: "Tesla Charge Nocturne Necessaire"
+    unique_id: sensor.tesla_charge_nocturne_necessaire
+    state: >-
+      {% set batterie = states('sensor.f_r_i_d_a_y_niveau_de_batterie') | int(0) %}
+      {% set soc_cible = states('input_number.tesla_soc_cible') | int(50) %}
+      {% set prevision = states('sensor.energy_production_tomorrow') | float(0) %}
+      {% set seuil_solaire = states('input_number.tesla_seuil_solaire') | float(40) %}
+      {% set demain_semaine = (now().weekday() + 1) % 7 < 5 %}
+      {% set cable = is_state('binary_sensor.f_r_i_d_a_y_charge_cable', 'on') %}
+      {% set home = is_state('device_tracker.f_r_i_d_a_y_location', 'home') %}
+
+      {% if batterie >= soc_cible %}
+        non
+      {% elif not cable or not home %}
+        impossible
+      {% elif demain_semaine %}
+        oui_semaine
+      {% elif prevision < seuil_solaire %}
+        oui_meteo
+      {% else %}
+        non_solaire_suffisant
+      {% endif %}
+    icon: mdi:battery-clock
+    attributes:
+      batterie: >-
+        {{ states('sensor.f_r_i_d_a_y_niveau_de_batterie') | int(0) }}
+      soc_cible: >-
+        {{ states('input_number.tesla_soc_cible') | int(50) }}
+      prevision_demain_kwh: >-
+        {{ states('sensor.energy_production_tomorrow') | float(0) | round(1) }}
+      seuil_solaire_kwh: >-
+        {{ states('input_number.tesla_seuil_solaire') | float(40) }}
+      demain_est_semaine: >-
+        {{ (now().weekday() + 1) % 7 < 5 }}
+      cable_branche: >-
+        {{ is_state('binary_sensor.f_r_i_d_a_y_charge_cable', 'on') }}
+      deficit_pct: >-
+        {% set batterie = states('sensor.f_r_i_d_a_y_niveau_de_batterie') | int(0) %}
+        {% set soc_cible = states('input_number.tesla_soc_cible') | int(50) %}
+        {{ [0, soc_cible - batterie] | max }}
+
+  - name: "Tesla Duree Charge Nocturne Estimee"
+    unique_id: sensor.tesla_duree_charge_nocturne_estimee
+    state: >-
+      {# Capacite batterie Model Y ~75 kWh utile #}
+      {% set capacite_kwh = 75 %}
+      {% set batterie = states('sensor.f_r_i_d_a_y_niveau_de_batterie') | int(0) %}
+      {% set soc_cible = states('input_number.tesla_soc_cible') | int(50) %}
+      {% set max_amps = states('input_number.tesla_max_amps') | int(28) %}
+      {% set voltage = states('sensor.p1_meter_3c39e7284d28_active_voltage_l1') | float(230) %}
+      {# Wall Connector triphase 3x230V sans neutre : P = sqrt(3) * V * I #}
+      {% set sqrt3 = 1.732 %}
+      {% set deficit_pct = [0, soc_cible - batterie] | max %}
+      {% set kwh_needed = capacite_kwh * deficit_pct / 100 %}
+      {% set charge_power_kw = sqrt3 * max_amps * voltage / 1000 %}
+      {% if charge_power_kw > 0 and deficit_pct > 0 %}
+        {{ (kwh_needed / charge_power_kw * 60) | round(0) | int }}
+      {% else %}
+        0
+      {% endif %}
+    unit_of_measurement: "min"
+    device_class: duration
+    state_class: measurement
+    icon: mdi:timer-outline
