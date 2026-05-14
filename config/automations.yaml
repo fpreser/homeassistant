@@ -1367,4 +1367,71 @@
       entity_id: light.hall_d_entree
     action: light.turn_off
   mode: restart
+- id: '1746094800000'
+  alias: Ouverture Volets Matin
+  description: >-
+    Ouvre les volets en semaine à partir de 7h et le week-end à partir de 9h,
+    uniquement si le soleil est levé. Gère aussi le cas hivernal où le soleil
+    se lève après l'heure minimale.
+  triggers:
+  - trigger: time
+    at: "07:00:00"
+    id: semaine
+  - trigger: time
+    at: "09:00:00"
+    id: weekend
+  - trigger: sun
+    event: sunrise
+    id: lever_soleil
+  conditions:
+  - condition: or
+    conditions:
+    - condition: and
+      conditions:
+      - condition: trigger
+        id: semaine
+      - condition: time
+        weekday:
+        - mon
+        - tue
+        - wed
+        - thu
+        - fri
+      - condition: sun
+        after: sunrise
+    - condition: and
+      conditions:
+      - condition: trigger
+        id: weekend
+      - condition: time
+        weekday:
+        - sat
+        - sun
+      - condition: sun
+        after: sunrise
+    - condition: and
+      conditions:
+      - condition: trigger
+        id: lever_soleil
+      - condition: or
+        conditions:
+        - condition: time
+          after: "07:00:00"
+          weekday:
+          - mon
+          - tue
+          - wed
+          - thu
+          - fri
+        - condition: time
+          after: "09:00:00"
+          weekday:
+          - sat
+          - sun
+  actions:
+  - action: scene.turn_on
+    metadata: {}
+    target:
+      entity_id: scene.ouverture_volets
+  mode: single
   max_exceeded: silent

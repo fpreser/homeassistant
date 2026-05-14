@@ -1459,6 +1459,10 @@
               "type": "entities",
               "entities": [
                 {
+                  "entity": "input_boolean.tesla_smart_charge",
+                  "name": "Smart Charge (maitre)"
+                },
+                {
                   "type": "section",
                   "label": "Maitre & etat vehicule"
                 },
@@ -1485,8 +1489,11 @@
                   "name": "Voiture en ligne"
                 },
                 {
-                  "entity": "input_boolean.tesla_smart_charge",
-                  "name": "Smart Charge (maitre)"
+                  "entity": "device_tracker.tesla_y"
+                },
+                {
+                  "entity": "device_tracker.f_r_i_d_a_y_location",
+                  "name": "Localisation"
                 },
                 {
                   "entity": "input_boolean.tesla_night_charge_pending",
@@ -1503,10 +1510,6 @@
                 {
                   "entity": "binary_sensor.f_r_i_d_a_y_charge_cable",
                   "name": "Cable branche"
-                },
-                {
-                  "entity": "device_tracker.f_r_i_d_a_y_location",
-                  "name": "Localisation"
                 },
                 {
                   "type": "section",

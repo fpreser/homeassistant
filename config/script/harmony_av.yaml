@@ -1,0 +1,1049 @@
+# Contrôle AV via Harmony Hub (remote.salon)
+# VOO Enregistreur numérique (id: 82218657) + Récepteur AV Onkyo (id: 39530143)
+# Décodeur Fujionkyo TNT (id: 51302938)
+# Sony Bravia 8 (remote.bravia_8 via androidtv_remote + media_player.bravia_8_3 via braviatv)
+# Exposé vers Unfolded Circle Remote 3 via intégration Home Assistant
+
+##########
+# VOO
+##########
+
+voo_power:
+  alias: "VOO - Power"
+  sequence:
+    - service: remote.send_command
+      target:
+        entity_id: remote.salon
+      data:
+        device: "VOO Enregistreur numérique"
+        command: PowerToggle
+
+voo_haut:
+  alias: "VOO - Haut"
+  sequence:
+    - service: remote.send_command
+      target:
+        entity_id: remote.salon
+      data:
+        device: "VOO Enregistreur numérique"
+        command: DirectionUp
+
+voo_bas:
+  alias: "VOO - Bas"
+  sequence:
+    - service: remote.send_command
+      target:
+        entity_id: remote.salon
+      data:
+        device: "VOO Enregistreur numérique"
+        command: DirectionDown
+
+voo_gauche:
+  alias: "VOO - Gauche"
+  sequence:
+    - service: remote.send_command
+      target:
+        entity_id: remote.salon
+      data:
+        device: "VOO Enregistreur numérique"
+        command: DirectionLeft
+
+voo_droite:
+  alias: "VOO - Droite"
+  sequence:
+    - service: remote.send_command
+      target:
+        entity_id: remote.salon
+      data:
+        device: "VOO Enregistreur numérique"
+        command: DirectionRight
+
+voo_ok:
+  alias: "VOO - OK"
+  sequence:
+    - service: remote.send_command
+      target:
+        entity_id: remote.salon
+      data:
+        device: "VOO Enregistreur numérique"
+        command: OK
+
+voo_retour:
+  alias: "VOO - Retour"
+  sequence:
+    - service: remote.send_command
+      target:
+        entity_id: remote.salon
+      data:
+        device: "VOO Enregistreur numérique"
+        command: Back
+
+voo_quitter:
+  alias: "VOO - Quitter"
+  sequence:
+    - service: remote.send_command
+      target:
+        entity_id: remote.salon
+      data:
+        device: "VOO Enregistreur numérique"
+        command: Exit
+
+voo_menu:
+  alias: "VOO - Menu"
+  sequence:
+    - service: remote.send_command
+      target:
+        entity_id: remote.salon
+      data:
+        device: "VOO Enregistreur numérique"
+        command: Menu
+
+voo_guide:
+  alias: "VOO - Guide"
+  sequence:
+    - service: remote.send_command
+      target:
+        entity_id: remote.salon
+      data:
+        device: "VOO Enregistreur numérique"
+        command: Guide
+
+voo_info:
+  alias: "VOO - Info"
+  sequence:
+    - service: remote.send_command
+      target:
+        entity_id: remote.salon
+      data:
+        device: "VOO Enregistreur numérique"
+        command: Info
+
+voo_home:
+  alias: "VOO - Home"
+  sequence:
+    - service: remote.send_command
+      target:
+        entity_id: remote.salon
+      data:
+        device: "VOO Enregistreur numérique"
+        command: Home
+
+voo_chaine_suivante:
+  alias: "VOO - Chaîne suivante"
+  sequence:
+    - service: remote.send_command
+      target:
+        entity_id: remote.salon
+      data:
+        device: "VOO Enregistreur numérique"
+        command: ChannelUp
+
+voo_chaine_precedente:
+  alias: "VOO - Chaîne précédente"
+  sequence:
+    - service: remote.send_command
+      target:
+        entity_id: remote.salon
+      data:
+        device: "VOO Enregistreur numérique"
+        command: ChannelDown
+
+voo_lecture:
+  alias: "VOO - Lecture"
+  sequence:
+    - service: remote.send_command
+      target:
+        entity_id: remote.salon
+      data:
+        device: "VOO Enregistreur numérique"
+        command: Play
+
+voo_pause:
+  alias: "VOO - Pause"
+  sequence:
+    - service: remote.send_command
+      target:
+        entity_id: remote.salon
+      data:
+        device: "VOO Enregistreur numérique"
+        command: Pause
+
+voo_stop:
+  alias: "VOO - Stop"
+  sequence:
+    - service: remote.send_command
+      target:
+        entity_id: remote.salon
+      data:
+        device: "VOO Enregistreur numérique"
+        command: Stop
+
+voo_rembobiner:
+  alias: "VOO - Rembobiner"
+  sequence:
+    - service: remote.send_command
+      target:
+        entity_id: remote.salon
+      data:
+        device: "VOO Enregistreur numérique"
+        command: Rewind
+
+voo_avance_rapide:
+  alias: "VOO - Avance rapide"
+  sequence:
+    - service: remote.send_command
+      target:
+        entity_id: remote.salon
+      data:
+        device: "VOO Enregistreur numérique"
+        command: FastForward
+
+voo_enregistrer:
+  alias: "VOO - Enregistrer"
+  sequence:
+    - service: remote.send_command
+      target:
+        entity_id: remote.salon
+      data:
+        device: "VOO Enregistreur numérique"
+        command: Record
+
+voo_saut_arriere:
+  alias: "VOO - Saut arrière"
+  sequence:
+    - service: remote.send_command
+      target:
+        entity_id: remote.salon
+      data:
+        device: "VOO Enregistreur numérique"
+        command: SkipBack
+
+voo_saut_avant:
+  alias: "VOO - Saut avant"
+  sequence:
+    - service: remote.send_command
+      target:
+        entity_id: remote.salon
+      data:
+        device: "VOO Enregistreur numérique"
+        command: SkipForward
+
+voo_rouge:
+  alias: "VOO - Rouge"
+  sequence:
+    - service: remote.send_command
+      target:
+        entity_id: remote.salon
+      data:
+        device: "VOO Enregistreur numérique"
+        command: Red
+
+voo_vod:
+  alias: "VOO - VOD"
+  sequence:
+    - service: remote.send_command
+      target:
+        entity_id: remote.salon
+      data:
+        device: "VOO Enregistreur numérique"
+        command: VOD
+
+voo_betv:
+  alias: "VOO - BeTV"
+  sequence:
+    - service: remote.send_command
+      target:
+        entity_id: remote.salon
+      data:
+        device: "VOO Enregistreur numérique"
+        command: BeTv
+
+voo_tv:
+  alias: "VOO - TV"
+  sequence:
+    - service: remote.send_command
+      target:
+        entity_id: remote.salon
+      data:
+        device: "VOO Enregistreur numérique"
+        command: TV
+
+voo_0:
+  alias: "VOO - 0"
+  sequence:
+    - service: remote.send_command
+      target:
+        entity_id: remote.salon
+      data:
+        device: "VOO Enregistreur numérique"
+        command: "0"
+
+voo_1:
+  alias: "VOO - 1"
+  sequence:
+    - service: remote.send_command
+      target:
+        entity_id: remote.salon
+      data:
+        device: "VOO Enregistreur numérique"
+        command: "1"
+
+voo_2:
+  alias: "VOO - 2"
+  sequence:
+    - service: remote.send_command
+      target:
+        entity_id: remote.salon
+      data:
+        device: "VOO Enregistreur numérique"
+        command: "2"
+
+voo_3:
+  alias: "VOO - 3"
+  sequence:
+    - service: remote.send_command
+      target:
+        entity_id: remote.salon
+      data:
+        device: "VOO Enregistreur numérique"
+        command: "3"
+
+voo_4:
+  alias: "VOO - 4"
+  sequence:
+    - service: remote.send_command
+      target:
+        entity_id: remote.salon
+      data:
+        device: "VOO Enregistreur numérique"
+        command: "4"
+
+voo_5:
+  alias: "VOO - 5"
+  sequence:
+    - service: remote.send_command
+      target:
+        entity_id: remote.salon
+      data:
+        device: "VOO Enregistreur numérique"
+        command: "5"
+
+voo_6:
+  alias: "VOO - 6"
+  sequence:
+    - service: remote.send_command
+      target:
+        entity_id: remote.salon
+      data:
+        device: "VOO Enregistreur numérique"
+        command: "6"
+
+voo_7:
+  alias: "VOO - 7"
+  sequence:
+    - service: remote.send_command
+      target:
+        entity_id: remote.salon
+      data:
+        device: "VOO Enregistreur numérique"
+        command: "7"
+
+voo_8:
+  alias: "VOO - 8"
+  sequence:
+    - service: remote.send_command
+      target:
+        entity_id: remote.salon
+      data:
+        device: "VOO Enregistreur numérique"
+        command: "8"
+
+voo_9:
+  alias: "VOO - 9"
+  sequence:
+    - service: remote.send_command
+      target:
+        entity_id: remote.salon
+      data:
+        device: "VOO Enregistreur numérique"
+        command: "9"
+
+##########
+# ONKYO
+##########
+
+onkyo_allumer:
+  alias: "Onkyo - Allumer"
+  sequence:
+    - service: remote.send_command
+      target:
+        entity_id: remote.salon
+      data:
+        device: "Récepteur AV Onkyo"
+        command: PowerOn
+
+onkyo_eteindre:
+  alias: "Onkyo - Éteindre"
+  sequence:
+    - service: remote.send_command
+      target:
+        entity_id: remote.salon
+      data:
+        device: "Récepteur AV Onkyo"
+        command: PowerOff
+
+onkyo_power:
+  alias: "Onkyo - Power toggle"
+  sequence:
+    - service: remote.send_command
+      target:
+        entity_id: remote.salon
+      data:
+        device: "Récepteur AV Onkyo"
+        command: PowerToggle
+
+onkyo_volume_plus:
+  alias: "Onkyo - Volume +"
+  sequence:
+    - service: remote.send_command
+      target:
+        entity_id: remote.salon
+      data:
+        device: "Récepteur AV Onkyo"
+        command: VolumeUp
+
+onkyo_volume_moins:
+  alias: "Onkyo - Volume -"
+  sequence:
+    - service: remote.send_command
+      target:
+        entity_id: remote.salon
+      data:
+        device: "Récepteur AV Onkyo"
+        command: VolumeDown
+
+onkyo_mute:
+  alias: "Onkyo - Mute"
+  sequence:
+    - service: remote.send_command
+      target:
+        entity_id: remote.salon
+      data:
+        device: "Récepteur AV Onkyo"
+        command: Mute
+
+onkyo_entree_tv:
+  alias: "Onkyo - Entrée TV"
+  sequence:
+    - service: remote.send_command
+      target:
+        entity_id: remote.salon
+      data:
+        device: "Récepteur AV Onkyo"
+        command: InputTv
+
+onkyo_entree_cbl:
+  alias: "Onkyo - Entrée CBL/SAT"
+  sequence:
+    - service: remote.send_command
+      target:
+        entity_id: remote.salon
+      data:
+        device: "Récepteur AV Onkyo"
+        command: "InputCbl/Sat"
+
+onkyo_entree_bd:
+  alias: "Onkyo - Entrée BD/DVD"
+  sequence:
+    - service: remote.send_command
+      target:
+        entity_id: remote.salon
+      data:
+        device: "Récepteur AV Onkyo"
+        command: "InputBd/Dvd"
+
+onkyo_entree_game:
+  alias: "Onkyo - Entrée Game"
+  sequence:
+    - service: remote.send_command
+      target:
+        entity_id: remote.salon
+      data:
+        device: "Récepteur AV Onkyo"
+        command: InputGame
+
+onkyo_entree_net:
+  alias: "Onkyo - Entrée Net"
+  sequence:
+    - service: remote.send_command
+      target:
+        entity_id: remote.salon
+      data:
+        device: "Récepteur AV Onkyo"
+        command: InputNet
+
+onkyo_entree_bluetooth:
+  alias: "Onkyo - Entrée Bluetooth"
+  sequence:
+    - service: remote.send_command
+      target:
+        entity_id: remote.salon
+      data:
+        device: "Récepteur AV Onkyo"
+        command: InputBluetooth
+
+onkyo_entree_aux:
+  alias: "Onkyo - Entrée AUX"
+  sequence:
+    - service: remote.send_command
+      target:
+        entity_id: remote.salon
+      data:
+        device: "Récepteur AV Onkyo"
+        command: InputAux
+
+onkyo_entree_strm:
+  alias: "Onkyo - Entrée Streaming Box"
+  sequence:
+    - service: remote.send_command
+      target:
+        entity_id: remote.salon
+      data:
+        device: "Récepteur AV Onkyo"
+        command: InputStrmBox
+
+onkyo_mode_cinema:
+  alias: "Onkyo - Mode Cinéma/TV"
+  sequence:
+    - service: remote.send_command
+      target:
+        entity_id: remote.salon
+      data:
+        device: "Récepteur AV Onkyo"
+        command: "ModeMovie/Tv"
+
+onkyo_mode_musique:
+  alias: "Onkyo - Mode Musique"
+  sequence:
+    - service: remote.send_command
+      target:
+        entity_id: remote.salon
+      data:
+        device: "Récepteur AV Onkyo"
+        command: ModeMusic
+
+onkyo_mode_jeu:
+  alias: "Onkyo - Mode Jeu"
+  sequence:
+    - service: remote.send_command
+      target:
+        entity_id: remote.salon
+      data:
+        device: "Récepteur AV Onkyo"
+        command: ModeGame
+
+onkyo_haut:
+  alias: "Onkyo - Haut"
+  sequence:
+    - service: remote.send_command
+      target:
+        entity_id: remote.salon
+      data:
+        device: "Récepteur AV Onkyo"
+        command: DirectionUp
+
+onkyo_bas:
+  alias: "Onkyo - Bas"
+  sequence:
+    - service: remote.send_command
+      target:
+        entity_id: remote.salon
+      data:
+        device: "Récepteur AV Onkyo"
+        command: DirectionDown
+
+onkyo_gauche:
+  alias: "Onkyo - Gauche"
+  sequence:
+    - service: remote.send_command
+      target:
+        entity_id: remote.salon
+      data:
+        device: "Récepteur AV Onkyo"
+        command: DirectionLeft
+
+onkyo_droite:
+  alias: "Onkyo - Droite"
+  sequence:
+    - service: remote.send_command
+      target:
+        entity_id: remote.salon
+      data:
+        device: "Récepteur AV Onkyo"
+        command: DirectionRight
+
+onkyo_entrer:
+  alias: "Onkyo - Enter"
+  sequence:
+    - service: remote.send_command
+      target:
+        entity_id: remote.salon
+      data:
+        device: "Récepteur AV Onkyo"
+        command: Enter
+
+onkyo_retour:
+  alias: "Onkyo - Retour"
+  sequence:
+    - service: remote.send_command
+      target:
+        entity_id: remote.salon
+      data:
+        device: "Récepteur AV Onkyo"
+        command: Return
+
+onkyo_lecture:
+  alias: "Onkyo - Lecture"
+  sequence:
+    - service: remote.send_command
+      target:
+        entity_id: remote.salon
+      data:
+        device: "Récepteur AV Onkyo"
+        command: Play
+
+onkyo_pause:
+  alias: "Onkyo - Pause"
+  sequence:
+    - service: remote.send_command
+      target:
+        entity_id: remote.salon
+      data:
+        device: "Récepteur AV Onkyo"
+        command: Pause
+
+##########
+# DÉCODEUR TNT FUJIONKYO
+##########
+
+tnt_power:
+  alias: "TNT - Power"
+  sequence:
+    - service: remote.send_command
+      target:
+        entity_id: remote.salon
+      data:
+        device: "Décodeur Fujionkyo"
+        command: PowerToggle
+
+tnt_haut:
+  alias: "TNT - Haut"
+  sequence:
+    - service: remote.send_command
+      target:
+        entity_id: remote.salon
+      data:
+        device: "Décodeur Fujionkyo"
+        command: DirectionUp
+
+tnt_bas:
+  alias: "TNT - Bas"
+  sequence:
+    - service: remote.send_command
+      target:
+        entity_id: remote.salon
+      data:
+        device: "Décodeur Fujionkyo"
+        command: DirectionDown
+
+tnt_gauche:
+  alias: "TNT - Gauche"
+  sequence:
+    - service: remote.send_command
+      target:
+        entity_id: remote.salon
+      data:
+        device: "Décodeur Fujionkyo"
+        command: DirectionLeft
+
+tnt_droite:
+  alias: "TNT - Droite"
+  sequence:
+    - service: remote.send_command
+      target:
+        entity_id: remote.salon
+      data:
+        device: "Décodeur Fujionkyo"
+        command: DirectionRight
+
+tnt_select:
+  alias: "TNT - Select"
+  sequence:
+    - service: remote.send_command
+      target:
+        entity_id: remote.salon
+      data:
+        device: "Décodeur Fujionkyo"
+        command: Select
+
+tnt_quitter:
+  alias: "TNT - Quitter"
+  sequence:
+    - service: remote.send_command
+      target:
+        entity_id: remote.salon
+      data:
+        device: "Décodeur Fujionkyo"
+        command: Exit
+
+tnt_menu:
+  alias: "TNT - Menu"
+  sequence:
+    - service: remote.send_command
+      target:
+        entity_id: remote.salon
+      data:
+        device: "Décodeur Fujionkyo"
+        command: Menu
+
+tnt_guide:
+  alias: "TNT - Guide"
+  sequence:
+    - service: remote.send_command
+      target:
+        entity_id: remote.salon
+      data:
+        device: "Décodeur Fujionkyo"
+        command: Guide
+
+tnt_info:
+  alias: "TNT - Info"
+  sequence:
+    - service: remote.send_command
+      target:
+        entity_id: remote.salon
+      data:
+        device: "Décodeur Fujionkyo"
+        command: Info
+
+tnt_teletext:
+  alias: "TNT - Télétexte"
+  sequence:
+    - service: remote.send_command
+      target:
+        entity_id: remote.salon
+      data:
+        device: "Décodeur Fujionkyo"
+        command: Teletext
+
+tnt_chaine_suivante:
+  alias: "TNT - Chaîne suivante"
+  sequence:
+    - service: remote.send_command
+      target:
+        entity_id: remote.salon
+      data:
+        device: "Décodeur Fujionkyo"
+        command: ChannelUp
+
+tnt_chaine_precedente:
+  alias: "TNT - Chaîne précédente"
+  sequence:
+    - service: remote.send_command
+      target:
+        entity_id: remote.salon
+      data:
+        device: "Décodeur Fujionkyo"
+        command: ChannelDown
+
+tnt_chaine_prec:
+  alias: "TNT - Chaîne précédente (mémoire)"
+  sequence:
+    - service: remote.send_command
+      target:
+        entity_id: remote.salon
+      data:
+        device: "Décodeur Fujionkyo"
+        command: ChannelPrev
+
+tnt_rouge:
+  alias: "TNT - Rouge"
+  sequence:
+    - service: remote.send_command
+      target:
+        entity_id: remote.salon
+      data:
+        device: "Décodeur Fujionkyo"
+        command: Red
+
+tnt_vert:
+  alias: "TNT - Vert"
+  sequence:
+    - service: remote.send_command
+      target:
+        entity_id: remote.salon
+      data:
+        device: "Décodeur Fujionkyo"
+        command: Green
+
+tnt_bleu:
+  alias: "TNT - Bleu"
+  sequence:
+    - service: remote.send_command
+      target:
+        entity_id: remote.salon
+      data:
+        device: "Décodeur Fujionkyo"
+        command: Blue
+
+tnt_jaune:
+  alias: "TNT - Jaune"
+  sequence:
+    - service: remote.send_command
+      target:
+        entity_id: remote.salon
+      data:
+        device: "Décodeur Fujionkyo"
+        command: Yellow
+
+tnt_0:
+  alias: "TNT - 0"
+  sequence:
+    - service: remote.send_command
+      target:
+        entity_id: remote.salon
+      data:
+        device: "Décodeur Fujionkyo"
+        command: "0"
+
+tnt_1:
+  alias: "TNT - 1"
+  sequence:
+    - service: remote.send_command
+      target:
+        entity_id: remote.salon
+      data:
+        device: "Décodeur Fujionkyo"
+        command: "1"
+
+tnt_2:
+  alias: "TNT - 2"
+  sequence:
+    - service: remote.send_command
+      target:
+        entity_id: remote.salon
+      data:
+        device: "Décodeur Fujionkyo"
+        command: "2"
+
+tnt_3:
+  alias: "TNT - 3"
+  sequence:
+    - service: remote.send_command
+      target:
+        entity_id: remote.salon
+      data:
+        device: "Décodeur Fujionkyo"
+        command: "3"
+
+tnt_4:
+  alias: "TNT - 4"
+  sequence:
+    - service: remote.send_command
+      target:
+        entity_id: remote.salon
+      data:
+        device: "Décodeur Fujionkyo"
+        command: "4"
+
+tnt_5:
+  alias: "TNT - 5"
+  sequence:
+    - service: remote.send_command
+      target:
+        entity_id: remote.salon
+      data:
+        device: "Décodeur Fujionkyo"
+        command: "5"
+
+tnt_6:
+  alias: "TNT - 6"
+  sequence:
+    - service: remote.send_command
+      target:
+        entity_id: remote.salon
+      data:
+        device: "Décodeur Fujionkyo"
+        command: "6"
+
+tnt_7:
+  alias: "TNT - 7"
+  sequence:
+    - service: remote.send_command
+      target:
+        entity_id: remote.salon
+      data:
+        device: "Décodeur Fujionkyo"
+        command: "7"
+
+tnt_8:
+  alias: "TNT - 8"
+  sequence:
+    - service: remote.send_command
+      target:
+        entity_id: remote.salon
+      data:
+        device: "Décodeur Fujionkyo"
+        command: "8"
+
+tnt_9:
+  alias: "TNT - 9"
+  sequence:
+    - service: remote.send_command
+      target:
+        entity_id: remote.salon
+      data:
+        device: "Décodeur Fujionkyo"
+        command: "9"
+
+##########
+# SONY BRAVIA 8
+# Navigation / contrôle : remote.bravia_8 (androidtv_remote, clés Android TV)
+# Sélection source HDMI : media_player.bravia_8_3 (braviatv, select_source)
+# Note : vérifier les noms exacts des sources dans HA → États → media_player.bravia_8_3 → source_list
+##########
+
+bravia_power:
+  alias: "Bravia - Power"
+  sequence:
+    - service: remote.send_command
+      target:
+        entity_id: remote.bravia_8
+      data:
+        command: POWER
+
+bravia_volume_plus:
+  alias: "Bravia - Volume +"
+  sequence:
+    - service: remote.send_command
+      target:
+        entity_id: remote.bravia_8
+      data:
+        command: VOLUME_UP
+
+bravia_volume_moins:
+  alias: "Bravia - Volume -"
+  sequence:
+    - service: remote.send_command
+      target:
+        entity_id: remote.bravia_8
+      data:
+        command: VOLUME_DOWN
+
+bravia_mute:
+  alias: "Bravia - Mute"
+  sequence:
+    - service: remote.send_command
+      target:
+        entity_id: remote.bravia_8
+      data:
+        command: MUTE
+
+bravia_haut:
+  alias: "Bravia - Haut"
+  sequence:
+    - service: remote.send_command
+      target:
+        entity_id: remote.bravia_8
+      data:
+        command: DPAD_UP
+
+bravia_bas:
+  alias: "Bravia - Bas"
+  sequence:
+    - service: remote.send_command
+      target:
+        entity_id: remote.bravia_8
+      data:
+        command: DPAD_DOWN
+
+bravia_gauche:
+  alias: "Bravia - Gauche"
+  sequence:
+    - service: remote.send_command
+      target:
+        entity_id: remote.bravia_8
+      data:
+        command: DPAD_LEFT
+
+bravia_droite:
+  alias: "Bravia - Droite"
+  sequence:
+    - service: remote.send_command
+      target:
+        entity_id: remote.bravia_8
+      data:
+        command: DPAD_RIGHT
+
+bravia_ok:
+  alias: "Bravia - OK"
+  sequence:
+    - service: remote.send_command
+      target:
+        entity_id: remote.bravia_8
+      data:
+        command: DPAD_CENTER
+
+bravia_retour:
+  alias: "Bravia - Retour"
+  sequence:
+    - service: remote.send_command
+      target:
+        entity_id: remote.bravia_8
+      data:
+        command: BACK
+
+bravia_home:
+  alias: "Bravia - Home"
+  sequence:
+    - service: remote.send_command
+      target:
+        entity_id: remote.bravia_8
+      data:
+        command: HOME
+
+bravia_source_hdmi1:
+  alias: "Bravia - Source HDMI 1"
+  sequence:
+    - service: media_player.select_source
+      target:
+        entity_id: media_player.bravia_8_3
+      data:
+        source: "HDMI 1"
+
+bravia_source_hdmi2:
+  alias: "Bravia - Source HDMI 2"
+  sequence:
+    - service: media_player.select_source
+      target:
+        entity_id: media_player.bravia_8_3
+      data:
+        source: "HDMI 2"
+
+bravia_source_hdmi3:
+  alias: "Bravia - Source HDMI 3"
+  sequence:
+    - service: media_player.select_source
+      target:
+        entity_id: media_player.bravia_8_3
+      data:
+        source: "HDMI 3"
+
+bravia_source_hdmi4:
+  alias: "Bravia - Source HDMI 4"
+  sequence:
+    - service: media_player.select_source
+      target:
+        entity_id: media_player.bravia_8_3
+      data:
+        source: "HDMI 4"
