@@ -61,9 +61,14 @@
     - condition: state
       entity_id: sensor.p1_meter_3c39e7284d28_active_tariff
       state: '2'
-    - condition: state
-      entity_id: device_tracker.f_r_i_d_a_y_location
-      state: home
+    - condition: or
+      conditions:
+        - condition: state
+          entity_id: device_tracker.f_r_i_d_a_y_location
+          state: home
+        - condition: state
+          entity_id: device_tracker.tesla_y
+          state: home
     - condition: state
       entity_id: binary_sensor.f_r_i_d_a_y_charge_cable
       state: 'on'
@@ -300,9 +305,14 @@
     - condition: state
       entity_id: switch.f_r_i_d_a_y_charge
       state: 'off'
-    - condition: state
-      entity_id: device_tracker.f_r_i_d_a_y_location
-      state: home
+    - condition: or
+      conditions:
+        - condition: state
+          entity_id: device_tracker.f_r_i_d_a_y_location
+          state: home
+        - condition: state
+          entity_id: device_tracker.tesla_y
+          state: home
     - condition: state
       entity_id: sensor.p1_meter_3c39e7284d28_active_tariff
       state: '2'

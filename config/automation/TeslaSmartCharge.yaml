@@ -14,6 +14,7 @@
 #  0b. Refresh donnees WiFi  (connexion WiFi via Netgear)
 #  0c. Refresh sur saut conso (delta P1 > 3kW + voiture awake + API dit pas charge)
 #  0d. Refresh sur chute conso (delta P1 < -3kW + voiture home/awake + API dit charge)
+#  0e. Stop charge HP a l'arrivee (GPS ou WiFi, heures pleines, pas de surplus)
 #   1. Activation du mode    (toggle ON + surplus solaire)
 #  1b. Activation en attente (toggle ON sans soleil → notif)
 #   2. Desactivation du mode (toggle OFF)
@@ -79,6 +80,58 @@
   mode: single
 
 #####################################################################
+# 0e. STOP CHARGE HP A L'ARRIVEE (GPS ou WiFi)
+#####################################################################
+# Si la voiture arrive a la maison (Fleet API ou WiFi Netgear) alors
+# qu'elle est deja en charge et qu'on est en heures pleines sans
+# surplus solaire, coupe immediatement la charge.
+#
+# Contexte : la Tesla peut demarrer seule au branchement avant que
+# HA sache que la voiture est a la maison (lag Fleet API ~10-20 min).
+# L'auto 6 (Pause solaire) prend normalement le relais mais necessite
+# que le switch ait ete actif 3 min — cette auto reagit sans delai.
+#
+# Double trigger : GPS (Fleet API) et WiFi (Netgear) pour reagir
+# des que l'un ou l'autre detecte l'arrivee.
+# Pas de condition sur device_tracker.f_r_i_d_a_y_location : si le
+# trigger WiFi fire en premier, le GPS peut encore etre a not_home.
+#####################################################################
+- id: 'tesla_smart_charge_stop_hp_arrival'
+  alias: Tesla Smart Charge - Stop charge HP a l arrivee
+
+  trigger:
+    - platform: state
+      entity_id: device_tracker.f_r_i_d_a_y_location
+      to: home
+    - platform: state
+      entity_id: device_tracker.tesla_y
+      to: home
+  condition:
+    - condition: state
+      entity_id: input_boolean.tesla_night_charge_pending
+      state: 'off'
+    - condition: state
+      entity_id: sensor.p1_meter_3c39e7284d28_active_tariff
+      state: '1'
+    - condition: state
+      entity_id: switch.f_r_i_d_a_y_charge
+      state: 'on'
+    - condition: numeric_state
+      entity_id: sensor.tesla_optimized_amp
+      below: 5
+  action:
+    - service: switch.turn_off
+      target:
+        entity_id: switch.f_r_i_d_a_y_charge
+    - service: script.notify_fabien
+      data:
+        title: Tesla Smart Charge
+        message: >-
+          {% set bat = states('sensor.f_r_i_d_a_y_niveau_de_batterie') | int(0) %}
+          Charge arretee a l'arrivee (heures pleines, pas de surplus). Batterie : {{ bat }}%.
+  mode: single
+
+#####################################################################
 # 0c. REFRESH SUR SAUT DE CONSO (desync charge)
 #####################################################################
 # Detecte un demarrage de charge non encore reporte par la Fleet API :
@@ -138,9 +191,14 @@
     - condition: state
       entity_id: binary_sensor.f_r_i_d_a_y_status
       state: 'on'
-    - condition: state
-      entity_id: device_tracker.f_r_i_d_a_y_location
-      state: home
+    - condition: or
+      conditions:
+        - condition: state
+          entity_id: device_tracker.f_r_i_d_a_y_location
+          state: home
+        - condition: state
+          entity_id: device_tracker.tesla_y
+          state: home
     - condition: template
       value_template: >-
         {{ states('sensor.f_r_i_d_a_y_charging') in ['charging', 'starting'] }}
@@ -166,9 +224,14 @@
     - condition: state
       entity_id: input_boolean.tesla_night_charge_pending
       state: 'off'
-    - condition: state
-      entity_id: device_tracker.f_r_i_d_a_y_location
-      state: home
+    - condition: or
+      conditions:
+        - condition: state
+          entity_id: device_tracker.f_r_i_d_a_y_location
+          state: home
+        - condition: state
+          entity_id: device_tracker.tesla_y
+          state: home
     - condition: state
       entity_id: binary_sensor.f_r_i_d_a_y_charge_cable
       state: 'on'
@@ -236,9 +299,14 @@
     - condition: state
       entity_id: input_boolean.tesla_night_charge_pending
       state: 'off'
-    - condition: state
-      entity_id: device_tracker.f_r_i_d_a_y_location
-      state: home
+    - condition: or
+      conditions:
+        - condition: state
+          entity_id: device_tracker.f_r_i_d_a_y_location
+          state: home
+        - condition: state
+          entity_id: device_tracker.tesla_y
+          state: home
     - condition: state
       entity_id: binary_sensor.f_r_i_d_a_y_charge_cable
       state: 'on'
@@ -343,9 +411,14 @@
     - condition: state
       entity_id: input_boolean.tesla_night_charge_pending
       state: 'off'
-    - condition: state
-      entity_id: device_tracker.f_r_i_d_a_y_location
-      state: home
+    - condition: or
+      conditions:
+        - condition: state
+          entity_id: device_tracker.f_r_i_d_a_y_location
+          state: home
+        - condition: state
+          entity_id: device_tracker.tesla_y
+          state: home
     - condition: state
       entity_id: switch.f_r_i_d_a_y_charge
       state: 'off'
@@ -358,7 +431,7 @@
     # le Resume gerer la reprise (seuil + hysteresis plus robustes).
     - condition: template
       value_template: >-
-        {% set last_pause = state_attr('automation.tesla_smart_charge_pause_solaire', 'last_triggered') %}
+        {% set last_pause = state_attr('automation.tesla_smart_charge_pause_surplus_insuffisant', 'last_triggered') %}
         {{ last_pause is none or (now() - last_pause).total_seconds() > 300 }}
   action:
     - service: script.tesla_refresh
@@ -505,9 +578,14 @@
     - condition: state
       entity_id: switch.f_r_i_d_a_y_charge
       state: 'on'
-    - condition: state
-      entity_id: device_tracker.f_r_i_d_a_y_location
-      state: home
+    - condition: or
+      conditions:
+        - condition: state
+          entity_id: device_tracker.f_r_i_d_a_y_location
+          state: home
+        - condition: state
+          entity_id: device_tracker.tesla_y
+          state: home
     - condition: template
       value_template: >-
         {% set target = states('sensor.tesla_optimized_amp') | int(0) %}
@@ -563,9 +641,14 @@
     - condition: state
       entity_id: switch.f_r_i_d_a_y_charge
       state: 'on'
-    - condition: state
-      entity_id: device_tracker.f_r_i_d_a_y_location
-      state: home
+    - condition: or
+      conditions:
+        - condition: state
+          entity_id: device_tracker.f_r_i_d_a_y_location
+          state: home
+        - condition: state
+          entity_id: device_tracker.tesla_y
+          state: home
     - condition: numeric_state
       entity_id: sensor.tesla_optimized_amp
       below: 5
@@ -603,9 +686,14 @@
     - condition: state
       entity_id: switch.f_r_i_d_a_y_charge
       state: 'off'
-    - condition: state
-      entity_id: device_tracker.f_r_i_d_a_y_location
-      state: home
+    - condition: or
+      conditions:
+        - condition: state
+          entity_id: device_tracker.f_r_i_d_a_y_location
+          state: home
+        - condition: state
+          entity_id: device_tracker.tesla_y
+          state: home
   action:
     # Re-applique la limite SoC max solaire avant turn_on (defense
     # contre une derive cote Tesla pendant la pause).
@@ -665,9 +753,14 @@
     - condition: state
       entity_id: switch.f_r_i_d_a_y_charge
       state: 'on'
-    - condition: state
-      entity_id: device_tracker.f_r_i_d_a_y_location
-      state: home
+    - condition: or
+      conditions:
+        - condition: state
+          entity_id: device_tracker.f_r_i_d_a_y_location
+          state: home
+        - condition: state
+          entity_id: device_tracker.tesla_y
+          state: home
   action:
     - choose:
         # Si le max admissible est trop bas, pause la charge
@@ -797,9 +890,14 @@
             - condition: state
               entity_id: input_boolean.tesla_smart_charge
               state: 'on'
-            - condition: state
-              entity_id: device_tracker.f_r_i_d_a_y_location
-              state: home
+            - condition: or
+              conditions:
+                - condition: state
+                  entity_id: device_tracker.f_r_i_d_a_y_location
+                  state: home
+                - condition: state
+                  entity_id: device_tracker.tesla_y
+                  state: home
             - condition: state
               entity_id: binary_sensor.f_r_i_d_a_y_charge_cable
               state: 'on'
