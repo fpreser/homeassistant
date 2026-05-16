@@ -15,6 +15,11 @@
 #   - Ch. Emma, Ch. Louis, Bureau Fabien, Ch. Amis, Salle de bain
 #   - Temperature chauffe-eau (Viessmann Vicare)
 #
+# state_class: measurement active les statistiques long-terme HA.
+# Permet a l'agent MCP de corréler temperatures par pièce avec la
+# conso gaz (sensor.vicare_heating_gas_consumption_*) et la temp
+# extérieure (sensor.vicare_outside_temperature).
+#
 #####################################################################
 
 - sensor:
@@ -30,6 +35,7 @@
         {{ states.climate.hall_entree.attributes['current_temperature'] | float }}
       unit_of_measurement: "°C"
       device_class: temperature
+      state_class: measurement
 
     - name: "WC Bas Temperature"
       unique_id: honeywell-2
@@ -37,6 +43,7 @@
         {{ states.climate.wc_bas.attributes['current_temperature'] | float }}
       unit_of_measurement: "°C"
       device_class: temperature
+      state_class: measurement
 
     - name: "Salon Temperature"
       unique_id: honeywell-3
@@ -44,6 +51,7 @@
         {{ states.climate.salon.attributes['current_temperature'] | float }}
       unit_of_measurement: "°C"
       device_class: temperature
+      state_class: measurement
 
     - name: "Salle à Manger Temperature"
       unique_id: honeywell-4
@@ -51,6 +59,7 @@
         {{ states.climate.salle_a_manger.attributes['current_temperature'] | float }}
       unit_of_measurement: "°C"
       device_class: temperature
+      state_class: measurement
 
     - name: "Cuisine Temperature"
       unique_id: honeywell-5
@@ -58,6 +67,7 @@
         {{ states.climate.cuisine.attributes['current_temperature'] | float }}
       unit_of_measurement: "°C"
       device_class: temperature
+      state_class: measurement
 
     - name: "Hall de Nuit Temperature"
       unique_id: honeywell-6
@@ -65,6 +75,7 @@
         {{ states.climate.hall_nuit.attributes['current_temperature'] | float }}
       unit_of_measurement: "°C"
       device_class: temperature
+      state_class: measurement
 
     - name: "Polyvalent Temperature"
       unique_id: honeywell-7
@@ -72,6 +83,7 @@
         {{ states.climate.polyvalent.attributes['current_temperature'] | float }}
       unit_of_measurement: "°C"
       device_class: temperature
+      state_class: measurement
 
     - name: "Chambre Emma Temperature"
       unique_id: honeywell-8
@@ -79,6 +91,7 @@
         {{ states.climate.ch_emma.attributes['current_temperature'] | float }}
       unit_of_measurement: "°C"
       device_class: temperature
+      state_class: measurement
 
     - name: "Chambre Louis Temperature"
       unique_id: honeywell-9
@@ -86,6 +99,7 @@
         {{ states.climate.ch_louis.attributes['current_temperature'] | float }}
       unit_of_measurement: "°C"
       device_class: temperature
+      state_class: measurement
 
     - name: "Bureau Fabien Temperature"
       unique_id: honeywell-10
@@ -93,6 +107,7 @@
         {{ states.climate.bureau_fabien.attributes['current_temperature'] | float }}
       unit_of_measurement: "°C"
       device_class: temperature
+      state_class: measurement
 
     - name: "Chambre Amis Temperature"
       unique_id: honeywell-11
@@ -100,6 +115,7 @@
         {{ states.climate.chambre_amis.attributes['current_temperature'] | float }}
       unit_of_measurement: "°C"
       device_class: temperature
+      state_class: measurement
 
     - name: "Salle de Bain Temperature"
       unique_id: honeywell-12
@@ -107,6 +123,7 @@
         {{ states.climate.salle_de_bain.attributes['current_temperature'] | float }}
       unit_of_measurement: "°C"
       device_class: temperature
+      state_class: measurement
 
     - name: "Temperature Chauffe-eau"
       unique_id: temp-chauffe-eau
@@ -114,4 +131,5 @@
         {{ state_attr('water_heater.vicare_water', 'current_temperature') | float(0) | round(1) }}
       unit_of_measurement: "°C"
       device_class: temperature
+      state_class: measurement
       icon: mdi:water-boiler
