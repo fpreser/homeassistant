@@ -26,6 +26,8 @@ Config requise dans configuration.yaml :
 """
 
 import json
+import re
+import unicodedata
 from datetime import datetime
 
 SCHEDULE_FILE = "/config/evohome_schedules.json"
@@ -159,7 +161,33 @@ async def _do_fetch() -> int:
     with open(SCHEDULE_FILE, "w", encoding="utf-8") as f:
         json.dump(payload, f, indent=2, ensure_ascii=False)
 
+    _create_schedule_sensors(zones_data)
     return len(zones_data)
+
+
+def _zone_slug(name: str) -> str:
+    """Convertit un nom de zone Honeywell en slug HA (ex: 'Salle à manger' → 'salle_a_manger')."""
+    n = unicodedata.normalize("NFKD", name)
+    n = "".join(c for c in n if not unicodedata.combining(c))
+    return re.sub(r"[^a-z0-9]+", "_", n.lower()).strip("_")
+
+
+def _create_schedule_sensors(zones_data: dict) -> None:
+    """Crée un sensor HA par zone avec le planning hebdomadaire en attribut."""
+    ts = datetime.now().isoformat()
+    for name, zone_data in zones_data.items():
+        sensor_id = f"sensor.evohome_sched_{_zone_slug(name)}"
+        state.set(
+            sensor_id,
+            value="ok",
+            new_attributes={
+                "schedule": zone_data["schedule"],
+                "zone_name": name,
+                "fetched_at": ts,
+                "friendly_name": f"Planning {name}",
+                "icon": "mdi:calendar-week",
+            },
+        )
 
 
 @service
