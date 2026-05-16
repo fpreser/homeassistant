@@ -48,9 +48,9 @@ def zone_card(name, entity):
                     "{% set mode = s.setpoint_status.setpoint_mode %}"
                     "{% if mode == 'FollowSchedule' %}"
                     "{{ s.setpoints.this_sp_temp }}°C → {{ s.setpoints.next_sp_temp }}°C "
-                    "à {{ s.setpoints.next_sp_from | as_datetime | as_local | strftime('%H:%M') }}"
+                    "à {{ (s.setpoints.next_sp_from | as_datetime | as_local).strftime('%H:%M') }}"
                     "{% elif mode == 'TemporaryOverride' %}"
-                    "⚡ Override → {{ s.setpoints.next_sp_from | as_datetime | as_local | strftime('%H:%M') }}"
+                    "⚡ Override → {{ (s.setpoints.next_sp_from | as_datetime | as_local).strftime('%H:%M') }}"
                     "{% else %}🔒 Override permanent{% endif %}"
                     "{% else %}—{% endif %}"
                 ),

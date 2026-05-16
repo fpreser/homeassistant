@@ -93,7 +93,7 @@ async def _get_zone(zone_name: str):
     username = cfg.get("username", "")
     password = cfg.get("password", "")
     import evohomeasync2
-    client = evohomeasync2.EvohomeClient(username, password)
+    client = evohomeasync2.EvohomeClient(username, password=password)
     await client.login()
     for location in client.locations:
         gateways = getattr(location, "gateways", getattr(location, "_gateways", []))
@@ -108,48 +108,56 @@ async def _get_zone(zone_name: str):
     raise ValueError(f"Zone '{zone_name}' introuvable dans Evohome")
 
 
-async def _do_fetch() -> int:
-    """Cœur du fetch — retourne le nombre de zones récupérées."""
+async def _iter_zones():
+    """Itère sur les zones via le broker HA (session existante) ou nouveau client en fallback."""
+    broker = hass.data.get("evohome")
+    if broker:
+        try:
+            tcs = broker.tcs
+            zones = tcs.zones.values() if isinstance(tcs.zones, dict) else list(tcs.zones)
+            for zone in zones:
+                yield zone
+            return
+        except Exception as e:
+            log.warning(f"evohome_schedule: broker inaccessible ({e}), fallback client")
+
+    # Fallback : nouveau client — password en keyword pour evohomeasync2 2.x
     cfg = pyscript.app_config
     username = cfg.get("username", "")
     password = cfg.get("password", "")
-
     if not username or not password:
-        raise ValueError(
-            "credentials manquants — vérifier pyscript.apps.evohome_schedule dans configuration.yaml"
-        )
-
+        raise ValueError("credentials manquants dans pyscript.apps.evohome_schedule")
     import evohomeasync2
-
-    client = evohomeasync2.EvohomeClient(username, password)
+    client = evohomeasync2.EvohomeClient(username, password=password)
     await client.login()
-
-    zones_data = {}
-
     for location in client.locations:
         gateways = getattr(location, "gateways", getattr(location, "_gateways", []))
         for gw in gateways:
             systems = getattr(gw, "systems", getattr(gw, "_systems", []))
             for sys_ in systems:
                 for zone in sys_.zones:
-                    name = getattr(zone, "name", None) or getattr(zone, "Name", str(zone))
-                    zone_id = str(
-                        getattr(zone, "id", None)
-                        or getattr(zone, "zoneId", None)
-                        or getattr(zone, "zone_id", "?")
-                    )
-                    try:
-                        getter = getattr(zone, "get_schedule", None)
-                        raw = await getter() if callable(getter) else getattr(zone, "schedule", {})
-                        parsed = _normalise_schedule(raw)
-                        zones_data[name] = {
-                            "zone_id": zone_id,
-                            "name": name,
-                            "schedule": parsed,
-                        }
-                        log.info(f"evohome_schedule: '{name}' — {len(parsed)} jours")
-                    except Exception as e:
-                        log.warning(f"evohome_schedule: zone '{name}' — {e}")
+                    yield zone
+
+
+async def _do_fetch() -> int:
+    """Cœur du fetch — retourne le nombre de zones récupérées."""
+    zones_data = {}
+
+    async for zone in _iter_zones():
+        name = getattr(zone, "name", None) or getattr(zone, "Name", str(zone))
+        zone_id = str(
+            getattr(zone, "id", None)
+            or getattr(zone, "zoneId", None)
+            or getattr(zone, "zone_id", "?")
+        )
+        try:
+            getter = getattr(zone, "get_schedule", None)
+            raw = await getter() if callable(getter) else getattr(zone, "schedule", {})
+            parsed = _normalise_schedule(raw)
+            zones_data[name] = {"zone_id": zone_id, "name": name, "schedule": parsed}
+            log.info(f"evohome_schedule: '{name}' — {len(parsed)} jours")
+        except Exception as e:
+            log.warning(f"evohome_schedule: zone '{name}' — {e}")
 
     payload = {
         "fetched_at": datetime.now().isoformat(),
