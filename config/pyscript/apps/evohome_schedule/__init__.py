@@ -26,8 +26,6 @@ Config requise dans configuration.yaml :
 """
 
 import json
-import re
-import unicodedata
 from datetime import datetime
 
 SCHEDULE_FILE = "/config/evohome_schedules.json"
@@ -167,6 +165,8 @@ async def _do_fetch() -> int:
 
 def _zone_slug(name: str) -> str:
     """Convertit un nom de zone Honeywell en slug HA (ex: 'Salle à manger' → 'salle_a_manger')."""
+    import re
+    import unicodedata
     n = unicodedata.normalize("NFKD", name)
     n = "".join(c for c in n if not unicodedata.combining(c))
     return re.sub(r"[^a-z0-9]+", "_", n.lower()).strip("_")
