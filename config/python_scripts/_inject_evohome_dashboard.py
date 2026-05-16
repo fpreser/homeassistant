@@ -169,7 +169,7 @@ def build_view():
                     "type": "buttons",
                     "entities": [
                         {
-                            "entity": "script.evohome_fetch_schedules",
+                            "entity": "sensor.evohome_schedule_status",
                             "name": "Sync planifications",
                             "icon": "mdi:sync",
                             "tap_action": {
