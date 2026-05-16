@@ -1,0 +1,70 @@
+###############################################################################
+#   E V O H O M E   O V E R R I D E   S C R I P T S
+###############################################################################
+#
+# Utilisés par le dashboard Planification Chauffage.
+#
+# evohome_apply_boost   : force une zone à input_number.evohome_boost_temp
+#                         pour la durée sélectionnée dans input_select.evohome_boost_duration
+#                         "Planifié" = override sans durée (jusqu'au prochain créneau Evohome)
+#
+# evohome_reset_zone    : annule l'override et retourne au planning Evohome
+#
+###############################################################################
+
+evohome_apply_boost:
+  alias: "Evohome — Appliquer boost"
+  description: "Force la consigne boost sur une zone Evohome"
+  mode: parallel
+  max: 12
+  fields:
+    entity_id:
+      description: "Entité climate Evohome (ex: climate.salon)"
+      required: true
+      selector:
+        entity:
+          domain: climate
+  sequence:
+    - variables:
+        boost_temp: "{{ states('input_number.evohome_boost_temp') | float(20) }}"
+        duration_label: "{{ states('input_select.evohome_boost_duration') }}"
+        duration_str: >-
+          {% set map = {
+            '30 min': '00:30:00',
+            '1h':     '01:00:00',
+            '2h':     '02:00:00',
+            '4h':     '04:00:00'
+          } %}
+          {{ map.get(duration_label, '') }}
+    - choose:
+        - conditions:
+            - condition: template
+              value_template: "{{ duration_label == 'Planifié' }}"
+          sequence:
+            - action: evohome.set_zone_override
+              data:
+                entity_id: "{{ entity_id }}"
+                setpoint: "{{ boost_temp }}"
+      default:
+        - action: evohome.set_zone_override
+          data:
+            entity_id: "{{ entity_id }}"
+            setpoint: "{{ boost_temp }}"
+            duration: "{{ duration_str }}"
+
+evohome_reset_zone:
+  alias: "Evohome — Retour planification"
+  description: "Annule l'override d'une zone et retourne au planning Evohome"
+  mode: parallel
+  max: 12
+  fields:
+    entity_id:
+      description: "Entité climate Evohome (ex: climate.salon)"
+      required: true
+      selector:
+        entity:
+          domain: climate
+  sequence:
+    - action: evohome.reset_zone_override
+      data:
+        entity_id: "{{ entity_id }}"
