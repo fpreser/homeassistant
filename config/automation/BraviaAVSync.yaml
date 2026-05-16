@@ -1,0 +1,61 @@
+- id: bravia_av_allumage
+  alias: "AV | Bravia ON → allumer VOO, TNT, Onkyo"
+  description: >
+    Quand la Sony Bravia s'allume via braviatv, allume automatiquement
+    le décodeur VOO, le décodeur TNT Fujionkyo et l'ampli Onkyo.
+    Les scripts VOO/TNT sont des toggles Harmony IR — suppose les appareils éteints au départ.
+  trigger:
+  - platform: state
+    entity_id: media_player.bravia_8_3
+    from: "off"
+    to:
+      - "on"
+      - "idle"
+      - "playing"
+      - "paused"
+  condition: []
+  action:
+  - alias: "Allumer Sony Bravia"
+    service: remote.turn_on
+    entity_id: remote.bravia_8
+  - alias: "Allumer VOO (toggle Harmony)"
+    service: script.turn_on
+    entity_id: script.voo_power
+  - alias: "Allumer TNT Fujionkyo (toggle Harmony)"
+    service: script.turn_on
+    entity_id: script.tnt_power
+  - alias: "Allumer ampli Onkyo"
+    service: media_player.turn_on
+    entity_id: media_player.ampli_salon
+  mode: single
+
+- id: bravia_av_extinction
+  alias: "AV | Bravia OFF → éteindre VOO, TNT, Onkyo"
+  description: >
+    Quand la Sony Bravia s'éteint via braviatv, éteint automatiquement
+    le décodeur VOO, le décodeur TNT Fujionkyo et l'ampli Onkyo.
+    Déclenché uniquement depuis un état actif (évite les faux triggers au restart HA).
+  trigger:
+  - platform: state
+    entity_id: media_player.bravia_8_3
+    from:
+      - "on"
+      - "idle"
+      - "playing"
+      - "paused"
+    to: "off"
+  condition: []
+  action:
+  - alias: "Éteindre VOO (toggle Harmony)"
+    service: script.turn_on
+    entity_id: script.voo_power
+  - alias: "Éteindre TNT Fujionkyo (toggle Harmony)"
+    service: script.turn_on
+    entity_id: script.tnt_power
+  - alias: "Éteindre ampli Onkyo"
+    service: media_player.turn_off
+    entity_id: media_player.ampli_salon
+  - alias: "Éteindre Sony Bravia"
+    service: remote.turn_off
+    entity_id: remote.bravia_8
+  mode: single

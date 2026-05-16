@@ -123,6 +123,23 @@ Via Input Source dans le Web Configurator UC, taper le package :
 | Max (HBO) | `com.wbd.stream` |
 | Kodi | `market://launch?id=org.xbmc.kodi` |
 
+## Automations AV
+
+### BraviaAVSync (config/automation/BraviaAVSync.yaml)
+
+Synchronisation automatique des appareils AV avec la Sony Bravia (trigger : intégration braviatv, entité `media_player.bravia_8_3`).
+
+| Automation | Trigger | Actions |
+|---|---|---|
+| `bravia_av_allumage` | Bravia passe de `off` → `on/idle/playing/paused` | Onkyo ON → VOO toggle → TNT toggle |
+| `bravia_av_extinction` | Bravia passe de `on/idle/playing/paused` → `off` | VOO toggle → TNT toggle → Onkyo OFF |
+
+**Notes :**
+- Délai de 5 s sur le trigger pour éviter les faux positifs
+- Onkyo contrôlé via `media_player.turn_on/off` (intégration ISCP native, plus fiable que IR)
+- VOO et TNT contrôlés via `script.voo_power` / `script.tnt_power` (toggle IR Harmony) — suppose les appareils dans l'état attendu (éteints au démarrage, allumés à l'extinction)
+- Délais entre actions : 3 s après Onkyo, 2 s entre VOO et TNT
+
 ## Ressources
 
 - Icones UC : unfolded.tools

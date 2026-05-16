@@ -136,7 +136,7 @@ voo_chaine_suivante:
         entity_id: remote.salon
       data:
         device: "VOO Enregistreur numérique"
-        command: ChannelUp
+        command: ChannelDown
 
 voo_chaine_precedente:
   alias: "VOO - Chaîne précédente"
@@ -146,7 +146,7 @@ voo_chaine_precedente:
         entity_id: remote.salon
       data:
         device: "VOO Enregistreur numérique"
-        command: ChannelDown
+        command: ChannelUp
 
 voo_lecture:
   alias: "VOO - Lecture"
