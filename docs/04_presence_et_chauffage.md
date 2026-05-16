@@ -80,8 +80,45 @@ Les sensors temperature (`template_sensors/temperature_rooms.yaml`) extraient `c
 - Integration **ViCare** dans HA
 - **`water_heater.vicare_water`** : chauffe-eau (temperature actuelle, consigne)
 - **`sensor.temperature_chauffe_eau`** : template sensor extrayant `current_temperature` depuis `water_heater.vicare_water`
-- **`climate.vicare_heating`** : controle de la chaudiere
+- **`climate.vicare_heating`** : controle de la chaudiere (mode auto/standby, courbe de chauffe slope=1.4 shift=0)
 - Consommation gaz integree dans l'energy dashboard (kWh/jour, chauffage + eau chaude separes)
+
+### Sensors Vicare cles
+
+| Sensor | Description | state_class |
+|---|---|---|
+| `sensor.vicare_outside_temperature` | Temperature exterieure (source chaudiere) | `measurement` |
+| `sensor.vicare_supply_temperature` | Temperature depart circuit (~35-40°C optimal condensation) | natif |
+| `sensor.vicare_burner_modulation` | Modulation bruleur (%) | `measurement` |
+| `sensor.vicare_burner_active` | Bruleur ON/OFF | binary_sensor |
+| `sensor.vicare_heating_gas_consumption_today` | Conso gaz chauffage aujourd'hui (m³) | `total_increasing` |
+| `sensor.vicare_heating_gas_consumption_this_week` | Conso gaz chauffage cette semaine (m³) | `total_increasing` |
+| `sensor.vicare_heating_gas_consumption_this_month` | Conso gaz chauffage ce mois (m³) | `total_increasing` |
+| `sensor.vicare_heating_gas_consumption_this_year` | Conso gaz chauffage cette annee (m³) | `total_increasing` |
+| `sensor.vicare_hot_water_gas_consumption_today` | Conso gaz ECS aujourd'hui (m³) | `total_increasing` |
+| `sensor.vicare_burner_hours` | Heures totales bruleur (14 000h) | `total_increasing` |
+| `sensor.vicare_burner_starts` | Demarrages totaux bruleur (118 000) | `total_increasing` |
+
+---
+
+## Statistiques long-terme pour l'analyse
+
+Depuis le 16/05/2026, **tous les sensors de temperature de pieces ont `state_class: measurement`** (`template_sensors/temperature_rooms.yaml`). Cela active les statistiques long-terme HA (agregats horaires indefiniment conserves).
+
+Les sensors Vicare ont `state_class` natif depuis le debut.
+
+### Ce que l'agent MCP peut analyser
+
+- **Correlation meteo/chauffage** : temperature exterieure vs conso gaz hebdomadaire
+- **Confort par piece** : temperature reelle vs consigne Evohome dans le temps
+- **Rendement chaudiere** : modulation bruleur, demarrages/heure, supply temp vs ext temp
+- **Repartition gaz** : chauffage vs ECS (sensors separes Vicare)
+- **Tendances saisonnieres** : accumulation automatique des statistiques horaires
+
+Exemples de questions a poser a l'agent :
+> "Correle la conso gaz hebdomadaire avec la temperature exterieure ces 3 derniers mois"
+> "Quelle piece est chroniquement sous sa consigne ?"
+> "La courbe de chauffe (slope=1.4, shift=0) est-elle adaptee ?"
 
 ---
 

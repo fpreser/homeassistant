@@ -38,12 +38,16 @@ Le compteur P1 mesure la puissance active et les totaux d'energie en tarif bi-ho
 
 2 onduleurs SMA SB 5.0 (total ~10 kWc installe).
 
-| Sensor | Description |
-|---|---|
-| `sensor.sb5_0_1av_41_208_grid_power` | Puissance onduleur 1 (W) |
-| `sensor.sb5_0_1av_41_345_grid_power` | Puissance onduleur 2 (W) |
-| `sensor.sb5_0_1av_41_208_voltage_l1` | Tension onduleur 1 (V) |
-| `sensor.sb5_0_1av_41_345_voltage_l1` | Tension onduleur 2 (V) |
+| Sensor | Description | state_class |
+|---|---|---|
+| `sensor.sb5_0_1av_41_208_grid_power` | Puissance onduleur 1 (W) | `measurement` |
+| `sensor.sb5_0_1av_41_345_grid_power` | Puissance onduleur 2 (W) | `measurement` |
+| `sensor.sb5_0_1av_41_208_total_yield` | Production cumul vie onduleur 1 (kWh) — 31 922 kWh | `total_increasing` |
+| `sensor.sb5_0_1av_41_345_total_yield` | Production cumul vie onduleur 2 (kWh) — 32 294 kWh | `total_increasing` |
+| `sensor.sb5_0_1av_41_208_daily_yield` | Production aujourd'hui onduleur 1 (Wh) | `total_increasing` |
+| `sensor.sb5_0_1av_41_345_daily_yield` | Production aujourd'hui onduleur 2 (Wh) | `total_increasing` |
+| `sensor.sb5_0_1av_41_208_voltage_l1` | Tension onduleur 1 (V) — exclu recorder |
+| `sensor.sb5_0_1av_41_345_voltage_l1` | Tension onduleur 2 (V) — exclu recorder |
 
 ### Sensor calcule
 
@@ -98,6 +102,32 @@ Le compteur P1 mesure la puissance active et les totaux d'energie en tarif bi-ho
 
 L'integration **battery_sim** (HACS) est installee, probablement pour simuler l'interet d'une batterie domestique virtuelle par rapport a la production/consommation reelle.
 
+## Statistiques long-terme
+
+Tous les sensors P1 et SMA ont `state_class` natif depuis leur integration HA. Les sensors template (power_home, solar_total, etc.) ont `state_class: measurement` depuis `power_and_energy.yaml`.
+
+### Recap state_class par type
+
+| Type | state_class | Sensors |
+|---|---|---|
+| Energie cumulative (P1 import/export) | `total_increasing` | `total_power_import_t1/t2`, `total_power_export_t1/t2` |
+| Energie cumulative (SMA yield) | `total_increasing` | `total_yield` x2, `daily_yield` x2 |
+| Puissances instantanees | `measurement` | `active_power`, `grid_power`, tous les sensors calcules |
+| Energie nette calculee | `total` | `sensor.net_energy`, sensors releves officiels |
+
+### Analyse possible avec l'agent MCP
+
+- **Taux d'autoconsommation** : (production - export) / production sur la periode
+- **Taux d'autosuffisance** : (production - export) / consommation totale
+- **Production solaire par periode** : via `total_yield` (increment entre deux dates)
+- **Correlation production/meteo** : `daily_yield` vs `vicare_outside_temperature`
+- **Pic de consommation** : `peak_demand_current_month` = tarif capacitaire belge
+
+Exemples de questions a poser a l'agent :
+> "Quel est mon taux d'autoconsommation solaire ce mois vs le mois dernier ?"
+> "Est-ce que ma production solaire couvre ma recharge Tesla sur la semaine ?"
+> "Quelles heures de la journee ai-je le plus de surplus solaire ?"
+
 ## Points cles pour les futures automatisations energie
 
 1. **Le P1 meter est la source de verite** pour savoir si on soutire ou injecte
@@ -105,3 +135,4 @@ L'integration **battery_sim** (HACS) est installee, probablement pour simuler l'
 3. **~10 kWc solaire** : production significative, surplus frequents en journee
 4. **Toute la chaine de mesure est en place** : production, consommation, injection, prelevement
 5. **La tension est mesuree** en temps reel (utile pour calculer la puissance Tesla a partir de l'amperage)
+6. **Production cumulee** : onduleur 1 = 31 922 kWh, onduleur 2 = 32 294 kWh (total ~64 216 kWh vie)
