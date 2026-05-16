@@ -7,6 +7,7 @@ et les stocke dans /config/evohome_schedules.json.
 
 Services exposés :
   pyscript.evohome_fetch_schedules  — synchronisation manuelle ou via dashboard
+  pyscript.evohome_reset_zone       — annule l'override d'une zone (entity_id requis)
 
 Sensor mis à jour :
   sensor.evohome_schedule_status   — "ok" / "error" + attributs (zones, fetched_at)
@@ -65,6 +66,46 @@ def _normalise_schedule(raw: dict) -> dict:
 
         result[day_fr] = sorted(slots, key=lambda s: s["time"])
     return result
+
+
+async def _get_zone(zone_name: str):
+    """Trouve l'objet zone evohomeasync2 par son nom.
+
+    Essaie d'abord le broker HA (session existante), puis crée un nouveau client
+    en fallback. Supporte evohomeasync2 0.x (cancel_temp_override) et 1.x+ (reset_mode).
+    """
+    # Priorité : broker HA — réutilise la session authentifiée
+    broker = hass.data.get("evohome")
+    if broker:
+        try:
+            tcs = broker.tcs
+            zones_iter = tcs.zones.values() if isinstance(tcs.zones, dict) else iter(tcs.zones)
+            for zone in zones_iter:
+                name = getattr(zone, "name", "") or getattr(zone, "Name", "")
+                if name == zone_name:
+                    log.info(f"evohome: zone '{name}' trouvée via broker HA")
+                    return zone
+        except Exception as e:
+            log.warning(f"evohome: broker inaccessible ({e}), fallback client")
+
+    # Fallback : nouveau client API
+    cfg = pyscript.app_config
+    username = cfg.get("username", "")
+    password = cfg.get("password", "")
+    import evohomeasync2
+    client = evohomeasync2.EvohomeClient(username, password)
+    await client.login()
+    for location in client.locations:
+        gateways = getattr(location, "gateways", getattr(location, "_gateways", []))
+        for gw in gateways:
+            systems = getattr(gw, "systems", getattr(gw, "_systems", []))
+            for sys_ in systems:
+                for zone in sys_.zones:
+                    name = getattr(zone, "name", "") or getattr(zone, "Name", "")
+                    if name == zone_name:
+                        return zone
+
+    raise ValueError(f"Zone '{zone_name}' introuvable dans Evohome")
 
 
 async def _do_fetch() -> int:
@@ -148,6 +189,29 @@ async def evohome_fetch_schedules():
                 "icon": "mdi:calendar-alert",
             },
         )
+
+
+@service
+async def evohome_reset_zone(entity_id=None):
+    """Annule l'override d'une zone Evohome et retourne au planning."""
+    if not entity_id:
+        raise ValueError("entity_id requis (ex: climate.salon)")
+
+    # Nom de zone depuis l'état HA — gère les décalages entity_id/nom (ex: chambre_amis → Ch Amis)
+    attrs = state.getattr(entity_id) or {}
+    zone_name = attrs.get("friendly_name") or entity_id.split(".", 1)[-1].replace("_", " ").title()
+
+    try:
+        zone = await _get_zone(zone_name)
+        # evohomeasync2 1.x+ : reset_mode() / 0.x : cancel_temp_override()
+        reset_fn = getattr(zone, "reset_mode", None) or getattr(zone, "cancel_temp_override", None)
+        if not reset_fn:
+            raise ValueError(f"Aucune méthode reset sur la zone '{zone_name}'")
+        await reset_fn()
+        log.info(f"evohome: zone '{zone_name}' réinitialisée au planning")
+    except Exception as exc:
+        log.error(f"evohome_reset_zone: {exc}")
+        raise
 
 
 @time_trigger("startup")

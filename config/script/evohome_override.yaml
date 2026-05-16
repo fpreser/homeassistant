@@ -65,12 +65,6 @@ evohome_reset_zone:
         entity:
           domain: climate
   sequence:
-    - variables:
-        # chambre_amis est un cas particulier (entity_id ≠ nom de zone "Ch Amis")
-        button_exceptions:
-          "climate.chambre_amis": "button.reset_ch_amis"
-        zone_id: "{{ entity_id | replace('climate.', '') }}"
-        button_entity: "{{ button_exceptions.get(entity_id, 'button.reset_' + zone_id) }}"
-    - action: button.press
-      target:
-        entity_id: "{{ button_entity }}"
+    - action: pyscript.evohome_reset_zone
+      data:
+        entity_id: "{{ entity_id }}"
