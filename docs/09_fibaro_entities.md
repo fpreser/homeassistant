@@ -1,6 +1,7 @@
 # Fibaro — Entités Home Assistant par pièce
 
 > Généré le 2026-05-17 depuis Fibaro HC3 (192.168.1.12) et registre HA
+> Nettoyage fantômes 2026-05-17 : 12 entités supprimées (devices 37, 38, 39, 41, 139, 140, 169, 170, 172, 174 absents de HC3)
 
 
 ## Salon
