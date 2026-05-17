@@ -84,6 +84,7 @@ tesla_pubkey:
 # s'authentifier à l'API Honeywell et récupérer les planifications zones.
 pyscript:
   allow_all_imports: true
+  hass_is_global: true
   apps:
     evohome_schedule:
       username: !secret evohome_username
