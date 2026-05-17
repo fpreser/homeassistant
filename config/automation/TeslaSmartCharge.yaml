@@ -28,7 +28,12 @@
 #  10. Sync helper SoC max   (modification utilisateur depuis le dashboard)
 #  11. Refresh apres amps    (poll Fleet API 10s apres set ampérage)
 #
-# Helpers de limite de charge :
+# Helpers de session et limite de charge :
+#   - input_boolean.tesla_solar_charging : session solaire active
+#     Set ON par autos 1 et 3 au demarrage, OFF par autos 2, 4, 9.
+#     Utilise comme condition dans auto 7 (Resume) a la place des
+#     device_trackers : garantit qu'on ne reprend que si une session
+#     a ete explicitement lancee (voiture forcement home+branchee).
 #   - input_number.tesla_soc_solaire_max : SoC max en mode solaire (defaut 80%)
 #     Force au demarrage des autos 1 et 3, restaure a la fin (auto 9).
 #   - input_number.tesla_soc_cible       : SoC cible en HC (defaut 50%)
@@ -266,6 +271,9 @@
     - service: switch.turn_on
       target:
         entity_id: switch.f_r_i_d_a_y_charge
+    - service: input_boolean.turn_on
+      target:
+        entity_id: input_boolean.tesla_solar_charging
     - service: number.set_value
       target:
         entity_id: number.f_r_i_d_a_y_charge_current
@@ -351,6 +359,9 @@
       entity_id: input_boolean.tesla_night_charge_pending
       state: 'off'
   action:
+    - service: input_boolean.turn_off
+      target:
+        entity_id: input_boolean.tesla_solar_charging
     - choose:
         - conditions:
             - condition: state
@@ -454,6 +465,9 @@
     - service: switch.turn_on
       target:
         entity_id: switch.f_r_i_d_a_y_charge
+    - service: input_boolean.turn_on
+      target:
+        entity_id: input_boolean.tesla_solar_charging
     - service: number.set_value
       target:
         entity_id: number.f_r_i_d_a_y_charge_current
@@ -520,6 +534,9 @@
     - service: switch.turn_off
       target:
         entity_id: switch.f_r_i_d_a_y_charge
+    - service: input_boolean.turn_off
+      target:
+        entity_id: input_boolean.tesla_solar_charging
     - delay:
         seconds: 3
     - service: input_boolean.turn_on
@@ -656,6 +673,14 @@
     - service: switch.turn_off
       target:
         entity_id: switch.f_r_i_d_a_y_charge
+    - service: script.notify_fabien
+      data:
+        title: Tesla Smart Charge
+        message: >-
+          {% set bat = states('sensor.f_r_i_d_a_y_niveau_de_batterie') | int(0) %}
+          {% set solaire = states('sensor.solar_total') | int(0) %}
+          Charge mise en pause — surplus solaire insuffisant ({{ solaire }}W).
+          Batterie : {{ bat }}%.
   mode: single
 
 #####################################################################
@@ -666,6 +691,15 @@
 # contre une derive cote Tesla pendant la pause (modif via app, commande
 # Fleet API perdue avec voiture endormie, etc.). Sans ce filet, la
 # voiture peut s'arreter prematurement a une vieille limite (ex 63%).
+#
+# Condition input_boolean.tesla_solar_charging :
+#   Remplace le check device_tracker (insuffisant si la voiture dort).
+#   Si la session est active, la voiture est forcement home+branchee.
+#   Reset automatique par auto 9 (cable) ou auto 2 (desactivation).
+#
+# Action : reveille la voiture avant d'envoyer les commandes (fix
+#   bug 2026-05-17 : commandes perdues quand la voiture s'endort
+#   pendant une pause solaire de >10 min).
 #####################################################################
 - id: 'tesla_smart_charge_resume'
   alias: Tesla Smart Charge - Resume solaire
@@ -683,18 +717,22 @@
     - condition: state
       entity_id: input_boolean.tesla_night_charge_pending
       state: 'off'
+    # Session solaire explicitement active (set par Demarrage/Activation,
+    # reset par Desactivation/Arret/cable debranche/nuit).
+    # Remplace le check device_tracker : si la session est active,
+    # la voiture est forcement a la maison et branchee.
+    - condition: state
+      entity_id: input_boolean.tesla_solar_charging
+      state: 'on'
     - condition: state
       entity_id: switch.f_r_i_d_a_y_charge
       state: 'off'
-    - condition: or
-      conditions:
-        - condition: state
-          entity_id: device_tracker.f_r_i_d_a_y_location
-          state: home
-        - condition: state
-          entity_id: device_tracker.tesla_y
-          state: home
   action:
+    # Reveille la voiture si elle dort (evite la perte de commandes
+    # quand la voiture s'endort pendant une longue pause solaire).
+    - service: script.tesla_refresh
+    - delay:
+        seconds: 5
     # Re-applique la limite SoC max solaire avant turn_on (defense
     # contre une derive cote Tesla pendant la pause).
     - service: number.set_value
@@ -715,6 +753,14 @@
           {% set opt = states('sensor.tesla_optimized_amp') | int(0) %}
           {% set max_amps = states('input_number.tesla_max_amps') | int(28) %}
           {{ [5, [opt, max_amps] | min] | max }}
+    - service: script.notify_fabien
+      data:
+        title: Tesla Smart Charge
+        message: >-
+          {% set bat = states('sensor.f_r_i_d_a_y_niveau_de_batterie') | int(0) %}
+          {% set solaire = states('sensor.tesla_optimized_amp') | int(0) %}
+          Charge reprise — surplus solaire suffisant ({{ solaire }}A).
+          Batterie : {{ bat }}%.
   mode: single
 
 #####################################################################
@@ -839,6 +885,9 @@
         entity_id: number.f_r_i_d_a_y_charge_limit
       data:
         value: "{{ states('input_number.tesla_soc_solaire_max') | int(80) }}"
+    - service: input_boolean.turn_off
+      target:
+        entity_id: input_boolean.tesla_solar_charging
     - service: script.notify_fabien
       data:
         title: Tesla Smart Charge
