@@ -173,6 +173,7 @@
         (
           states('sensor.grenier_vmc_power') | float(0) +
           states('sensor.bureau_fabien_pc_power') | float(0) +
+          states('sensor.chambre_louis_pc_louis_power') | float(0) +
           states('sensor.prise_ups_power') | float(0) +
           states('sensor.salon_prise_tv_power') | float(0) +
           states('sensor.jardin_pompe_a_eau_power') | float(0)
@@ -187,12 +188,13 @@
     unique_id: sensor.power_tesla
     default_entity_id: sensor.power_tesla
     # Tesla Fleet expose charger_power en kW (0 a l'arret) -> conversion W.
-    # Garde unavailable/unknown pour eviter un 0 trompeur quand la voiture
-    # est hors ligne (Fleet API endormi).
+    # Si le Fleet API est endormi (unavailable/unknown), on garde la derniere
+    # valeur connue du sensor lui-meme pour ne pas injecter un 0 trompeur
+    # dans power_unmanaged pendant une charge en cours.
     state: >-
       {% set p = states('sensor.f_r_i_d_a_y_charger_power') %}
-      {% if p in ['unavailable', 'unknown', 'none', None] %}
-        0
+      {% if p in ['unavailable', 'unknown'] %}
+        {{ states('sensor.power_tesla') | float(0) }}
       {% else %}
         {{ (p | float(0) * 1000) | round(1) }}
       {% endif %}
@@ -258,7 +260,11 @@
       {{
         (
           states('sensor.buanderie_seche_linge_power') | float(0) +
-          states('sensor.buanderie_machine_a_laver_power') | float(0)
+          states('sensor.buanderie_machine_a_laver_power') | float(0) +
+          states('sensor.buanderie_frigos_buanderie_power') | float(0) +
+          states('sensor.cuisine_bouilloire_power') | float(0) +
+          states('sensor.cuisine_grille_pain_power') | float(0) +
+          states('sensor.fer_a_repasser_power') | float(0)
         ) | round(1)
       }}
     unit_of_measurement: "W"

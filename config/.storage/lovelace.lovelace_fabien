@@ -3052,13 +3052,6 @@
                         "cards": [
                           {
                             "type": "custom:mushroom-light-card",
-                            "entity": "light.buis_exterieur",
-                            "show_brightness_control": false,
-                            "collapsible_controls": false,
-                            "name": "Buis Extérieur"
-                          },
-                          {
-                            "type": "custom:mushroom-light-card",
                             "entity": "light.jardin_exterieur_porte",
                             "show_brightness_control": false,
                             "collapsible_controls": false,
