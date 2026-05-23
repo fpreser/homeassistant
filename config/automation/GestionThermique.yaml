@@ -1,0 +1,386 @@
+#####################################################################
+#          G E S T I O N   T H E R M I Q U E   E T É
+#####################################################################
+#
+# Occultation diurne et ventilation nocturne pour maintenir
+# une température confortable en période de chaleur.
+#
+# Helpers :
+#   input_boolean.gestion_thermique : maître on/off
+#   input_number.seuil_chaleur      : seuil T_ext déclenchement (défaut 23°C)
+#
+# Orientation maison (45 Rue Jacques, Habergy — vérifié OSM 2026-05-23) :
+#   Sud  : volet_poly_pelouse, volet_bureau_fabien, volet_bureau_gillian,
+#          volet_cuisine, volet_velux_chambre, velux_chambre, velux_escalier
+#   Ouest: volet_tv, volet_poly_route, volet_emma_route
+#   Nord : volet_salle_de_bain, volet_salle_a_manger, volet_louis,
+#          volet_canape, volet_emma_gauche  (pas gérés ici)
+#   Est  : volet_chambre        (pas géré ici)
+#   Vélux SDD : nord (velux_sdd_gauche, velux_sdd_droite)
+#
+# Contenu :
+#   1. Fermeture solaire diurne   (T_ext > seuil + soleil levé)
+#   2. Réouverture diurne         (T_ext < seuil - 2°C, hysteresis)
+#   3. Ouverture vélux nocturne   (nuit + T_ext < T_int_max - 2°C + pas de pluie)
+#   4. Fermeture vélux matin      (sunrise + 30 min)
+#   5. Surveillance pluie nocturne (binary_sensor.pluie_imminente_2h → on)
+#
+#####################################################################
+
+#####################################################################
+# 1. FERMETURE SOLAIRE DIURNE
+#####################################################################
+# Ferme les volets sud à 15% dès que T_ext dépasse le seuil.
+# Ajoute la façade ouest à partir de 13h (soleil qui bascule).
+# Façades nord et est non gérées (exposition négligeable en été).
+#
+# Cohabitation avec les autos existantes :
+#   - ouverture_volets_matin  (7h/9h) → ouvre tout à 100% le matin
+#   - fermeture_volets (coucher soleil) → ferme tout, prend le relais le soir
+#   - Cette auto agit uniquement dans la fenêtre entre les deux
+#
+# Triggers multiples pour couvrir les cas :
+#   - T_ext franchit le seuil en cours de journée
+#   - Seuil déjà dépassé au check 9h (soleil déjà levé, volets ouverts)
+#   - Seuil déjà dépassé au check 13h (pour activer la façade ouest)
+#####################################################################
+- id: 'gestion_thermique_fermeture_solaire'
+  alias: Gestion Thermique - Fermeture solaire
+
+  trigger:
+    - platform: numeric_state
+      entity_id: sensor.vicare_outside_temperature
+      above: input_number.seuil_chaleur
+      id: chaleur
+    - platform: time
+      at: "09:00:00"
+      id: check_matin
+    - platform: time
+      at: "13:00:00"
+      id: check_aprem
+    - platform: state
+      entity_id: input_boolean.gestion_thermique
+      to: 'on'
+      id: activation
+    - platform: homeassistant
+      event: start
+      id: ha_start
+
+  condition:
+    - condition: state
+      entity_id: input_boolean.gestion_thermique
+      state: 'on'
+    - condition: sun
+      after: sunrise
+      before: sunset
+    - condition: numeric_state
+      entity_id: sensor.vicare_outside_temperature
+      above: input_number.seuil_chaleur
+
+  action:
+    # Façade SUD : toujours quand le seuil est dépassé
+    - service: cover.set_cover_position
+      target:
+        entity_id:
+          - cover.volet_poly_pelouse
+          - cover.volet_bureau_fabien
+          - cover.volet_bureau_gillian
+          - cover.volet_cuisine
+          - cover.volet_velux_chambre
+      data:
+        position: 15
+    # Façade OUEST : seulement à partir de 13h
+    - choose:
+        - conditions:
+            - condition: time
+              after: "13:00:00"
+          sequence:
+            - service: cover.set_cover_position
+              target:
+                entity_id:
+                  - cover.volet_tv
+                  - cover.volet_poly_route
+                  - cover.volet_emma_route
+              data:
+                position: 15
+    - service: script.notify_fabien
+      data:
+        title: Gestion Thermique
+        message: >-
+          {% set t_ext = states('sensor.vicare_outside_temperature') | float(0) %}
+          {% set seuil = states('input_number.seuil_chaleur') | float(23) %}
+          Volets fermés — T ext {{ t_ext }}°C (seuil {{ seuil | round(0) | int }}°C).
+          {% if now().hour >= 13 %}
+          Façades sud et ouest.
+          {% else %}
+          Façade sud — ouest à 13h.
+          {% endif %}
+  mode: single
+
+#####################################################################
+# 2. RÉOUVERTURE DIURNE
+#####################################################################
+# Si T_ext redescend sous (seuil - 2°C), rouvre les volets sud et
+# ouest pour laisser rentrer l'air frais (orage, passage nuageux).
+# Hysteresis 2°C pour éviter l'oscillation autour du seuil.
+# La fermeture_volets du soir reste maître en fin de journée.
+#####################################################################
+- id: 'gestion_thermique_reouverture'
+  alias: Gestion Thermique - Reouverture volets
+
+  trigger:
+    - platform: template
+      value_template: >-
+        {{ states('sensor.vicare_outside_temperature') | float(99)
+           < states('input_number.seuil_chaleur') | float(23) - 2 }}
+
+  condition:
+    - condition: state
+      entity_id: input_boolean.gestion_thermique
+      state: 'on'
+    - condition: sun
+      after: sunrise
+      before: sunset
+
+  action:
+    - service: cover.set_cover_position
+      target:
+        entity_id:
+          - cover.volet_poly_pelouse
+          - cover.volet_bureau_fabien
+          - cover.volet_bureau_gillian
+          - cover.volet_cuisine
+          - cover.volet_velux_chambre
+          - cover.volet_tv
+          - cover.volet_poly_route
+          - cover.volet_emma_route
+      data:
+        position: 100
+    - service: script.notify_fabien
+      data:
+        title: Gestion Thermique
+        message: >-
+          {% set t_ext = states('sensor.vicare_outside_temperature') | float(0) %}
+          {% set seuil = states('input_number.seuil_chaleur') | float(23) %}
+          Volets rouverts — T ext {{ t_ext }}°C (seuil {{ seuil | round(0) | int }}°C).
+  mode: single
+
+#####################################################################
+# 3. OUVERTURE VÉLUX NOCTURNE
+#####################################################################
+# La nuit, quand l'extérieur se refroidit sous T_int_max - 2°C et
+# qu'il ne pleut pas dans les 2h, ouvre les vélux pour purger la
+# chaleur accumulée (effet cheminée).
+#
+# T_int_max = max(temp_hall_nuit, temp_chambre_emma, temp_chambre_louis)
+#
+# velux_chambre : conditions supplémentaires (indépendant de l'aération
+# vélux manuelle depuis auto 1681121951553 qui ne le gère plus) :
+#   - climate.chambre = off  (pas de clim en cours, serait contre-productif)
+#   - volet_velux_chambre != closed  (volet fermé = sieste/nuit intentionnelle)
+#
+# Groupe SDD (nord) + escalier (sud) : ouverts sans restriction.
+#####################################################################
+- id: 'gestion_thermique_velux_ouverture'
+  alias: Gestion Thermique - Ouverture velux nuit
+
+  trigger:
+    - platform: state
+      entity_id: sun.sun
+      to: 'below_horizon'
+      id: nuit
+    - platform: template
+      value_template: >-
+        {% set t_ext = states('sensor.vicare_outside_temperature') | float(99) %}
+        {% set t_int_max = [
+          states('sensor.temp_hall_nuit') | float(0),
+          states('sensor.temp_chambre_emma') | float(0),
+          states('sensor.temp_chambre_louis') | float(0)
+        ] | max %}
+        {{ t_ext < t_int_max - 3 }}
+      id: fraicheur
+
+  condition:
+    - condition: state
+      entity_id: input_boolean.gestion_thermique
+      state: 'on'
+    - condition: state
+      entity_id: sun.sun
+      state: 'below_horizon'
+    - condition: template
+      value_template: >-
+        {% set t_ext = states('sensor.vicare_outside_temperature') | float(99) %}
+        {% set t_int_max = [
+          states('sensor.temp_hall_nuit') | float(0),
+          states('sensor.temp_chambre_emma') | float(0),
+          states('sensor.temp_chambre_louis') | float(0)
+        ] | max %}
+        {{ t_ext < t_int_max - 2 }}
+    - condition: state
+      entity_id: binary_sensor.pluie_imminente_2h
+      state: 'off'
+
+  action:
+    # Groupe principal : SDD (nord) + escalier (sud), pas de condition extra
+    - service: cover.open_cover
+      target:
+        entity_id:
+          - cover.velux_sdd_gauche
+          - cover.velux_sdd_droite
+          - cover.velux_escalier
+    # velux_chambre : clim off ET volet occultant non fermé
+    - choose:
+        - conditions:
+            - condition: state
+              entity_id: climate.chambre
+              state: 'off'
+            - condition: not
+              conditions:
+                - condition: state
+                  entity_id: cover.volet_velux_chambre
+                  state: 'closed'
+          sequence:
+            - service: cover.open_cover
+              target:
+                entity_id: cover.velux_chambre
+    - service: script.notify_fabien
+      data:
+        title: Gestion Thermique
+        message: >-
+          {% set t_ext = states('sensor.vicare_outside_temperature') | float(0) %}
+          {% set t_int_max = [
+            states('sensor.temp_hall_nuit') | float(0),
+            states('sensor.temp_chambre_emma') | float(0),
+            states('sensor.temp_chambre_louis') | float(0)
+          ] | max %}
+          {% set chambre_ok = is_state('climate.chambre', 'off')
+             and not is_state('cover.volet_velux_chambre', 'closed') %}
+          Vélux ouverts — T ext {{ t_ext }}°C / T int {{ t_int_max }}°C.
+          {% if chambre_ok %}Vélux chambre inclus.
+          {% else %}Vélux chambre exclu (clim on ou volet fermé).{% endif %}
+  mode: single
+
+#####################################################################
+# 4. FERMETURE VÉLUX MATIN
+#####################################################################
+# Ferme les vélux de ventilation 30 min après le lever du soleil,
+# avant que la chaleur du jour ne commence à entrer.
+# Ferme aussi velux_chambre même si non ouvert par l'auto 3
+# (close_cover sur un vélux déjà fermé est idempotent).
+#####################################################################
+- id: 'gestion_thermique_velux_fermeture_matin'
+  alias: Gestion Thermique - Fermeture velux matin
+
+  trigger:
+    - platform: sun
+      event: sunrise
+      offset: "00:30:00"
+
+  condition:
+    - condition: state
+      entity_id: input_boolean.gestion_thermique
+      state: 'on'
+
+  action:
+    - service: cover.close_cover
+      target:
+        entity_id:
+          - cover.velux_sdd_gauche
+          - cover.velux_sdd_droite
+          - cover.velux_escalier
+          - cover.velux_chambre
+    - service: script.notify_fabien
+      data:
+        title: Gestion Thermique
+        message: >-
+          {% set t_ext = states('sensor.vicare_outside_temperature') | float(0) %}
+          Vélux fermés (lever du soleil). T ext {{ t_ext }}°C.
+  mode: single
+
+#####################################################################
+# 5. SURVEILLANCE PLUIE NOCTURNE
+#####################################################################
+# Si binary_sensor.pluie_imminente_2h passe à ON pendant la nuit,
+# ferme immédiatement tous les vélux de ventilation.
+# Le sensor se rafraîchit toutes les 30 min (template_sensors/gestion_thermique.yaml).
+#####################################################################
+- id: 'gestion_thermique_velux_pluie'
+  alias: Gestion Thermique - Surveillance pluie nocturne
+
+  trigger:
+    - platform: state
+      entity_id: binary_sensor.pluie_imminente_2h
+      to: 'on'
+
+  condition:
+    - condition: state
+      entity_id: input_boolean.gestion_thermique
+      state: 'on'
+    - condition: state
+      entity_id: sun.sun
+      state: 'below_horizon'
+
+  action:
+    - service: cover.close_cover
+      target:
+        entity_id:
+          - cover.velux_sdd_gauche
+          - cover.velux_sdd_droite
+          - cover.velux_escalier
+          - cover.velux_chambre
+    - service: script.notify_fabien
+      data:
+        title: Gestion Thermique
+        message: Vélux fermés — pluie prévue dans les 2h.
+  mode: single
+
+#####################################################################
+# 6. DÉSACTIVATION — RELÈVE LES VOLETS FERMÉS PAR L'AUTOMATION
+#####################################################################
+# Si le maître est coupé en cours de journée, relève uniquement les
+# volets qui sont encore à 15% (position posée par l'automation).
+# Les volets réglés manuellement à d'autres positions sont ignorés.
+#####################################################################
+- id: 'gestion_thermique_desactivation'
+  alias: Gestion Thermique - Désactivation
+
+  trigger:
+    - platform: state
+      entity_id: input_boolean.gestion_thermique
+      to: 'off'
+
+  action:
+    - variables:
+        volets_a_relever: >-
+          {% set volets = [
+            'cover.volet_poly_pelouse',
+            'cover.volet_bureau_fabien',
+            'cover.volet_bureau_gillian',
+            'cover.volet_cuisine',
+            'cover.volet_velux_chambre',
+            'cover.volet_tv',
+            'cover.volet_poly_route',
+            'cover.volet_emma_route'
+          ] %}
+          {% set ns = namespace(a=[]) %}
+          {% for v in volets %}
+            {% if state_attr(v, 'current_position') | int(-1) == 15 %}
+              {% set ns.a = ns.a + [v] %}
+            {% endif %}
+          {% endfor %}
+          {{ ns.a }}
+    - if:
+        - condition: template
+          value_template: "{{ volets_a_relever | length > 0 }}"
+      then:
+        - service: cover.set_cover_position
+          target:
+            entity_id: "{{ volets_a_relever }}"
+          data:
+            position: 100
+        - service: script.notify_fabien
+          data:
+            title: Gestion Thermique
+            message: >-
+              Gestion thermique désactivée — {{ volets_a_relever | length }} volet(s) relevé(s).
+  mode: single

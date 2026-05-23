@@ -12,6 +12,10 @@ input_boolean:
     name: "Tesla charge nocturne programmee"
     icon: mdi:battery-clock
 
+  gestion_thermique:
+    name: "Gestion thermique estivale"
+    icon: mdi:thermometer-auto
+
 # Helpers Tesla : pas de cle `initial` = HA restaure la derniere valeur
 # au redemarrage (modif dashboard persiste). Les fallbacks dans les
 # templates et automations restent en place pour le tout premier boot.
@@ -55,6 +59,14 @@ input_number:
     step: 500
     unit_of_measurement: "W"
     icon: mdi:transmission-tower-import
+
+  seuil_chaleur:
+    name: "Seuil T extérieure fermeture volets"
+    min: 18
+    max: 35
+    step: 1
+    unit_of_measurement: "°C"
+    icon: mdi:thermometer-chevron-up
 
   evohome_boost_temp:
     name: "Evohome température boost"

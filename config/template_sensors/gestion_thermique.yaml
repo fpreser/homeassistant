@@ -1,0 +1,42 @@
+#####################################################################
+#      G E S T I O N   T H E R M I Q U E   -   S E N S O R S
+#####################################################################
+#
+# binary_sensor.pluie_imminente_2h
+#   Interroge le forecast horaire Met.no (weather.forecast_home)
+#   toutes les 30 min et au démarrage HA.
+#   ON  = précipitations > 0.1 mm prévues dans les 2 prochains slots.
+#   OFF = pas de pluie imminente.
+#
+#   Utilisé par :
+#     automation.gestion_thermique_velux_ouverture  (condition)
+#     automation.gestion_thermique_velux_pluie      (trigger)
+#
+#####################################################################
+
+- trigger:
+    - platform: time_pattern
+      minutes: "/30"
+    - platform: homeassistant
+      event: start
+  action:
+    - service: weather.get_forecasts
+      data:
+        type: hourly
+      target:
+        entity_id: weather.forecast_home
+      response_variable: wx
+  binary_sensor:
+    - name: "Pluie Imminente 2h"
+      unique_id: pluie_imminente_2h
+      device_class: moisture
+      state: >-
+        {% set slots = wx['weather.forecast_home']['forecast'][:2] %}
+        {% set ns = namespace(rain=false) %}
+        {% for slot in slots %}
+          {% if slot.precipitation is defined and slot.precipitation | float(0) > 0.1 %}
+            {% set ns.rain = true %}
+          {% endif %}
+        {% endfor %}
+        {{ ns.rain }}
+      icon: "{{ 'mdi:weather-rainy' if this.state == 'on' else 'mdi:weather-sunny' }}"
