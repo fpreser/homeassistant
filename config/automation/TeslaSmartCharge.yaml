@@ -14,23 +14,24 @@
 #  0b. Refresh donnees WiFi  (connexion WiFi via Netgear)
 #  0c. Refresh sur saut conso (delta P1 > 3kW + voiture awake + API dit pas charge)
 #  0d. Refresh sur chute conso (delta P1 < -3kW + voiture home/awake + API dit charge)
-#  0e. Stop charge HP a l'arrivee (GPS ou WiFi, heures pleines, pas de surplus)
+#  0e. Stop charge HP a l'arrivee (GPS ou WiFi, HP, pas de surplus) + active mode solaire
 #   1. Activation du mode    (toggle ON + surplus solaire)
 #  1b. Activation en attente (toggle ON sans soleil → notif)
 #   2. Desactivation du mode (toggle OFF)
 #   3. Demarrage auto        (cable, solaire, charge manuelle)
+#  3b. Sync flag solar_charging (charge demarree hors auto 3)
 #   4. Arret auto            (debranche, arret manuel, charge finie)
 #   5. Suivi amperage        (toutes les 2 min)
 #   6. Pause solaire         (surplus < 5A pendant 3 min)
 #   7. Resume solaire        (surplus >= 5A pendant 3 min)
 #   8. Protection reseau     (soutirage > tesla_grid_limit - 500W marge)
-#   9. Reset limite SoC max  (cable debranche ou nuit tombee)
+#   9. Reset limite + solar_charging (cable debranche ou nuit tombee)
 #  10. Sync helper SoC max   (modification utilisateur depuis le dashboard)
 #  11. Refresh apres amps    (poll Fleet API 10s apres set ampérage)
 #
 # Helpers de session et limite de charge :
 #   - input_boolean.tesla_solar_charging : session solaire active
-#     Set ON par autos 1 et 3 au demarrage, OFF par autos 2, 4, 9.
+#     Set ON par autos 1, 3 et 3b au demarrage, OFF par autos 2, 4, 9.
 #     Utilise comme condition dans auto 7 (Resume) a la place des
 #     device_trackers : garantit qu'on ne reprend que si une session
 #     a ete explicitement lancee (voiture forcement home+branchee).
@@ -89,7 +90,9 @@
 #####################################################################
 # Si la voiture arrive a la maison (Fleet API ou WiFi Netgear) alors
 # qu'elle est deja en charge et qu'on est en heures pleines sans
-# surplus solaire, coupe immediatement la charge.
+# surplus solaire, coupe immediatement la charge et active le mode
+# solaire pour que la charge reprenne automatiquement quand le
+# surplus devient suffisant (via auto 3, trigger power_available).
 #
 # Contexte : la Tesla peut demarrer seule au branchement avant que
 # HA sache que la voiture est a la maison (lag Fleet API ~10-20 min).
@@ -128,12 +131,19 @@
     - service: switch.turn_off
       target:
         entity_id: switch.f_r_i_d_a_y_charge
+    # Active le mode solaire : l'auto 3 (demarrage_auto, trigger power_available)
+    # relancera automatiquement des que tesla_optimized_amp > 2 pendant 1 min.
+    # turn_on est idempotent — si le mode etait deja actif, aucun effet de bord.
+    - service: input_boolean.turn_on
+      target:
+        entity_id: input_boolean.tesla_smart_charge
     - service: script.notify_fabien
       data:
         title: Tesla Smart Charge
         message: >-
           {% set bat = states('sensor.f_r_i_d_a_y_niveau_de_batterie') | int(0) %}
           Charge arretee a l'arrivee (heures pleines, pas de surplus). Batterie : {{ bat }}%.
+          Mode solaire active — reprendra automatiquement des que le surplus est suffisant.
   mode: single
 
 #####################################################################
@@ -268,12 +278,14 @@
         entity_id: number.f_r_i_d_a_y_charge_limit
       data:
         value: "{{ states('input_number.tesla_soc_solaire_max') | int(80) }}"
-    - service: switch.turn_on
-      target:
-        entity_id: switch.f_r_i_d_a_y_charge
+    # solar_charging pose AVANT switch.turn_on : empeche auto 3b de re-fire
+    # dans ce cas normal (3b ne fire que si solar_charging est encore OFF).
     - service: input_boolean.turn_on
       target:
         entity_id: input_boolean.tesla_solar_charging
+    - service: switch.turn_on
+      target:
+        entity_id: switch.f_r_i_d_a_y_charge
     - service: number.set_value
       target:
         entity_id: number.f_r_i_d_a_y_charge_current
@@ -462,12 +474,14 @@
         entity_id: number.f_r_i_d_a_y_charge_limit
       data:
         value: "{{ states('input_number.tesla_soc_solaire_max') | int(80) }}"
-    - service: switch.turn_on
-      target:
-        entity_id: switch.f_r_i_d_a_y_charge
+    # solar_charging pose AVANT switch.turn_on : empeche auto 3b de re-fire
+    # dans ce cas normal (3b ne fire que si solar_charging est encore OFF).
     - service: input_boolean.turn_on
       target:
         entity_id: input_boolean.tesla_solar_charging
+    - service: switch.turn_on
+      target:
+        entity_id: switch.f_r_i_d_a_y_charge
     - service: number.set_value
       target:
         entity_id: number.f_r_i_d_a_y_charge_current
@@ -488,6 +502,67 @@
           Smart Charge demarre ({{ reasons.get(trigger.id, trigger.id) }}).
           Batterie : {{ bat }}% (limite {{ limit }}%).
           Production solaire : {{ solaire }}W.
+  mode: single
+
+#####################################################################
+# 3b. SYNC FLAG SOLAR_CHARGING (charge demarree hors auto 3)
+#####################################################################
+# Complement de l'auto 3 : positionne tesla_solar_charging a ON
+# des que switch.f_r_i_d_a_y_charge passe de off a on, si le maitre
+# est actif mais que la session solaire n'etait pas encore marquee.
+#
+# Cas couvert : la Tesla demarre la charge automatiquement (auto-charge
+# native, commande app) avant que l'auto 3 ait eu le temps de s'executer
+# — Fleet API remonte switch ON en < 30s (delai du trigger charger_plugin),
+# ou aucun des trois triggers de l'auto 3 n'a detecte de nouvelle transition.
+#
+# Sans cette auto, solar_charging resterait OFF : l'auto 7 (Resume) ne
+# pourrait pas reprendre la charge apres une pause solaire.
+#
+# Idempotent : si auto 3 avait deja pose le flag avant la transition du
+# switch, turn_on n'a aucun effet de bord.
+#####################################################################
+- id: 'tesla_smart_charge_sync_solar_flag'
+  alias: Tesla Smart Charge - Sync flag solar charging
+
+  trigger:
+    - platform: state
+      entity_id: switch.f_r_i_d_a_y_charge
+      from: 'off'
+      to: 'on'
+  condition:
+    - condition: state
+      entity_id: input_boolean.tesla_smart_charge
+      state: 'on'
+    - condition: state
+      entity_id: input_boolean.tesla_night_charge_pending
+      state: 'off'
+    - condition: state
+      entity_id: input_boolean.tesla_solar_charging
+      state: 'off'
+    - condition: or
+      conditions:
+        - condition: state
+          entity_id: device_tracker.f_r_i_d_a_y_location
+          state: home
+        - condition: state
+          entity_id: device_tracker.tesla_y
+          state: home
+  action:
+    - service: input_boolean.turn_on
+      target:
+        entity_id: input_boolean.tesla_solar_charging
+    - service: input_boolean.turn_off
+      target:
+        entity_id: input_boolean.awtrix_toggle_tesla
+    - service: script.notify_fabien
+      data:
+        title: Tesla Smart Charge
+        message: >-
+          {% set bat = states('sensor.f_r_i_d_a_y_niveau_de_batterie') | int(0) %}
+          {% set limit = states('number.f_r_i_d_a_y_charge_limit') | int(0) %}
+          Smart Charge detecte (charge demarree par la voiture).
+          Batterie : {{ bat }}% (limite {{ limit }}%).
   mode: single
 
 #####################################################################
@@ -678,9 +753,10 @@
         title: Tesla Smart Charge
         message: >-
           {% set bat = states('sensor.f_r_i_d_a_y_niveau_de_batterie') | int(0) %}
+          {% set opt = states('sensor.tesla_optimized_amp') | int(0) %}
           {% set solaire = states('sensor.solar_total') | int(0) %}
-          Charge mise en pause — surplus solaire insuffisant ({{ solaire }}W).
-          Batterie : {{ bat }}%.
+          Charge mise en pause — surplus insuffisant ({{ opt }}A, seuil 5A).
+          Production solaire : {{ solaire }}W. Batterie : {{ bat }}%.
   mode: single
 
 #####################################################################
@@ -838,16 +914,27 @@
   mode: single
 
 #####################################################################
-# 9. RESET LIMITE EN FIN DE CHARGE SOLAIRE
+# 9. RESET LIMITE ET SESSION EN FIN DE CHARGE SOLAIRE
 #####################################################################
-# Restaure number.f_r_i_d_a_y_charge_limit a la valeur du helper
-# tesla_soc_solaire_max quand :
+# Remet solar_charging a OFF et (si necessaire) restaure charge_limit
+# a tesla_soc_solaire_max quand :
 #   - le cable est debranche pendant 30s (la voiture part)
 #   - le soleil se couche (sun.sun -> below_horizon)
 #
-# Filet de securite : si une charge HC a modifie la limite a la cible
-# HC et que les autos NightCharge 2/4/5 n'ont pas reset (ex. plantage),
-# cette auto restaure la valeur normale solaire.
+# Condition : pending=off ET (limite differente OU solar_charging=on).
+# Le OR sur solar_charging est indispensable : en charge solaire normale
+# la limite est deja a soc_solaire_max des le demarrage (autos 1/3),
+# donc la condition "limite differente" serait toujours fausse et
+# solar_charging resterait bloque a ON apres debranchement. L'auto 7
+# (Resume) s'appuie sur solar_charging=on comme garde "voiture home+
+# branchee" — si elle est ON alors que la voiture est partie, Resume
+# enverrait des commandes a la voiture absente.
+#
+# Le set_value charge_limit est conditionnel (if-then) : evite un appel
+# Fleet API inutile quand la limite est deja correcte.
+#
+# Filet de securite : si une charge HC a modifie la limite et que les
+# autos NightCharge 2/4/5 n'ont pas reset, cette auto restaure la valeur.
 #
 # Note sur le choix sun.sun plutot que tarif T2 :
 # Le tarif HC inclut aussi la plage midi 11h-17h en Wallonie 2026.
@@ -869,22 +956,36 @@
       to: 'below_horizon'
       id: nuit
   condition:
-    # N'agit que si la limite actuelle differe du helper (sinon noop).
-    - condition: template
-      value_template: >-
-        {{ states('number.f_r_i_d_a_y_charge_limit') | int(0)
-           != states('input_number.tesla_soc_solaire_max') | int(80) }}
     # Pas pendant une charge HC active (l'auto 1 NightCharge a fixe
     # la limite a la cible HC volontairement).
     - condition: state
       entity_id: input_boolean.tesla_night_charge_pending
       state: 'off'
+    # Agit si la limite differe du helper OU si une session solaire est
+    # encore marquee comme active. En charge solaire normale, la limite
+    # est deja a soc_solaire_max des le demarrage (autos 1/3) : sans le
+    # OR, solar_charging resterait bloque a ON apres debranchement,
+    # permettant a l'auto 7 (Resume) d'envoyer des commandes a la
+    # voiture absente.
+    - condition: template
+      value_template: >-
+        {{ (states('number.f_r_i_d_a_y_charge_limit') | int(0)
+            != states('input_number.tesla_soc_solaire_max') | int(80))
+           or is_state('input_boolean.tesla_solar_charging', 'on') }}
   action:
-    - service: number.set_value
-      target:
-        entity_id: number.f_r_i_d_a_y_charge_limit
-      data:
-        value: "{{ states('input_number.tesla_soc_solaire_max') | int(80) }}"
+    # Reset la limite seulement si elle differe (evite un appel Fleet API
+    # inutile quand la limite est deja correcte).
+    - if:
+        - condition: template
+          value_template: >-
+            {{ states('number.f_r_i_d_a_y_charge_limit') | int(0)
+               != states('input_number.tesla_soc_solaire_max') | int(80) }}
+      then:
+        - service: number.set_value
+          target:
+            entity_id: number.f_r_i_d_a_y_charge_limit
+          data:
+            value: "{{ states('input_number.tesla_soc_solaire_max') | int(80) }}"
     - service: input_boolean.turn_off
       target:
         entity_id: input_boolean.tesla_solar_charging
@@ -898,8 +999,8 @@
           } %}
           {% set bat = states('sensor.f_r_i_d_a_y_niveau_de_batterie') | int(0) %}
           {% set lim = states('input_number.tesla_soc_solaire_max') | int(80) %}
-          Limite de charge restauree a {{ lim }}% ({{ reasons.get(trigger.id, trigger.id) }}).
-          Batterie : {{ bat }}%.
+          Charge solaire terminee ({{ reasons.get(trigger.id, trigger.id) }}).
+          Batterie : {{ bat }}%. Limite de charge : {{ lim }}%.
   mode: single
 
 #####################################################################

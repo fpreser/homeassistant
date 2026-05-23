@@ -251,8 +251,9 @@
                       data:
                         title: Tesla Charge Nocturne
                         message: >-
-                          Charge mise en pause — soutirage reseau sature
-                          (max admissible < 5A). Reprise auto quand le surplus revient.
+                          {% set p1 = states('sensor.p1_meter_3c39e7284d28_active_power') | int(0) %}
+                          Charge mise en pause — soutirage reseau sature : {{ p1 }}W
+                          (max admissible < 5A). Reprise auto quand la consommation se libere.
       default:
         - service: number.set_value
           target:
