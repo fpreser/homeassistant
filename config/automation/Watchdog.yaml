@@ -1,0 +1,196 @@
+######################################################################
+#                     W A T C H D O G S
+######################################################################
+#
+# Détecte les intégrations qui tombent unavailable et tente un reload
+# automatique avant de notifier si l'échec persiste.
+#
+# Logique :
+#   1. Entité clé unavailable pendant X minutes → reload de l'intégration
+#   2. Attente 90 s pour que l'intégration se reconnecte
+#   3. Si toujours unavailable → notification (intervention manuelle)
+#   4. Si l'intégration revient → rien (silencieux)
+#
+# Le trigger `for:` ne se redéclenche qu'après un retour d'état suivi
+# d'une nouvelle indisponibilité → pas de boucle de reload.
+#
+# Intégrations surveillées :
+#   - Vicare (Viessmann) : water_heater.vicare_water
+#   - Tesla Fleet API   : sensor.f_r_i_d_a_y_niveau_de_batterie
+#
+######################################################################
+
+######################################################################
+# 1. VICARE (Viessmann Vitodens 200)
+######################################################################
+# L'intégration Vicare perd parfois son token OAuth et ne se reconnecte
+# pas automatiquement sans redémarrage HA. Un reload de la config entry
+# suffit dans la plupart des cas.
+# Délai 5 min pour ne pas réagir aux redémarrages HA normaux.
+######################################################################
+- id: 'watchdog_vicare'
+  alias: Watchdog - Intégration Vicare
+
+  trigger:
+    - platform: state
+      entity_id: water_heater.vicare_water
+      to: 'unavailable'
+      for: '00:05:00'
+
+  action:
+    - service: homeassistant.reload_config_entry
+      target:
+        entity_id: water_heater.vicare_water
+    - delay: '00:01:30'
+    - if:
+        - condition: state
+          entity_id: water_heater.vicare_water
+          state: 'unavailable'
+      then:
+        - service: script.notify_fabien
+          data:
+            title: "Watchdog — Vicare"
+            message: >-
+              Intégration Vicare unavailable depuis 5+ min.
+              Reload tenté — toujours en échec.
+              Vérification manuelle nécessaire.
+  mode: single
+
+######################################################################
+# 2. TESLA FLEET API
+######################################################################
+# La voiture peut être en deep sleep et rendre certaines entités
+# temporairement unavailable. Délai 10 min pour éviter les faux positifs.
+# On surveille le niveau de batterie qui reste disponible même en veille
+# légère (dernière valeur connue) — son passage à unavailable indique
+# un vrai problème d'intégration.
+######################################################################
+- id: 'watchdog_tesla_fleet'
+  alias: Watchdog - Tesla Fleet API
+
+  trigger:
+    - platform: state
+      entity_id: sensor.f_r_i_d_a_y_niveau_de_batterie
+      to: 'unavailable'
+      for: '00:10:00'
+
+  action:
+    - service: homeassistant.reload_config_entry
+      target:
+        entity_id: sensor.f_r_i_d_a_y_niveau_de_batterie
+    - delay: '00:01:30'
+    - if:
+        - condition: state
+          entity_id: sensor.f_r_i_d_a_y_niveau_de_batterie
+          state: 'unavailable'
+      then:
+        - service: script.notify_fabien
+          data:
+            title: "Watchdog — Tesla Fleet"
+            message: >-
+              Intégration Tesla Fleet unavailable depuis 10+ min.
+              Reload tenté — toujours en échec.
+              Vérification manuelle nécessaire.
+  mode: single
+
+######################################################################
+# 3. SMA SOLAR (SB5.0-1AV-41)
+######################################################################
+# Les onduleurs SMA s'éteignent la nuit → entities unavailable attendu.
+# Condition sun > horizon pour ne pas reloader inutilement chaque nuit.
+# Critique : alimente le calcul du surplus solaire pour Tesla Smart
+# Charge (sensor.tesla_optimized_amp).
+######################################################################
+- id: 'watchdog_sma_345'
+  alias: Watchdog - SMA Onduleur 345
+
+  trigger:
+    - platform: state
+      entity_id: sensor.sb5_0_1av_41_345_status
+      to: 'unavailable'
+      for: '00:10:00'
+
+  condition:
+    - condition: sun
+      after: sunrise
+      before: sunset
+
+  action:
+    - service: homeassistant.reload_config_entry
+      target:
+        entity_id: sensor.sb5_0_1av_41_345_status
+    - delay: '00:01:30'
+    - if:
+        - condition: state
+          entity_id: sensor.sb5_0_1av_41_345_status
+          state: 'unavailable'
+      then:
+        - service: script.notify_fabien
+          data:
+            title: "Watchdog — SMA 345"
+            message: Onduleur SMA 345 unavailable en journée — reload en échec.
+  mode: single
+
+- id: 'watchdog_sma_208'
+  alias: Watchdog - SMA Onduleur 208
+
+  trigger:
+    - platform: state
+      entity_id: sensor.sb5_0_1av_41_208_status
+      to: 'unavailable'
+      for: '00:10:00'
+
+  condition:
+    - condition: sun
+      after: sunrise
+      before: sunset
+
+  action:
+    - service: homeassistant.reload_config_entry
+      target:
+        entity_id: sensor.sb5_0_1av_41_208_status
+    - delay: '00:01:30'
+    - if:
+        - condition: state
+          entity_id: sensor.sb5_0_1av_41_208_status
+          state: 'unavailable'
+      then:
+        - service: script.notify_fabien
+          data:
+            title: "Watchdog — SMA 208"
+            message: Onduleur SMA 208 unavailable en journée — reload en échec.
+  mode: single
+
+######################################################################
+# 4. P1 METER (HomeWizard)
+######################################################################
+# Compteur P1 Fluvius — doit être disponible 24/7.
+# Critique : alimente sensor.p1_meter_*_active_power utilisé par
+# Tesla Smart Charge pour le calcul de la puissance réseau.
+######################################################################
+- id: 'watchdog_p1_meter'
+  alias: Watchdog - P1 Meter
+
+  trigger:
+    - platform: state
+      entity_id: sensor.p1_meter_3c39e7284d28_active_power_l1
+      to: 'unavailable'
+      for: '00:10:00'
+
+  action:
+    - service: homeassistant.reload_config_entry
+      target:
+        entity_id: sensor.p1_meter_3c39e7284d28_active_power_l1
+    - delay: '00:01:30'
+    - if:
+        - condition: state
+          entity_id: sensor.p1_meter_3c39e7284d28_active_power_l1
+          state: 'unavailable'
+      then:
+        - service: script.notify_fabien
+          data:
+            title: "Watchdog — P1 Meter"
+            message: >-
+              P1 Meter unavailable depuis 10+ min — reload en échec.
+              Tesla Smart Charge potentiellement affecté.
+  mode: single
