@@ -49,8 +49,10 @@
         ''search'', ''Binary'') | rejectattr (''attributes.friendly_name'', ''search'',
         ''FGD'') | rejectattr (''attributes.friendly_name'', ''search'', ''awtrix'')
         | rejectattr  (''attributes.friendly_name'', ''search'', ''microwave'') |
-        rejectattr (''attributes.friendly_name'', ''search'', ''oven'')   | map (attribute=''entity_id'')
-        | join('','') }}'
+        rejectattr (''attributes.friendly_name'', ''search'', ''oven'')
+        | rejectattr (''entity_id'', ''search'', ''_[0-9]+_0_(fgd|binary)'')
+        | rejectattr (''entity_id'', ''in'', [''light.reterminal_dashboard_led_reterminal'', ''light.remote_3_button_backlight'', ''light.humidificateurs_ambient_light''])
+        | map (attribute=''entity_id'') | join('','') }}'
     action: group.set
   - data:
       object_id: my_climates
