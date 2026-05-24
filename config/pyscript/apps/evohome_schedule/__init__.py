@@ -40,6 +40,7 @@ _DAYS_NUM_FR = {
     0: "Lundi", 1: "Mardi", 2: "Mercredi", 3: "Jeudi",
     4: "Vendredi", 5: "Samedi", 6: "Dimanche",
 }
+_DAYS_FR_NUM = {v: k for k, v in _DAYS_NUM_FR.items()}
 
 
 def _normalise_schedule(raw) -> dict:
@@ -256,4 +257,45 @@ async def _startup_fetch():
 @time_trigger("cron(0 4 * * *)")
 async def _daily_fetch():
     """Mise à jour automatique chaque nuit à 4h."""
+    await evohome_fetch_schedules()
+
+
+def _schedule_to_api(schedule: dict) -> list:
+    """Convertit {jour_fr: [{time, temp}]} → format API evohomeasync2 2.x."""
+    result = []
+    for day_fr, num in _DAYS_FR_NUM.items():
+        slots = schedule.get(day_fr, [])
+        switchpoints = []
+        for sp in sorted(slots, key=lambda s: s["time"]):
+            switchpoints.append({
+                "time_of_day": sp["time"] + ":00",
+                "heat_setpoint": float(sp["temp"]),
+            })
+        if switchpoints:
+            result.append({"day_of_week": num, "switchpoints": switchpoints})
+    return result
+
+
+@service
+async def evohome_set_zone_schedule(zone_name=None, schedule=None):
+    """Met à jour la planification complète d'une zone Evohome.
+
+    zone_name : nom de la zone tel qu'affiché dans l'app Evohome (ex: 'Ch Amis')
+    schedule  : dict {jour_fr: [{time: 'HH:MM', temp: float}]}
+    """
+    if not zone_name or schedule is None:
+        raise ValueError("zone_name et schedule requis")
+
+    zone = await _get_zone(zone_name)
+    api_schedule = _schedule_to_api(schedule)
+
+    set_fn = getattr(zone, "set_schedule", None)
+    if not set_fn:
+        raise ValueError(
+            f"Pas de méthode set_schedule sur '{zone_name}' "
+            f"(attrs: {[a for a in dir(zone) if not a.startswith('_')]})"
+        )
+
+    await set_fn(api_schedule)
+    log.info(f"evohome: schedule '{zone_name}' mis à jour ({len(api_schedule)} jours)")
     await evohome_fetch_schedules()
