@@ -299,3 +299,61 @@ async def evohome_set_zone_schedule(zone_name=None, schedule=None):
     await set_fn(api_schedule)
     log.info(f"evohome: schedule '{zone_name}' mis à jour ({len(api_schedule)} jours)")
     await evohome_fetch_schedules()
+
+
+@service
+async def evohome_update_heat_demand():
+    """Crée/met à jour sensor.evohome_deficit_<zone> : déficit thermique (consigne − réel).
+
+    heat_demand n'est pas exposé par evohomeasync2 2.x — on utilise le déficit thermique
+    comme proxy : valeur positive = zone en retard sur sa consigne = demande de chaleur.
+    Valeur 0 = zone satisfaite ou système éteint.
+    """
+    ts = datetime.now().isoformat()
+    zones = await _iter_zones()
+    n_active = 0
+
+    for zone in zones:
+        name = getattr(zone, "name", None) or getattr(zone, "Name", str(zone))
+        slug = _zone_slug(name)
+        sensor_id = f"sensor.evohome_deficit_{slug}"
+
+        try:
+            status_dict = zone.status if isinstance(zone.status, dict) else {}
+            t_real = (status_dict.get("temperature_status") or {}).get("temperature")
+            t_set = (status_dict.get("setpoint_status") or {}).get("target_heat_temperature")
+
+            if t_real is not None and t_set is not None:
+                deficit = round(max(0.0, float(t_set) - float(t_real)), 1)
+                calling = deficit > 0.3
+                if calling:
+                    n_active += 1
+                state.set(
+                    sensor_id,
+                    value=deficit,
+                    new_attributes={
+                        "unit_of_measurement": "°C",
+                        "state_class": "measurement",
+                        "zone_name": name,
+                        "friendly_name": f"Déficit {name}",
+                        "icon": "mdi:thermometer-alert" if calling else "mdi:thermometer-check",
+                        "calling_for_heat": calling,
+                        "current_temperature": t_real,
+                        "target_temperature": t_set,
+                        "updated_at": ts,
+                    },
+                )
+            else:
+                state.set(sensor_id, value="unavailable",
+                          new_attributes={"zone_name": name,
+                                          "friendly_name": f"Déficit {name}"})
+        except Exception as e:
+            log.warning(f"evohome_deficit: zone '{name}' — {e}")
+
+    log.info(f"evohome_deficit: {n_active}/{len(zones)} zones en demande de chaleur")
+
+
+@time_trigger("period(now, 3min)")
+async def _demand_poll():
+    """Rafraîchit les déficits thermiques toutes les 3 minutes."""
+    await evohome_update_heat_demand()
