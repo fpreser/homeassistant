@@ -303,15 +303,15 @@ async def evohome_set_zone_schedule(zone_name=None, schedule=None):
 
 @service
 async def evohome_update_heat_demand():
-    """Crée/met à jour sensor.evohome_deficit_<zone> : déficit thermique (consigne − réel).
+    """Crée/met à jour sensor.evohome_deficit_<zone> + classement temps réel.
 
-    heat_demand n'est pas exposé par evohomeasync2 2.x — on utilise le déficit thermique
-    comme proxy : valeur positive = zone en retard sur sa consigne = demande de chaleur.
-    Valeur 0 = zone satisfaite ou système éteint.
+    heat_demand non exposé par evohomeasync2 2.x → proxy déficit (consigne − réel).
+    Valeur positive = zone en retard sur sa consigne. 0 = satisfaite ou système éteint.
     """
     ts = datetime.now().isoformat()
     zones = await _iter_zones()
     n_active = 0
+    deficits = {}  # {name: deficit}
 
     for zone in zones:
         name = getattr(zone, "name", None) or getattr(zone, "Name", str(zone))
@@ -326,6 +326,7 @@ async def evohome_update_heat_demand():
             if t_real is not None and t_set is not None:
                 deficit = round(max(0.0, float(t_set) - float(t_real)), 1)
                 calling = deficit > 0.3
+                deficits[name] = deficit
                 if calling:
                     n_active += 1
                 state.set(
@@ -344,13 +345,123 @@ async def evohome_update_heat_demand():
                     },
                 )
             else:
+                deficits[name] = 0.0
                 state.set(sensor_id, value="unavailable",
                           new_attributes={"zone_name": name,
                                           "friendly_name": f"Déficit {name}"})
         except Exception as e:
             log.warning(f"evohome_deficit: zone '{name}' — {e}")
 
-    log.info(f"evohome_deficit: {n_active}/{len(zones)} zones en demande de chaleur")
+    # Classement temps réel — zones triées par déficit décroissant
+    ranked = sorted(deficits.items(), key=lambda x: x[1], reverse=True)
+    top_name = ranked[0][0] if ranked else "—"
+    top_val = ranked[0][1] if ranked else 0.0
+    ranked_str = ", ".join([f"{n}:{v}°C" for n, v in ranked if v > 0.3])
+
+    state.set(
+        "sensor.evohome_deficit_ranking",
+        value=round(top_val, 1),
+        new_attributes={
+            "unit_of_measurement": "°C",
+            "top_zone": top_name,
+            "zones_in_deficit": n_active,
+            "ranking": ranked_str or "Aucune zone en déficit",
+            "friendly_name": "Déficit max Evohome",
+            "icon": "mdi:thermometer-alert" if top_val > 0.3 else "mdi:thermometer-check",
+            "updated_at": ts,
+        },
+    )
+
+    log.info(f"evohome_deficit: {n_active}/{len(zones)} zones en déficit — max: {top_name} ({top_val}°C)")
+
+
+@service
+async def evohome_deficit_history_stats(hours=None):
+    """Analyse l'historique des déficits sur les N dernières heures.
+
+    Calcule par zone :
+    - déficit moyen (proxy intensité)
+    - heures passées en déficit (proxy durée)
+    - déficit max enregistré
+
+    Résultat dans sensor.evohome_deficit_history.
+    Appeler après une période de chauffe significative (minimum 24h).
+    """
+    if hours is None:
+        hours = 168  # 1 semaine par défaut
+
+    slugs = [
+        ("Hall Entree", "hall_entree"), ("WC Bas", "wc_bas"), ("Salon", "salon"),
+        ("Salle a manger", "salle_a_manger"), ("Cuisine", "cuisine"),
+        ("Hall Nuit", "hall_nuit"), ("Polyvalent", "polyvalent"),
+        ("Ch Emma", "ch_emma"), ("Ch Louis", "ch_louis"),
+        ("Bureau Fabien", "bureau_fabien"), ("Ch Amis", "ch_amis"),
+        ("Salle de Bain", "salle_de_bain"),
+    ]
+
+    stats = {}
+    INTERVAL_H = 3 / 60  # poll toutes les 3 min = 0.05h par mesure
+
+    for name, slug in slugs:
+        sensor_id = f"sensor.evohome_deficit_{slug}"
+        try:
+            history = hass.states.async_all(sensor_id)
+        except Exception:
+            history = []
+
+        values = []
+        try:
+            # Récupère l'historique via recorder
+            from homeassistant.components.recorder import get_instance
+            from homeassistant.components.recorder.history import get_significant_states
+            from datetime import timedelta
+            start = datetime.now() - timedelta(hours=int(hours))
+            recorder = get_instance(hass)
+            hist = await recorder.async_add_executor_job(
+                get_significant_states,
+                hass, start, None, [sensor_id], None, True, False, False
+            )
+            entries = hist.get(sensor_id, [])
+            for entry in entries:
+                try:
+                    values.append(float(entry.state))
+                except (ValueError, TypeError):
+                    pass
+        except Exception as e:
+            log.warning(f"evohome_deficit_stats: {name} history error — {e}")
+
+        if values:
+            nonzero = [v for v in values if v > 0.3]
+            stats[name] = {
+                "avg_deficit": round(sum(values) / len(values), 2),
+                "max_deficit": round(max(values), 1),
+                "hours_in_deficit": round(len(nonzero) * INTERVAL_H, 1),
+                "pct_time_in_deficit": round(len(nonzero) / len(values) * 100),
+            }
+        else:
+            stats[name] = {"avg_deficit": 0, "max_deficit": 0, "hours_in_deficit": 0, "pct_time_in_deficit": 0}
+
+    # Classement par heures en déficit (durée) et par déficit moyen (intensité)
+    by_duration = sorted(stats.items(), key=lambda x: x[1]["hours_in_deficit"], reverse=True)
+    by_intensity = sorted(stats.items(), key=lambda x: x[1]["avg_deficit"], reverse=True)
+
+    ranking_duration = ", ".join([f"{n}:{v['hours_in_deficit']}h" for n, v in by_duration[:5] if v["hours_in_deficit"] > 0])
+    ranking_intensity = ", ".join([f"{n}:{v['avg_deficit']}°C" for n, v in by_intensity[:5] if v["avg_deficit"] > 0])
+
+    state.set(
+        "sensor.evohome_deficit_history",
+        value=by_duration[0][0] if by_duration and by_duration[0][1]["hours_in_deficit"] > 0 else "—",
+        new_attributes={
+            "period_hours": hours,
+            "top_duration": ranking_duration or "Pas encore de données",
+            "top_intensity": ranking_intensity or "Pas encore de données",
+            "full_stats": str(stats),
+            "friendly_name": "Analyse déficits Evohome",
+            "icon": "mdi:chart-bar",
+            "updated_at": datetime.now().isoformat(),
+        },
+    )
+    log.info(f"evohome_deficit_stats: analyse {hours}h — top durée: {ranking_duration}")
 
 
 @time_trigger("period(now, 3min)")
