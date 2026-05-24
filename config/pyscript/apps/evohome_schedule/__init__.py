@@ -357,3 +357,5 @@ async def evohome_update_heat_demand():
 async def _demand_poll():
     """Rafraîchit les déficits thermiques toutes les 3 minutes."""
     await evohome_update_heat_demand()
+
+
