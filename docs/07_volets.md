@@ -177,10 +177,13 @@ En été, la façade **sud** (12.1 m, plein midi) est la plus critique. La faça
 
 ### Helpers
 
-| Helper | Entity ID | Valeur | Rôle |
+| Helper | Entity ID | Plage | Rôle |
 |---|---|---|---|
-| Maître on/off | `input_boolean.gestion_thermique` | off | Active/désactive toute la gestion thermique |
-| Seuil T_ext | `input_number.seuil_chaleur` | 23°C (18-35, step 1) | T_ext de déclenchement de la protection |
+| Maître on/off | `input_boolean.gestion_thermique` | — | Active/désactive toute la gestion thermique |
+| Seuil T_ext | `input_number.seuil_chaleur` | 18–35°C, step 1 | T_ext de déclenchement de la protection solaire |
+| Seuil T_int froid | `input_number.seuil_froid` | 15–25°C, step 1 | T_int_max minimale : en dessous, les vélux ne s'ouvrent pas / se ferment |
+
+Aucun `initial:` sur ces helpers — HA restaure la dernière valeur réglée après redémarrage.
 
 ### Template sensor
 
@@ -198,15 +201,16 @@ En été, la façade **sud** (12.1 m, plein midi) est la plus critique. La faça
 |---|---|---|---|
 | Fermeture solaire | `automation.gestion_thermique_fermeture_solaire` | T_ext > seuil + checks 9h/13h | Sud → 15% ; Ouest → 15% dès 13h |
 | Réouverture diurne | `automation.gestion_thermique_reouverture_volets` | T_ext < seuil − 2°C (hysteresis) | Sud + Ouest → 100% |
-| Ouverture vélux nuit | `automation.gestion_thermique_ouverture_velux_nuit` | Nuit + T_ext < T_int_max − 2°C + pas de pluie | SDD + escalier ouverts ; chambre si clim off + volet non fermé |
+| Ouverture vélux nuit | `automation.gestion_thermique_ouverture_velux_nuit` | Nuit + T_ext < T_int_max − 2°C + T_int_max > 20°C + pas de pluie | SDD + escalier ouverts ; chambre si clim off + volet > 90% |
 | Fermeture vélux matin | `automation.gestion_thermique_fermeture_velux_matin` | Sunrise + 30 min | Tous les vélux → fermés |
 | Surveillance pluie | `automation.gestion_thermique_surveillance_pluie_nocturne` | `pluie_imminente_2h` → on (nuit) | Tous les vélux → fermés + notif |
+| Fermeture vélux trop frais | `automation.gestion_thermique_velux_trop_frais` | T_int_max < 20°C (nuit) | Tous les vélux → fermés + notif |
 
 **T_int_max** = max(`temp_hall_nuit`, `temp_chambre_emma`, `temp_chambre_louis`)
 
 **`velux_chambre` (grenier) — conditions supplémentaires :**
 - `climate.chambre = off` — ne pas contrecarrer la clim
-- `cover.volet_velux_chambre ≠ closed` — volet fermé = sieste/nuit intentionnelle, ne pas ouvrir
+- `cover.volet_velux_chambre.current_position > 90` — volet partiellement ou totalement fermé = intention de blocage, ne pas ouvrir
 
 **Cohabitation avec les automations existantes :**
 - `ouverture_volets_matin` (7h/9h) → rouvre tout à 100% chaque matin → la protection reprend si T_ext > seuil

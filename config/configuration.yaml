@@ -68,6 +68,14 @@ input_number:
     unit_of_measurement: "°C"
     icon: mdi:thermometer-chevron-up
 
+  seuil_froid:
+    name: "Seuil T intérieure fermeture vélux"
+    min: 15
+    max: 25
+    step: 1
+    unit_of_measurement: "°C"
+    icon: mdi:thermometer-chevron-down
+
   evohome_boost_temp:
     name: "Evohome température boost"
     min: 5

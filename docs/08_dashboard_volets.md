@@ -26,7 +26,8 @@
 | Widget | Type | Entité | Action |
 |---|---|---|---|
 | Gestion thermique | `mushroom-entity-card` | `input_boolean.gestion_thermique` | Tap = toggle |
-| Seuil (°C) | `mushroom-number-card` | `input_number.seuil_chaleur` | Boutons +/− |
+| Seuil (°C) | `mushroom-number-card` | `input_number.seuil_chaleur` | Boutons +/− (seuil T_ext fermeture volets) |
+| Seuil froid | `mushroom-number-card` | `input_number.seuil_froid` | Boutons +/− (seuil T_int min vélux) |
 | T ext | `mushroom-entity-card` | `sensor.vicare_outside_temperature` | Affichage seul |
 
 Active/désactive le système de fermeture automatique des volets et d'ouverture nocturne des vélux.

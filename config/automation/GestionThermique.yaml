@@ -215,7 +215,7 @@
           states('sensor.temp_chambre_emma') | float(0),
           states('sensor.temp_chambre_louis') | float(0)
         ] | max %}
-        {{ t_ext < t_int_max - 2 }}
+        {{ t_ext < t_int_max - 2 and t_int_max > states('input_number.seuil_froid') | float(20) }}
     - condition: state
       entity_id: binary_sensor.pluie_imminente_2h
       state: 'off'
@@ -228,17 +228,17 @@
           - cover.velux_sdd_gauche
           - cover.velux_sdd_droite
           - cover.velux_escalier
-    # velux_chambre : clim off ET volet occultant non fermé
+    # velux_chambre : clim off ET volet occultant entièrement ouvert (position > 90%)
+    # Un volet partiellement fermé indique aussi une intention de blocage.
     - choose:
         - conditions:
             - condition: state
               entity_id: climate.chambre
               state: 'off'
-            - condition: not
-              conditions:
-                - condition: state
-                  entity_id: cover.volet_velux_chambre
-                  state: 'closed'
+            - condition: numeric_state
+              entity_id: cover.volet_velux_chambre
+              attribute: current_position
+              above: 90
           sequence:
             - service: cover.open_cover
               target:
@@ -254,10 +254,10 @@
             states('sensor.temp_chambre_louis') | float(0)
           ] | max %}
           {% set chambre_ok = is_state('climate.chambre', 'off')
-             and not is_state('cover.volet_velux_chambre', 'closed') %}
+             and state_attr('cover.volet_velux_chambre', 'current_position') | int(0) > 90 %}
           Vélux ouverts — T ext {{ t_ext }}°C / T int {{ t_int_max }}°C.
           {% if chambre_ok %}Vélux chambre inclus.
-          {% else %}Vélux chambre exclu (clim on ou volet fermé).{% endif %}
+          {% else %}Vélux chambre exclu (clim on ou volet non complètement ouvert).{% endif %}
   mode: single
 
 #####################################################################
@@ -335,7 +335,57 @@
   mode: single
 
 #####################################################################
-# 6. DÉSACTIVATION — RELÈVE LES VOLETS FERMÉS PAR L'AUTOMATION
+# 6. FERMETURE VÉLUX SI T_INT TROP BASSE (NUIT)
+#####################################################################
+# Si T_int_max descend sous input_number.seuil_froid (défaut 20°C)
+# pendant la nuit, ferme les vélux pour éviter de refroidir inutilement.
+# Seuil configurable depuis le dashboard volets.
+#####################################################################
+- id: 'gestion_thermique_velux_trop_frais'
+  alias: Gestion Thermique - Fermeture velux trop frais
+
+  trigger:
+    - platform: template
+      value_template: >-
+        {% set seuil_froid = states('input_number.seuil_froid') | float(20) %}
+        {% set t_int_max = [
+          states('sensor.temp_hall_nuit') | float(0),
+          states('sensor.temp_chambre_emma') | float(0),
+          states('sensor.temp_chambre_louis') | float(0)
+        ] | max %}
+        {{ t_int_max < seuil_froid }}
+
+  condition:
+    - condition: state
+      entity_id: input_boolean.gestion_thermique
+      state: 'on'
+    - condition: state
+      entity_id: sun.sun
+      state: 'below_horizon'
+
+  action:
+    - service: cover.close_cover
+      target:
+        entity_id:
+          - cover.velux_sdd_gauche
+          - cover.velux_sdd_droite
+          - cover.velux_escalier
+          - cover.velux_chambre
+    - service: script.notify_fabien
+      data:
+        title: Gestion Thermique
+        message: >-
+          {% set t_int_max = [
+            states('sensor.temp_hall_nuit') | float(0),
+            states('sensor.temp_chambre_emma') | float(0),
+            states('sensor.temp_chambre_louis') | float(0)
+          ] | max %}
+          {% set seuil_froid = states('input_number.seuil_froid') | float(20) | round(0) | int %}
+          Vélux fermés — T int {{ t_int_max }}°C (trop frais, seuil {{ seuil_froid }}°C).
+  mode: single
+
+#####################################################################
+# 7. DÉSACTIVATION — RELÈVE LES VOLETS FERMÉS PAR L'AUTOMATION
 #####################################################################
 # Si le maître est coupé en cours de journée, relève uniquement les
 # volets qui sont encore à 15% (position posée par l'automation).
