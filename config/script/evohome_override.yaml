@@ -65,6 +65,7 @@ evohome_reset_zone:
         entity:
           domain: climate
   sequence:
-    - action: pyscript.evohome_reset_zone
+    - action: climate.set_preset_mode
       data:
         entity_id: "{{ entity_id }}"
+        preset_mode: "none"

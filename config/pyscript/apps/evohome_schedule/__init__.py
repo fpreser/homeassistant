@@ -42,12 +42,26 @@ _DAYS_NUM_FR = {
 }
 
 
-def _normalise_schedule(raw: dict) -> dict:
-    """Convertit le schedule Honeywell en {jour_fr: [{time: HH:MM, temp: float}]}."""
+def _normalise_schedule(raw) -> dict:
+    """Convertit le schedule Honeywell en {jour_fr: [{time: HH:MM, temp: float}]}.
+
+    Supporte les deux formats :
+    - evohomeasync2 2.x : list directe, clés snake_case (day_of_week, heat_setpoint, time_of_day)
+    - evohomeasync2 0.x/1.x : dict avec dailySchedules, clés camelCase
+    """
     result = {}
-    daily = raw.get("dailySchedules") or raw.get("DailySchedules") or []
+    # Nouveau format 2.x : liste directe ; ancien format : dict avec dailySchedules
+    if isinstance(raw, list):
+        daily = raw
+    else:
+        daily = raw.get("dailySchedules") or raw.get("DailySchedules") or []
+
     for day_entry in daily:
-        day_raw = day_entry.get("dayOfWeek") or day_entry.get("DayOfWeek", 0)
+        day_raw = (
+            day_entry.get("day_of_week")
+            or day_entry.get("dayOfWeek")
+            or day_entry.get("DayOfWeek", 0)
+        )
         if isinstance(day_raw, int):
             day_fr = _DAYS_NUM_FR.get(day_raw, str(day_raw))
         else:
@@ -56,9 +70,14 @@ def _normalise_schedule(raw: dict) -> dict:
         switchpoints = day_entry.get("switchpoints") or day_entry.get("Switchpoints") or []
         slots = []
         for sp in switchpoints:
-            t = sp.get("timeOfDay") or sp.get("TimeOfDay", "00:00:00")
+            t = (
+                sp.get("time_of_day")
+                or sp.get("timeOfDay")
+                or sp.get("TimeOfDay", "00:00:00")
+            )
             temp = (
-                sp.get("heatSetpoint")
+                sp.get("heat_setpoint")
+                or sp.get("heatSetpoint")
                 or sp.get("HeatSetpoint")
                 or sp.get("temperature", 0.0)
             )
@@ -74,7 +93,7 @@ async def _get_zone(zone_name: str):
     Essaie d'abord le broker HA (session existante), puis crée un nouveau client
     en fallback. Supporte evohomeasync2 0.x (cancel_temp_override) et 1.x+ (reset_mode).
     """
-    # Priorité : broker HA — réutilise la session authentifiée
+    # Broker HA — réutilise la session authentifiée de l'intégration evohome
     broker = hass.data.get("evohome")
     if broker:
         try:
@@ -86,64 +105,37 @@ async def _get_zone(zone_name: str):
                     log.info(f"evohome: zone '{name}' trouvée via broker HA")
                     return zone
         except Exception as e:
-            log.warning(f"evohome: broker inaccessible ({e}), fallback client")
+            raise RuntimeError(f"evohome: broker inaccessible ({e})")
 
-    # Fallback : nouveau client API
-    cfg = pyscript.app_config
-    username = cfg.get("username", "")
-    password = cfg.get("password", "")
-    import evohomeasync2
-    client = evohomeasync2.EvohomeClient(username, password=password)
-    await client.login()
-    for location in client.locations:
-        gateways = getattr(location, "gateways", getattr(location, "_gateways", []))
-        for gw in gateways:
-            systems = getattr(gw, "systems", getattr(gw, "_systems", []))
-            for sys_ in systems:
-                for zone in sys_.zones:
-                    name = getattr(zone, "name", "") or getattr(zone, "Name", "")
-                    if name == zone_name:
-                        return zone
-
-    raise ValueError(f"Zone '{zone_name}' introuvable dans Evohome")
+    raise ValueError(f"Zone '{zone_name}' introuvable — broker evohome non disponible")
 
 
 async def _iter_zones():
-    """Itère sur les zones via le broker HA (session existante) ou nouveau client en fallback."""
+    """Retourne la liste des zones via le broker HA (session existante).
+
+    pyscript ne supporte pas yield dans les async generators — on retourne une liste.
+    evohomeasync2 2.x requiert un AbstractTokenManager pour créer un nouveau client,
+    donc le fallback direct n'est plus possible : on s'appuie exclusivement sur le broker HA.
+    """
     broker = hass.data.get("evohome")
     if broker:
         try:
             tcs = broker.tcs
             zones = tcs.zones.values() if isinstance(tcs.zones, dict) else list(tcs.zones)
-            for zone in zones:
-                yield zone
-            return
+            return list(zones)
         except Exception as e:
-            log.warning(f"evohome_schedule: broker inaccessible ({e}), fallback client")
+            log.warning(f"evohome_schedule: broker inaccessible ({e})")
 
-    # Fallback : nouveau client — password en keyword pour evohomeasync2 2.x
-    cfg = pyscript.app_config
-    username = cfg.get("username", "")
-    password = cfg.get("password", "")
-    if not username or not password:
-        raise ValueError("credentials manquants dans pyscript.apps.evohome_schedule")
-    import evohomeasync2
-    client = evohomeasync2.EvohomeClient(username, password=password)
-    await client.login()
-    for location in client.locations:
-        gateways = getattr(location, "gateways", getattr(location, "_gateways", []))
-        for gw in gateways:
-            systems = getattr(gw, "systems", getattr(gw, "_systems", []))
-            for sys_ in systems:
-                for zone in sys_.zones:
-                    yield zone
+    raise RuntimeError(
+        "Broker evohome HA non disponible — intégration evohome démarrée ?"
+    )
 
 
 async def _do_fetch() -> int:
     """Cœur du fetch — retourne le nombre de zones récupérées."""
     zones_data = {}
 
-    async for zone in _iter_zones():
+    for zone in await _iter_zones():
         name = getattr(zone, "name", None) or getattr(zone, "Name", str(zone))
         zone_id = str(
             getattr(zone, "id", None)
@@ -176,7 +168,7 @@ def _zone_slug(name: str) -> str:
     import re
     import unicodedata
     n = unicodedata.normalize("NFKD", name)
-    n = "".join(c for c in n if not unicodedata.combining(c))
+    n = "".join([c for c in n if not unicodedata.combining(c)])
     return re.sub(r"[^a-z0-9]+", "_", n.lower()).strip("_")
 
 
@@ -239,10 +231,14 @@ async def evohome_reset_zone(entity_id=None):
 
     try:
         zone = await _get_zone(zone_name)
-        # evohomeasync2 1.x+ : reset_mode() / 0.x : cancel_temp_override()
-        reset_fn = getattr(zone, "reset_mode", None) or getattr(zone, "cancel_temp_override", None)
+        # evohomeasync2 2.x : reset() / 1.x : reset_mode() / 0.x : cancel_temp_override()
+        reset_fn = (
+            getattr(zone, "reset", None)
+            or getattr(zone, "reset_mode", None)
+            or getattr(zone, "cancel_temp_override", None)
+        )
         if not reset_fn:
-            raise ValueError(f"Aucune méthode reset sur la zone '{zone_name}'")
+            raise ValueError(f"Aucune méthode reset sur la zone '{zone_name}' (attrs: {[a for a in dir(zone) if not a.startswith('_')]})")
         await reset_fn()
         log.info(f"evohome: zone '{zone_name}' réinitialisée au planning")
     except Exception as exc:

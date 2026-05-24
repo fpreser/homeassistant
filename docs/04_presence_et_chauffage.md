@@ -73,6 +73,92 @@ Les sensors temperature (`template_sensors/temperature_rooms.yaml`) extraient `c
 - **"Chauffage Auto"** : bascule le mode Evohome global (present/absent) en fonction de `input_boolean.presence_toggle`
 - **"Change statut chauffage"** : permet de changer manuellement le mode systeme Evohome via `input_select.evohome_select`
 
+### Pyscript evohome_schedule — synchronisation des planifications
+
+**Fichier** : `pyscript/apps/evohome_schedule/__init__.py`
+
+Ce script recupere les planifications hebdomadaires des 12 zones Evohome depuis l'API Honeywell et les met a disposition dans HA.
+
+#### Pourquoi ce script existe
+
+L'integration HA native `evohome` expose les entites `climate.*` pour controler les zones, mais **ne stocke pas les planifications hebdomadaires** (les plages horaires/temperatures programmees dans le thermostat). Ce script les recupere via `evohomeasync2` et les injecte dans HA pour qu'un dashboard ou une automation puisse les lire.
+
+#### Comment il fonctionne
+
+Il utilise en priorite le **broker de l'integration HA evohome** (`hass.data["evohome"]`) qui est deja authentifie — pas besoin de creer une nouvelle connexion. Il accede directement a `broker.tcs.zones` (liste des 12 objets `evohomeasync2.zone.Zone`) et appelle `get_schedule()` sur chacun.
+
+```
+hass.data["evohome"]          → EvoData
+  .tcs                        → ControlSystem (evohomeasync2)
+    .zones                    → list[Zone] (12 zones)
+      [i].get_schedule()      → list[{day_of_week, switchpoints}]  (API 2.x)
+```
+
+Le resultat est normalise en `{jour_fr: [{time: HH:MM, temp: float}]}` et sauvegarde dans `/config/evohome_schedules.json`.
+
+#### Donnees produites
+
+**Fichier JSON** : `/config/evohome_schedules.json`
+```json
+{
+  "fetched_at": "2026-05-24T20:07:07",
+  "zones_count": 12,
+  "zones": {
+    "Cuisine": {
+      "zone_id": "...",
+      "schedule": {
+        "Lundi": [{"time": "06:00", "temp": 20.0}, ...],
+        ...
+      }
+    }
+  }
+}
+```
+
+**Sensors HA crees** :
+
+| Sensor | Description |
+|---|---|
+| `sensor.evohome_schedule_status` | `ok` ou `error` — etat du dernier fetch (attribut `zones_count`, `fetched_at`) |
+| `sensor.evohome_sched_cuisine` | Planning semaine zone Cuisine (schedule en attribut) |
+| `sensor.evohome_sched_salon` | Planning semaine zone Salon |
+| *(un sensor par zone)* | Nommage : `sensor.evohome_sched_<slug_zone>` |
+
+#### Declenchements automatiques
+
+| Moment | Action |
+|---|---|
+| 90s apres demarrage HA | Fetch initial (attend que le broker soit pret) |
+| Chaque nuit a 4h00 | Mise a jour quotidienne |
+
+#### Services exposes
+
+| Service | Utilisation |
+|---|---|
+| `pyscript.evohome_fetch_schedules` | Synchronisation manuelle ou depuis le dashboard |
+| `pyscript.evohome_reset_zone` | Annule l'override d'une zone et retourne au planning (`entity_id` requis) |
+
+#### Configuration requise (`configuration.yaml`)
+
+```yaml
+pyscript:
+  allow_all_imports: true
+  apps:
+    evohome_schedule:
+      username: !secret evohome_username
+      password: !secret evohome_password
+```
+
+#### Compatibilite evohomeasync2 2.x (correction 2026-05-24)
+
+La version 2.x de la lib a introduit trois changements qui cassaient le script :
+
+| Probleme | Cause | Solution appliquee |
+|---|---|---|
+| `EvohomeClient() unexpected keyword argument 'password'` | API 2.x : `EvohomeClient(token_manager)` uniquement, pas de creation directe username/password | Suppression du fallback client — broker HA toujours utilise |
+| `not implemented ast ast_yield` | pyscript ne supporte pas `yield` dans les async generators | `_iter_zones` reecrite en `async def` retournant une `list` |
+| `'list' object has no attribute 'get'` | `get_schedule()` retourne une `list` directe (plus un dict avec `dailySchedules`) avec cles snake_case | `_normalise_schedule` adapte aux deux formats + `"".join([...])` pour les generator expressions |
+
 ---
 
 ## Chaudiere (Viessmann Vitodens)
@@ -189,3 +275,4 @@ Rafraichissement : automation **"Update Waze toutes les 5 mins"**
 | `template_sensors/temperature_rooms.yaml` | 12 sensors temperature Evohome + temperature chauffe-eau |
 | `template_sensors/trajet_matin.yaml` | Temps trajet matin Fabien (3 segments) et Gillian |
 | `template_sensors/household_applicances.yaml` | `sensor.connection_iphone_fabien` (localisation WiFi BSSID) |
+| `pyscript/apps/evohome_schedule/__init__.py` | Fetch planifications 12 zones Evohome → JSON + sensors HA (cron 4h, service manuel) |
