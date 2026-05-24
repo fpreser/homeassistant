@@ -137,6 +137,46 @@ Le resultat est normalise en `{jour_fr: [{time: HH:MM, temp: float}]}` et sauveg
 |---|---|
 | `pyscript.evohome_fetch_schedules` | Synchronisation manuelle ou depuis le dashboard |
 | `pyscript.evohome_reset_zone` | Annule l'override d'une zone et retourne au planning (`entity_id` requis) |
+| `pyscript.evohome_set_zone_schedule` | Modifie la planification complete d'une zone (`zone_name`, `schedule` requis) |
+| `pyscript.evohome_update_heat_demand` | Rafraichit manuellement les sensors de deficit thermique |
+| `pyscript.evohome_deficit_history_stats` | Analyse historique des deficits — voir section ci-dessous |
+
+#### Sensors de deficit thermique (analyse chauffage)
+
+Crees le 2026-05-24 pour analyser l'inertie et les besoins de chaleur par zone.
+
+| Sensor | Contenu | Frequence |
+|---|---|---|
+| `sensor.evohome_deficit_<slug>` | Deficit en °C par zone (consigne − reel, min 0) | 3 min |
+| `sensor.evohome_deficit_ranking` | Zone la plus froide + classement temps reel | 3 min |
+| `sensor.evohome_deficit_history` | Resultat analyse historique (apres appel service) | manuel |
+
+**`sensor.evohome_deficit_ranking` attributs :**
+- `top_zone` : zone avec le plus grand deficit actuel
+- `ranking` : ex `"Bureau Fabien:3.2°C, Ch Emma:1.5°C"`
+- `zones_in_deficit` : nombre de zones appelant le bruleur
+
+**Tous les sensors ont `state_class: measurement`** → statistiques long-terme HA activees automatiquement.
+
+#### Analyse historique (a faire en automne 2026)
+
+Apres 2 semaines de chauffage, appeler depuis les outils developpeur HA :
+
+```
+Service : pyscript.evohome_deficit_history_stats
+Donnees : hours: 336
+```
+
+Resultat dans `sensor.evohome_deficit_history` :
+- `top_duration` : zones classees par **heures passees en deficit** (inertie / zone chroniquement froide)
+- `top_intensity` : zones classees par **deficit moyen** (besoin de chaleur le plus fort)
+
+Utilisation : ajuster les heures de demarrage des planifications (ex: avancer de 30 min si la zone met
+trop longtemps a atteindre sa consigne) ou identifier une zone mal equilibree hydrauliquement.
+
+**Note technique :** `heat_demand` (signal natif Evohome) non disponible via evohomeasync2 2.x —
+deliberement exclu du schema de validation de la lib. Le deficit thermique est le meilleur proxy
+sans appel REST direct a l'API Honeywell.
 
 #### Configuration requise (`configuration.yaml`)
 
