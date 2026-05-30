@@ -1,0 +1,53 @@
+######################################################################
+#                  TESLA — ALERTE BATTERIE FAIBLE
+######################################################################
+#
+# Envoie une notification critique sur le téléphone de Fabien quand :
+#   - La voiture est à la maison
+#   - La batterie est <= 30 %
+#   - Le câble de charge n'est pas branché
+#
+# Trois triggers couvrent tous les scénarios d'entrée dans cet état :
+#   1. La batterie descend sous 31 % (= atteint 30 ou moins)
+#   2. La voiture rentre à la maison (batterie basse, pas de câble)
+#   3. Le câble est débranché (voiture à la maison, batterie basse)
+#
+# mode: single évite les notifications en rafale si les entités
+# oscillent autour du seuil.
+######################################################################
+
+- id: 'tesla_alerte_batterie_faible'
+  alias: Tesla — Alerte batterie faible non branchée
+
+  trigger:
+    - platform: numeric_state
+      entity_id: sensor.f_r_i_d_a_y_niveau_de_la_batterie
+      below: 31
+    - platform: state
+      entity_id: device_tracker.f_r_i_d_a_y_emplacement
+      to: 'home'
+    - platform: state
+      entity_id: binary_sensor.f_r_i_d_a_y_cable_de_charge
+      to: 'off'
+
+  condition:
+    - condition: numeric_state
+      entity_id: sensor.f_r_i_d_a_y_niveau_de_la_batterie
+      below: 31
+    - condition: state
+      entity_id: device_tracker.f_r_i_d_a_y_emplacement
+      state: 'home'
+    - condition: state
+      entity_id: binary_sensor.f_r_i_d_a_y_cable_de_charge
+      state: 'off'
+
+  action:
+    - service: script.notify_fabien
+      data:
+        title: "F.R.I.D.A.Y. — Batterie faible"
+        message: >-
+          Batterie à {{ states('sensor.f_r_i_d_a_y_niveau_de_la_batterie') }} % —
+          câble non branché !
+        critical: 1
+
+  mode: single

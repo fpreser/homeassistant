@@ -15,8 +15,11 @@
 # d'une nouvelle indisponibilité → pas de boucle de reload.
 #
 # Intégrations surveillées :
-#   - Vicare (Viessmann) : water_heater.vicare_water
-#   - Tesla Fleet API   : sensor.f_r_i_d_a_y_niveau_de_la_batterie
+#   - Vicare (Viessmann)        : water_heater.vicare_water
+#   - Tessie (Tesla)            : sensor.f_r_i_d_a_y_niveau_de_la_batterie
+#   - SMA Solar (345 + 208)     : sensor.sb5_0_1av_41_*_status
+#   - P1 Meter (HomeWizard)     : sensor.p1_meter_*_active_power_l1
+#   - Remote HA Garage          : sensor.remote_connection_to_192_168_1_103_8123_2
 #
 ######################################################################
 
@@ -193,4 +196,58 @@
             message: >-
               P1 Meter unavailable depuis 10+ min — reload en échec.
               Tesla Smart Charge potentiellement affecté.
+  mode: single
+
+######################################################################
+# 5. REMOTE HOME ASSISTANT (Garage — 192.168.1.103:8123)
+######################################################################
+# L'intégration remote_homeassistant ne se reconnecte pas toujours
+# automatiquement après un redémarrage HA. On surveille sur deux
+# triggers :
+#   - Démarrage HA : attente 3 min (laisser l'intégration tenter),
+#     puis reload si toujours pas connecté.
+#   - Déconnexion en cours de session : reload direct après 5 min.
+######################################################################
+- id: 'watchdog_remote_ha_garage'
+  alias: Watchdog - Remote HA Garage
+
+  trigger:
+    - platform: homeassistant
+      event: start
+      id: ha_start
+    - platform: state
+      entity_id: sensor.remote_connection_to_192_168_1_103_8123_2
+      to: 'disconnected'
+      for: '00:05:00'
+      id: disconnected
+
+  action:
+    - if:
+        - condition: trigger
+          id: ha_start
+      then:
+        - delay: '00:03:00'
+    - condition: not
+      conditions:
+        - condition: state
+          entity_id: sensor.remote_connection_to_192_168_1_103_8123_2
+          state: 'connected'
+    - service: homeassistant.reload_config_entry
+      target:
+        entity_id: sensor.remote_connection_to_192_168_1_103_8123_2
+    - delay: '00:01:30'
+    - if:
+        - condition: not
+          conditions:
+            - condition: state
+              entity_id: sensor.remote_connection_to_192_168_1_103_8123_2
+              state: 'connected'
+      then:
+        - service: script.notify_fabien
+          data:
+            title: "Watchdog — Remote HA Garage"
+            message: >-
+              Connexion Remote HA Garage (192.168.1.103) non rétablie.
+              Reload tenté — toujours en échec.
+              Vérification manuelle nécessaire.
   mode: single
