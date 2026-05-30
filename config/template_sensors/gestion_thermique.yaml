@@ -2,6 +2,15 @@
 #      G E S T I O N   T H E R M I Q U E   -   S E N S O R S
 #####################################################################
 #
+# sensor.t_int_max
+#   Température intérieure de référence pour les vélux nocturnes.
+#   = max(temp_hall_nuit, temp_chambre_emma, temp_chambre_louis)
+#   Les vélux s'ouvrent quand T_ext < T_int_max - 2°C.
+#
+#   Utilisé par :
+#     automation.gestion_thermique_velux_ouverture  (condition + trigger)
+#     automation.gestion_thermique_velux_trop_frais (trigger)
+#
 # binary_sensor.pluie_imminente_2h
 #   Interroge le forecast horaire Met.no (weather.forecast_home)
 #   toutes les 30 min et au démarrage HA.
@@ -13,6 +22,20 @@
 #     automation.gestion_thermique_velux_pluie      (trigger)
 #
 #####################################################################
+
+- sensor:
+    - name: "T int max"
+      unique_id: t_int_max_velux
+      state: >-
+        {{ [
+          states('sensor.temp_hall_nuit') | float(0),
+          states('sensor.temp_chambre_emma') | float(0),
+          states('sensor.temp_chambre_louis') | float(0)
+        ] | max | round(1) }}
+      unit_of_measurement: "°C"
+      device_class: temperature
+      state_class: measurement
+      icon: mdi:home-thermometer
 
 - trigger:
     - platform: time_pattern

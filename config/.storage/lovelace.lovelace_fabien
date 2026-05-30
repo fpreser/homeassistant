@@ -5206,6 +5206,13 @@
                   "name": "T ext",
                   "icon": "mdi:thermometer",
                   "fill_container": true
+                },
+                {
+                  "type": "custom:mushroom-entity-card",
+                  "entity": "sensor.t_int_max",
+                  "name": "T int",
+                  "icon": "mdi:home-thermometer",
+                  "fill_container": true
                 }
               ]
             },
