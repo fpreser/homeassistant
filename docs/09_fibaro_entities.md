@@ -1,7 +1,8 @@
 # Fibaro — Entités Home Assistant par pièce
 
 > Généré le 2026-05-17 depuis Fibaro HC3 (192.168.1.12) et registre HA  
-> Nettoyage 2026-05-17 : 55 entités supprimées (fantômes + doublons) + 70 renames (IDs techniques retirés)
+> Nettoyage 2026-05-17 : 55 entités supprimées (fantômes + doublons) + 70 renames (IDs techniques retirés)  
+> Mise à jour 2026-05-28 : remplacement module Z-Wave Node 57 (HC3 232/233 → 271/272/273) + nettoyage fantômes 142/143
 
 
 ## Salon
@@ -119,9 +120,10 @@
 | 147 | 26.0 Binary Switch | 💡 | `—` |
 | 149 | Escalier | 💡 | `light.escalier_principal` |
 | 209 | Prise UPS | 📡 | `switch.prise_nas` |
-| 231 | 46.0 Binary Switch | 💡 | `—` |
-| 232 | Hall d'entrée | 💡 | `light.hall_d_entree` |
-| 233 | Porte extérieure | 💡 | `light.jardin_exterieur_porte` |
+| 231 | 46.0 Binary Switch | 💡 | `—` (désactivé) |
+| 271 | Remote Z-Wave Node 57 | 📡 | `event.hall_d_entree_57_0_remote_controller_271_button_1/2` |
+| 272 | Lumière | 💡 | `light.hall_d_entree` |
+| 273 | Porte extérieure | 💡 | `light.jardin_exterieur_porte` |
 
 ## Escalier
 
