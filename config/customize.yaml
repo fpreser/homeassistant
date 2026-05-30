@@ -23,8 +23,6 @@ automation.tesla_smart_charge_protection_reseau:
   icon: mdi:car-electric
 
 # Tesla Night Charge
-automation.tesla_night_charge_evaluation:
-  icon: mdi:car-electric
 automation.tesla_night_charge_demarrage:
   icon: mdi:car-electric
 automation.tesla_night_charge_soc_atteint:

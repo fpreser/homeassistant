@@ -1485,6 +1485,10 @@
                   "name": "Dernier fetch Tessie"
                 },
                 {
+                  "entity": "sensor.f_r_i_d_a_y_cached_data_age",
+                  "name": "Age donnees cache Tessie"
+                },
+                {
                   "entity": "binary_sensor.f_r_i_d_a_y_etat",
                   "name": "Voiture en ligne"
                 },
@@ -4604,11 +4608,11 @@
               "cards": [
                 {
                   "type": "custom:mushroom-template-card",
-                  "entity": "climate.radiateur_bureau_gillian",
-                  "icon": "mdi:laptop",
-                  "icon_color": "{% if state_attr('climate.radiateur_bureau_gillian','current_temperature') | float(0) | round (0) < state_attr('climate.radiateur_bureau_gillian','temperature') | float(0) | round (0) %} blue\n  {% elif state_attr('climate.radiateur_bureau_gillian','current_temperature') | float(0) | round (0) == state_attr('climate.chambre','temperature') | float(0) | round (0) %}\n  green\n    {% elif state_attr('climate.radiateur_bureau_gillian','current_temperature') | float(0) | round (0) > state_attr('climate.chambre','temperature') | float(0) | round (0) %}\n    red\n{% endif %}",
-                  "primary": "{{ state_attr('climate.radiateur_bureau_gillian','current_temperature') }} °C",
-                  "secondary": "{{ state_attr('climate.radiateur_bureau_gillian','temperature') }} °C",
+                  "entity": "climate.bureau_gillian",
+                  "icon": "mdi:air-conditioner",
+                  "icon_color": "{% if state_attr('climate.bureau_gillian','current_temperature') | float(0) | round (0) < state_attr('climate.bureau_gillian','temperature') | float(0) | round (0) %} blue\n  {% elif state_attr('climate.bureau_gillian','current_temperature') | float(0) | round (0) == state_attr('climate.bureau_gillian','temperature') | float(0) | round (0) %}\n  green\n    {% elif state_attr('climate.bureau_gillian','current_temperature') | float(0) | round (0) > state_attr('climate.bureau_gillian','temperature') | float(0) | round (0) %}\n    red\n{% endif %}",
+                  "primary": "{{ state_attr('climate.bureau_gillian','current_temperature') }} °C",
+                  "secondary": "{{ state_attr('climate.bureau_gillian','temperature') }} °C",
                   "tap_action": {
                     "action": "more-info"
                   },
