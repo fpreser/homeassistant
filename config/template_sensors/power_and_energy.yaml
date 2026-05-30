@@ -158,7 +158,7 @@
     unique_id: sensor.tesla_current_charging_amp
     default_entity_id: sensor.tesla_current_charging_amp
     state: >-
-      {% set amp = states('sensor.f_r_i_d_a_y_charger_current') | int(0) %}
+      {% set amp = states('sensor.f_r_i_d_a_y_courant_du_chargeur') | int(0) %}
       {{ amp if amp > 0 else 0 }}
     unit_of_measurement: "A"
     device_class: current
@@ -192,7 +192,7 @@
     # valeur connue du sensor lui-meme pour ne pas injecter un 0 trompeur
     # dans power_unmanaged pendant une charge en cours.
     state: >-
-      {% set p = states('sensor.f_r_i_d_a_y_charger_power') %}
+      {% set p = states('sensor.f_r_i_d_a_y_puissance_du_chargeur') %}
       {% if p in ['unavailable', 'unknown'] %}
         {{ states('sensor.power_tesla') | float(0) }}
       {% else %}

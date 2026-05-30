@@ -1482,17 +1482,17 @@
                 },
                 {
                   "entity": "sensor.tesla_dernier_fetch_api",
-                  "name": "Dernier fetch Fleet API"
+                  "name": "Dernier fetch Tessie"
                 },
                 {
-                  "entity": "binary_sensor.f_r_i_d_a_y_status",
+                  "entity": "binary_sensor.f_r_i_d_a_y_etat",
                   "name": "Voiture en ligne"
                 },
                 {
                   "entity": "device_tracker.tesla_y"
                 },
                 {
-                  "entity": "device_tracker.f_r_i_d_a_y_location",
+                  "entity": "device_tracker.f_r_i_d_a_y_emplacement",
                   "name": "Localisation"
                 },
                 {
@@ -1500,15 +1500,15 @@
                   "name": "Charge HC en cours"
                 },
                 {
-                  "entity": "sensor.f_r_i_d_a_y_niveau_de_batterie",
+                  "entity": "sensor.f_r_i_d_a_y_niveau_de_la_batterie",
                   "name": "Batterie"
                 },
                 {
-                  "entity": "sensor.f_r_i_d_a_y_charging",
+                  "entity": "sensor.f_r_i_d_a_y_charge",
                   "name": "Etat charge"
                 },
                 {
-                  "entity": "binary_sensor.f_r_i_d_a_y_charge_cable",
+                  "entity": "binary_sensor.f_r_i_d_a_y_cable_de_charge",
                   "name": "Cable branche"
                 },
                 {
@@ -1548,11 +1548,11 @@
                   "name": "Session solaire active"
                 },
                 {
-                  "entity": "switch.f_r_i_d_a_y_charge",
+                  "entity": "switch.f_r_i_d_a_y_recharge",
                   "name": "Switch charge"
                 },
                 {
-                  "entity": "number.f_r_i_d_a_y_charge_current",
+                  "entity": "number.f_r_i_d_a_y_courant_de_recharge",
                   "name": "Amperage commande"
                 },
                 {
@@ -1564,7 +1564,7 @@
                   "name": "Derniere commande amperage"
                 },
                 {
-                  "entity": "number.f_r_i_d_a_y_charge_limit",
+                  "entity": "number.f_r_i_d_a_y_limite_de_recharge",
                   "name": "Limite SoC"
                 },
                 {
@@ -1572,11 +1572,11 @@
                   "name": "Puissance charge"
                 },
                 {
-                  "entity": "sensor.f_r_i_d_a_y_charge_energy_added",
+                  "entity": "sensor.f_r_i_d_a_y_energie_ajoutee_derniere_recharge",
                   "name": "Energie ajoutee (session)"
                 },
                 {
-                  "entity": "sensor.f_r_i_d_a_y_time_to_full_charge_2",
+                  "entity": "sensor.f_r_i_d_a_y_temps_avant_la_charge_complete",
                   "name": "Temps restant"
                 },
                 {
@@ -1632,95 +1632,95 @@
                   "type": "entities",
                   "entities": [
                     {
-                      "entity": "button.f_r_i_d_a_y_appel_de_phares_2",
+                      "entity": "button.f_r_i_d_a_y_appel_de_phares",
                       "name": "Appel de phares"
                     },
                     {
-                      "entity": "switch.f_r_i_d_a_y_auto_seat_climate_left",
+                      "entity": "binary_sensor.f_r_i_d_a_y_siege_chauffant_avant_gauche_automatique",
                       "name": "Auto seat climate left"
                     },
                     {
-                      "entity": "switch.f_r_i_d_a_y_auto_seat_climate_right",
+                      "entity": "binary_sensor.f_r_i_d_a_y_siege_chauffant_avant_droit_automatique",
                       "name": "Auto seat climate right"
                     },
                     {
-                      "entity": "switch.f_r_i_d_a_y_auto_steering_wheel_heater",
+                      "entity": "binary_sensor.f_r_i_d_a_y_chauffage_automatique_du_volant",
                       "name": "Auto steering wheel heater"
                     },
                     {
-                      "entity": "switch.f_r_i_d_a_y_charge",
+                      "entity": "switch.f_r_i_d_a_y_recharge",
                       "name": "Charge"
                     },
                     {
-                      "entity": "lock.f_r_i_d_a_y_charge_cable_lock_2",
+                      "entity": "lock.f_r_i_d_a_y_port_de_charge",
                       "name": "Charge cable lock"
                     },
                     {
-                      "entity": "number.f_r_i_d_a_y_charge_current",
+                      "entity": "number.f_r_i_d_a_y_courant_de_recharge",
                       "name": "Charge current"
                     },
                     {
-                      "entity": "number.f_r_i_d_a_y_charge_limit",
+                      "entity": "number.f_r_i_d_a_y_limite_de_recharge",
                       "name": "Charge limit"
                     },
                     {
-                      "entity": "cover.f_r_i_d_a_y_coffre",
+                      "entity": "cover.f_r_i_d_a_y_coffre_arriere",
                       "name": "Coffre"
                     },
                     {
-                      "entity": "cover.f_r_i_d_a_y_coffre_avant_2",
+                      "entity": "cover.f_r_i_d_a_y_coffre_avant",
                       "name": "Coffre avant"
                     },
                     {
-                      "entity": "switch.f_r_i_d_a_y_defrost",
+                      "entity": "switch.f_r_i_d_a_y_degivrage",
                       "name": "Defrost"
                     },
                     {
-                      "entity": "button.f_r_i_d_a_y_faire_peter",
+                      "entity": "button.f_r_i_d_a_y_pet",
                       "name": "Faire péter"
                     },
                     {
-                      "entity": "button.f_r_i_d_a_y_homelink",
+                      "entity": "button.f_r_i_d_a_y_homelink_2",
                       "name": "Homelink"
                     },
                     {
-                      "entity": "button.f_r_i_d_a_y_keyless_driving",
+                      "entity": "button.f_r_i_d_a_y_conduite_sans_cle",
                       "name": "Keyless driving"
                     },
                     {
-                      "entity": "button.f_r_i_d_a_y_klaxonner_2",
+                      "entity": "button.f_r_i_d_a_y_klaxon",
                       "name": "Klaxonner"
                     },
                     {
-                      "entity": "lock.f_r_i_d_a_y_lock",
+                      "entity": "lock.f_r_i_d_a_y_verrouillage",
                       "name": "Lock"
                     },
                     {
-                      "entity": "select.f_r_i_d_a_y_seat_heater_front_left",
+                      "entity": "select.f_r_i_d_a_y_siege_chauffant_gauche",
                       "name": "Seat heater front left"
                     },
                     {
-                      "entity": "select.f_r_i_d_a_y_seat_heater_front_right",
+                      "entity": "select.f_r_i_d_a_y_siege_chauffant_droit",
                       "name": "Seat heater front right"
                     },
                     {
-                      "entity": "switch.f_r_i_d_a_y_sentry_mode",
+                      "entity": "switch.f_r_i_d_a_y_mode_sentinelle",
                       "name": "Sentry mode"
                     },
                     {
-                      "entity": "select.f_r_i_d_a_y_steering_wheel_heater",
+                      "entity": "switch.f_r_i_d_a_y_volant_chauffant",
                       "name": "Steering wheel heater"
                     },
                     {
-                      "entity": "cover.f_r_i_d_a_y_trappe_de_charge",
+                      "entity": "cover.f_r_i_d_a_y_port_de_charge",
                       "name": "Trappe de charge"
                     },
                     {
-                      "entity": "button.f_r_i_d_a_y_wake",
+                      "entity": "button.f_r_i_d_a_y_reveiller",
                       "name": "Wake"
                     },
                     {
-                      "entity": "cover.f_r_i_d_a_y_windows",
+                      "entity": "cover.f_r_i_d_a_y_aeration",
                       "name": "Windows"
                     }
                   ],
@@ -1728,7 +1728,7 @@
                 },
                 {
                   "type": "thermostat",
-                  "entity": "climate.f_r_i_d_a_y_climate",
+                  "entity": "climate.f_r_i_d_a_y_climatisation",
                   "features": [
                     {
                       "type": "climate-hvac-modes",
@@ -1741,7 +1741,7 @@
                 },
                 {
                   "type": "media-control",
-                  "entity": "media_player.f_r_i_d_a_y_media_player"
+                  "entity": "media_player.f_r_i_d_a_y_lecteur_multimedia"
                 }
               ]
             },
@@ -1749,47 +1749,47 @@
               "type": "entities",
               "entities": [
                 {
-                  "entity": "sensor.f_r_i_d_a_y_autonomie_de_batterie",
+                  "entity": "sensor.f_r_i_d_a_y_autonomie",
                   "name": "Autonomie de batterie"
                 },
                 {
-                  "entity": "sensor.f_r_i_d_a_y_charge_energy_added",
+                  "entity": "sensor.f_r_i_d_a_y_energie_ajoutee_derniere_recharge",
                   "name": "Charge energy added"
                 },
                 {
-                  "entity": "sensor.f_r_i_d_a_y_charger_power",
+                  "entity": "sensor.f_r_i_d_a_y_puissance_du_chargeur",
                   "name": "Charger power"
                 },
                 {
-                  "entity": "sensor.f_r_i_d_a_y_charging",
+                  "entity": "sensor.f_r_i_d_a_y_charge",
                   "name": "Charging"
                 },
                 {
-                  "entity": "sensor.f_r_i_d_a_y_distance_pour_arriver",
+                  "entity": "sensor.f_r_i_d_a_y_distance_jusqu_a_l_arrivee",
                   "name": "Distance pour arriver"
                 },
                 {
-                  "entity": "sensor.f_r_i_d_a_y_niveau_de_batterie",
+                  "entity": "sensor.f_r_i_d_a_y_niveau_de_la_batterie",
                   "name": "Niveau de batterie"
                 },
                 {
-                  "entity": "binary_sensor.f_r_i_d_a_y_status",
+                  "entity": "binary_sensor.f_r_i_d_a_y_etat",
                   "name": "Status"
                 },
                 {
-                  "entity": "sensor.f_r_i_d_a_y_temperature_exterieure_2",
+                  "entity": "sensor.f_r_i_d_a_y_temperature_exterieure",
                   "name": "Température extérieure"
                 },
                 {
-                  "entity": "sensor.f_r_i_d_a_y_temperature_interieure_2",
+                  "entity": "sensor.f_r_i_d_a_y_temperature_interieure",
                   "name": "Température intérieure"
                 },
                 {
-                  "entity": "sensor.f_r_i_d_a_y_temps_pour_arriver",
+                  "entity": "sensor.f_r_i_d_a_y_heure_d_arrivee",
                   "name": "Temps pour arriver"
                 },
                 {
-                  "entity": "binary_sensor.f_r_i_d_a_y_user_present",
+                  "entity": "binary_sensor.f_r_i_d_a_y_conducteur",
                   "name": "User present"
                 }
               ],
@@ -1799,67 +1799,67 @@
               "type": "entities",
               "entities": [
                 {
-                  "entity": "update.f_r_i_d_a_y_mise_a_jour_2",
+                  "entity": "update.f_r_i_d_a_y_mise_a_jour",
                   "name": "Mise à jour"
                 },
                 {
-                  "entity": "binary_sensor.f_r_i_d_a_y_charge_cable",
+                  "entity": "binary_sensor.f_r_i_d_a_y_cable_de_charge",
                   "name": "Charge cable"
                 },
                 {
-                  "entity": "sensor.f_r_i_d_a_y_charger_current",
+                  "entity": "sensor.f_r_i_d_a_y_courant_du_chargeur",
                   "name": "Charger current"
                 },
                 {
-                  "entity": "sensor.f_r_i_d_a_y_charger_voltage",
+                  "entity": "sensor.f_r_i_d_a_y_tension_du_chargeur",
                   "name": "Charger voltage"
                 },
                 {
-                  "entity": "binary_sensor.f_r_i_d_a_y_front_driver_window",
+                  "entity": "binary_sensor.f_r_i_d_a_y_fenetre_avant_conducteur",
                   "name": "Front driver window"
                 },
                 {
-                  "entity": "binary_sensor.f_r_i_d_a_y_front_passenger_window",
+                  "entity": "binary_sensor.f_r_i_d_a_y_fenetre_avant_passager",
                   "name": "Front passenger window"
                 },
                 {
-                  "entity": "device_tracker.f_r_i_d_a_y_location",
+                  "entity": "device_tracker.f_r_i_d_a_y_emplacement",
                   "name": "Location"
                 },
                 {
-                  "entity": "binary_sensor.f_r_i_d_a_y_porte_arriere_conducteur",
+                  "entity": "binary_sensor.f_r_i_d_a_y_portiere_arriere_conducteur",
                   "name": "Porte arrière conducteur"
                 },
                 {
-                  "entity": "binary_sensor.f_r_i_d_a_y_porte_arriere_passager",
+                  "entity": "binary_sensor.f_r_i_d_a_y_portiere_arriere_passager",
                   "name": "Porte arrière passager"
                 },
                 {
-                  "entity": "binary_sensor.f_r_i_d_a_y_porte_avant_conducteur",
+                  "entity": "binary_sensor.f_r_i_d_a_y_portiere_avant_conducteur",
                   "name": "Porte avant conducteur"
                 },
                 {
-                  "entity": "binary_sensor.f_r_i_d_a_y_porte_avant_passager",
+                  "entity": "binary_sensor.f_r_i_d_a_y_portiere_avant_passager",
                   "name": "Porte avant passager"
                 },
                 {
-                  "entity": "binary_sensor.f_r_i_d_a_y_rear_driver_window",
+                  "entity": "binary_sensor.f_r_i_d_a_y_fenetre_arriere_conducteur",
                   "name": "Rear driver window"
                 },
                 {
-                  "entity": "binary_sensor.f_r_i_d_a_y_rear_passenger_window",
+                  "entity": "binary_sensor.f_r_i_d_a_y_fenetre_arriere_passager",
                   "name": "Rear passenger window"
                 },
                 {
-                  "entity": "sensor.f_r_i_d_a_y_time_to_full_charge_2",
+                  "entity": "sensor.f_r_i_d_a_y_temps_avant_la_charge_complete",
                   "name": "Time to full charge"
                 },
                 {
-                  "entity": "device_tracker.f_r_i_d_a_y_trajet",
+                  "entity": "device_tracker.f_r_i_d_a_y_destination",
                   "name": "Trajet"
                 },
                 {
-                  "entity": "sensor.f_r_i_d_a_y_vitesse_de_charge",
+                  "entity": "sensor.f_r_i_d_a_y_vitesse_de_recharge",
                   "name": "Vitesse de charge"
                 }
               ],

@@ -45,13 +45,13 @@
   - name: "Tesla Charge Nocturne Necessaire"
     unique_id: sensor.tesla_charge_nocturne_necessaire
     state: >-
-      {% set batterie = states('sensor.f_r_i_d_a_y_niveau_de_batterie') | int(0) %}
+      {% set batterie = states('sensor.f_r_i_d_a_y_niveau_de_la_batterie') | int(0) %}
       {% set soc_cible = states('input_number.tesla_soc_cible') | int(50) %}
       {% set prevision = states('sensor.energy_production_tomorrow') | float(0) %}
       {% set seuil_solaire = states('input_number.tesla_seuil_solaire') | float(40) %}
       {% set demain_semaine = (now().weekday() + 1) % 7 < 5 %}
-      {% set cable = is_state('binary_sensor.f_r_i_d_a_y_charge_cable', 'on') %}
-      {% set home = is_state('device_tracker.f_r_i_d_a_y_location', 'home') %}
+      {% set cable = is_state('binary_sensor.f_r_i_d_a_y_cable_de_charge', 'on') %}
+      {% set home = is_state('device_tracker.f_r_i_d_a_y_emplacement', 'home') %}
 
       {% if batterie >= soc_cible %}
         non
@@ -67,7 +67,7 @@
     icon: mdi:battery-clock
     attributes:
       batterie: >-
-        {{ states('sensor.f_r_i_d_a_y_niveau_de_batterie') | int(0) }}
+        {{ states('sensor.f_r_i_d_a_y_niveau_de_la_batterie') | int(0) }}
       soc_cible: >-
         {{ states('input_number.tesla_soc_cible') | int(50) }}
       prevision_demain_kwh: >-
@@ -77,9 +77,9 @@
       demain_est_semaine: >-
         {{ (now().weekday() + 1) % 7 < 5 }}
       cable_branche: >-
-        {{ is_state('binary_sensor.f_r_i_d_a_y_charge_cable', 'on') }}
+        {{ is_state('binary_sensor.f_r_i_d_a_y_cable_de_charge', 'on') }}
       deficit_pct: >-
-        {% set batterie = states('sensor.f_r_i_d_a_y_niveau_de_batterie') | int(0) %}
+        {% set batterie = states('sensor.f_r_i_d_a_y_niveau_de_la_batterie') | int(0) %}
         {% set soc_cible = states('input_number.tesla_soc_cible') | int(50) %}
         {{ [0, soc_cible - batterie] | max }}
 
@@ -88,7 +88,7 @@
     state: >-
       {# Capacite batterie Model Y ~75 kWh utile #}
       {% set capacite_kwh = 75 %}
-      {% set batterie = states('sensor.f_r_i_d_a_y_niveau_de_batterie') | int(0) %}
+      {% set batterie = states('sensor.f_r_i_d_a_y_niveau_de_la_batterie') | int(0) %}
       {% set soc_cible = states('input_number.tesla_soc_cible') | int(50) %}
       {% set max_amps = states('input_number.tesla_max_amps') | int(28) %}
       {% set voltage = states('sensor.p1_meter_3c39e7284d28_active_voltage_l1') | float(230) %}

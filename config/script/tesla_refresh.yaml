@@ -19,24 +19,24 @@ tesla_refresh:
   sequence:
     - service: button.press
       target:
-        entity_id: button.f_r_i_d_a_y_wake
+        entity_id: button.f_r_i_d_a_y_reveiller
     - delay:
-        seconds: 15
+        seconds: 10
     - service: homeassistant.update_entity
       target:
         entity_id:
-          - sensor.f_r_i_d_a_y_niveau_de_batterie
-          - sensor.f_r_i_d_a_y_vitesse_de_charge
-          - sensor.f_r_i_d_a_y_charger_current
+          - sensor.f_r_i_d_a_y_niveau_de_la_batterie
+          - sensor.f_r_i_d_a_y_vitesse_de_recharge
+          - sensor.f_r_i_d_a_y_courant_du_chargeur
   mode: single
 
 #####################################################################
 #                T E S L A   U P D A T E   N O   W A K E
 #####################################################################
-# Force un poll du coordinator Fleet API sans wake.
+# Force un poll du coordinator Tessie sans wake.
 # Utile quand la voiture est deja en charge ou en ligne — recupere les
 # vraies valeurs sans consommer la batterie 12V.
-# Si la voiture dort, le coordinator retourne le cache (no-op).
+# Si la voiture dort, Tessie retourne le cache (no-op).
 #
 # Utilise par :
 #   - bouton "Update sans Wake" du dashboard Tesla
@@ -48,12 +48,12 @@ tesla_update_no_wake:
     - service: homeassistant.update_entity
       target:
         entity_id:
-          - sensor.f_r_i_d_a_y_niveau_de_batterie
-          - sensor.f_r_i_d_a_y_vitesse_de_charge
-          - sensor.f_r_i_d_a_y_charger_current
-          - sensor.f_r_i_d_a_y_charger_power
-          - number.f_r_i_d_a_y_charge_limit
-          - number.f_r_i_d_a_y_charge_current
-          - binary_sensor.f_r_i_d_a_y_charge_cable
-          - binary_sensor.f_r_i_d_a_y_status
+          - sensor.f_r_i_d_a_y_niveau_de_la_batterie
+          - sensor.f_r_i_d_a_y_vitesse_de_recharge
+          - sensor.f_r_i_d_a_y_courant_du_chargeur
+          - sensor.f_r_i_d_a_y_puissance_du_chargeur
+          - number.f_r_i_d_a_y_limite_de_recharge
+          - number.f_r_i_d_a_y_courant_de_recharge
+          - binary_sensor.f_r_i_d_a_y_cable_de_charge
+          - binary_sensor.f_r_i_d_a_y_etat
   mode: single

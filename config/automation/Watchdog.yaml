@@ -16,7 +16,7 @@
 #
 # Intégrations surveillées :
 #   - Vicare (Viessmann) : water_heater.vicare_water
-#   - Tesla Fleet API   : sensor.f_r_i_d_a_y_niveau_de_batterie
+#   - Tesla Fleet API   : sensor.f_r_i_d_a_y_niveau_de_la_batterie
 #
 ######################################################################
 
@@ -66,29 +66,29 @@
 # un vrai problème d'intégration.
 ######################################################################
 - id: 'watchdog_tesla_fleet'
-  alias: Watchdog - Tesla Fleet API
+  alias: Watchdog - Tessie
 
   trigger:
     - platform: state
-      entity_id: sensor.f_r_i_d_a_y_niveau_de_batterie
+      entity_id: sensor.f_r_i_d_a_y_niveau_de_la_batterie
       to: 'unavailable'
       for: '00:10:00'
 
   action:
     - service: homeassistant.reload_config_entry
       target:
-        entity_id: sensor.f_r_i_d_a_y_niveau_de_batterie
+        entity_id: sensor.f_r_i_d_a_y_niveau_de_la_batterie
     - delay: '00:01:30'
     - if:
         - condition: state
-          entity_id: sensor.f_r_i_d_a_y_niveau_de_batterie
+          entity_id: sensor.f_r_i_d_a_y_niveau_de_la_batterie
           state: 'unavailable'
       then:
         - service: script.notify_fabien
           data:
-            title: "Watchdog — Tesla Fleet"
+            title: "Watchdog — Tessie"
             message: >-
-              Intégration Tesla Fleet unavailable depuis 10+ min.
+              Intégration Tessie unavailable depuis 10+ min.
               Reload tenté — toujours en échec.
               Vérification manuelle nécessaire.
   mode: single

@@ -64,12 +64,12 @@
     action: group.set
   - data: {}
     target:
-      entity_id: button.f_r_i_d_a_y_wake
+      entity_id: button.f_r_i_d_a_y_reveiller
     action: button.press
   - delay:
-      seconds: 15
+      seconds: 10
   - target:
-      entity_id: sensor.f_r_i_d_a_y_niveau_de_batterie
+      entity_id: sensor.f_r_i_d_a_y_niveau_de_la_batterie
     action: homeassistant.update_entity
   mode: single
 - id: '1681121951553'
@@ -310,7 +310,7 @@
       text_case: '0'
       awtrix_display: 7d296d7d5932219d74226900a66541e9
       toggle_helper: input_boolean.awtrix_toggle_tesla
-      my_sensor: sensor.f_r_i_d_a_y_niveau_de_batterie
+      my_sensor: sensor.f_r_i_d_a_y_niveau_de_la_batterie
       my_icon: '15635'
       push_icon: '2'
       awtrix_displays:

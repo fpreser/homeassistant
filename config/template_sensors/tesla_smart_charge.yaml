@@ -17,7 +17,7 @@
 #   optimal_amps = surplus_W / (sqrt(3) * tension)
 #
 # tesla_power = sqrt(3) * voltage * tesla_amps
-#   tesla_amps vient de number.f_r_i_d_a_y_charge_current (commande HA)
+#   tesla_amps vient de number.f_r_i_d_a_y_courant_de_recharge (commande HA)
 #   plutot que du sensor API Fleet (polling 30-60s = oscillations).
 #   Garde : switch=on ET cable=on, sinon 0 (valeur obsolete au rebranchement).
 #
@@ -56,9 +56,9 @@
       {% set p1_power   = states('sensor.p1_meter_3c39e7284d28_active_power') | float(0) %}
       {# tesla_amps : valeur commandee (HA) plutot que lue via API Fleet (polling lent) #}
       {# Garde sur switch ET cable pour eviter une valeur obsolete au rebranchement    #}
-      {% if is_state('switch.f_r_i_d_a_y_charge', 'on')
-            and is_state('binary_sensor.f_r_i_d_a_y_charge_cable', 'on') %}
-        {% set tesla_amps = states('number.f_r_i_d_a_y_charge_current') | float(0) %}
+      {% if is_state('switch.f_r_i_d_a_y_recharge', 'on')
+            and is_state('binary_sensor.f_r_i_d_a_y_cable_de_charge', 'on') %}
+        {% set tesla_amps = states('number.f_r_i_d_a_y_courant_de_recharge') | float(0) %}
       {% else %}
         {% set tesla_amps = 0 %}
       {% endif %}
@@ -87,17 +87,17 @@
 
   - name: "Tesla Derniere Commande Amperage"
     unique_id: sensor.tesla_last_amp_command
-    # Renvoie le last_changed de number.f_r_i_d_a_y_charge_current en ISO.
+    # Renvoie le last_changed de number.f_r_i_d_a_y_courant_de_recharge en ISO.
     # Avec device_class: timestamp, HA affiche "il y a X min" sur le dashboard.
     # Le last_changed se met a jour uniquement si la VALEUR change vraiment
     # (set_value 10 sur etat=10 n'incremente pas) — c'est l'info recherchee.
     state: >-
-      {% set s = states.number.f_r_i_d_a_y_charge_current %}
+      {% set s = states.number.f_r_i_d_a_y_courant_de_recharge %}
       {% if s and s.last_changed %}
         {{ s.last_changed.isoformat() }}
       {% endif %}
     availability: >-
-      {{ states.number.f_r_i_d_a_y_charge_current is not none }}
+      {{ states.number.f_r_i_d_a_y_courant_de_recharge is not none }}
     device_class: timestamp
     icon: mdi:timer-sand
 
@@ -109,9 +109,9 @@
       {% set p1_power   = states('sensor.p1_meter_3c39e7284d28_active_power') | float(0) %}
       {# tesla_amps : valeur commandee (HA) plutot que lue via API Fleet (polling lent) #}
       {# Garde sur switch ET cable pour eviter une valeur obsolete au rebranchement    #}
-      {% if is_state('switch.f_r_i_d_a_y_charge', 'on')
-            and is_state('binary_sensor.f_r_i_d_a_y_charge_cable', 'on') %}
-        {% set tesla_amps = states('number.f_r_i_d_a_y_charge_current') | float(0) %}
+      {% if is_state('switch.f_r_i_d_a_y_recharge', 'on')
+            and is_state('binary_sensor.f_r_i_d_a_y_cable_de_charge', 'on') %}
+        {% set tesla_amps = states('number.f_r_i_d_a_y_courant_de_recharge') | float(0) %}
       {% else %}
         {% set tesla_amps = 0 %}
       {% endif %}
@@ -156,7 +156,7 @@
     - name: "Tesla Dernier Fetch API"
       unique_id: sensor.tesla_dernier_fetch_api
       state: >-
-        {% set s = states.sensor.f_r_i_d_a_y_niveau_de_batterie %}
+        {% set s = states.sensor.f_r_i_d_a_y_niveau_de_la_batterie %}
         {{ s.last_reported.isoformat() if s and s.last_reported else none }}
       device_class: timestamp
       icon: mdi:cloud-download

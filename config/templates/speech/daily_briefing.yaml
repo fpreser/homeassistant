@@ -61,7 +61,7 @@
   {%- endmacro -%}
 
   {%- macro getTesla() -%}
-    Le niveau de batterie de FRIDAY est de {{ states('sensor.f_r_i_d_a_y_niveau_de_batterie')}}{{state_attr ('sensor.f_r_i_d_a_y_niveau_de_batterie','unit_of_measurement') }}
+    Le niveau de batterie de FRIDAY est de {{ states('sensor.f_r_i_d_a_y_niveau_de_la_batterie')}}{{state_attr ('sensor.f_r_i_d_a_y_niveau_de_la_batterie','unit_of_measurement') }}
   {%- endmacro -%}
   
   {# a macro that removes all newline characters, empty spaces, and returns formatted text  #}

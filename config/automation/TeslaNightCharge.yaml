@@ -47,7 +47,7 @@
       to: '2'
     - id: cable
       platform: state
-      entity_id: binary_sensor.f_r_i_d_a_y_charge_cable
+      entity_id: binary_sensor.f_r_i_d_a_y_cable_de_charge
       to: 'on'
       for:
         seconds: 30
@@ -64,17 +64,17 @@
     - condition: or
       conditions:
         - condition: state
-          entity_id: device_tracker.f_r_i_d_a_y_location
+          entity_id: device_tracker.f_r_i_d_a_y_emplacement
           state: home
         - condition: state
           entity_id: device_tracker.tesla_y
           state: home
     - condition: state
-      entity_id: binary_sensor.f_r_i_d_a_y_charge_cable
+      entity_id: binary_sensor.f_r_i_d_a_y_cable_de_charge
       state: 'on'
     - condition: template
       value_template: >-
-        {{ states('sensor.f_r_i_d_a_y_niveau_de_batterie') | int(0)
+        {{ states('sensor.f_r_i_d_a_y_niveau_de_la_batterie') | int(0)
            < states('input_number.tesla_soc_cible') | int(50) }}
     # Restart : reprend si la charge etait en cours (pending actif).
     # Autres triggers : evalue si la charge est necessaire maintenant.
@@ -92,19 +92,19 @@
     # Force la limite Tesla a la valeur du SoC cible : la voiture
     # s'arretera nativement (precis au %) quand la cible sera atteinte.
     # Plus fiable que d'attendre le trigger sur le sensor batterie qui
-    # peut etre fige par le polling Fleet API endormi de nuit.
+    # peut etre fige par le polling Tessie endormi de nuit.
     # La limite est restauree a tesla_soc_solaire_max par les auto 2/4/5 a la fin HC.
     - service: number.set_value
       target:
-        entity_id: number.f_r_i_d_a_y_charge_limit
+        entity_id: number.f_r_i_d_a_y_limite_de_recharge
       data:
         value: "{{ states('input_number.tesla_soc_cible') | int(50) }}"
     - service: switch.turn_on
       target:
-        entity_id: switch.f_r_i_d_a_y_charge
+        entity_id: switch.f_r_i_d_a_y_recharge
     - service: number.set_value
       target:
-        entity_id: number.f_r_i_d_a_y_charge_current
+        entity_id: number.f_r_i_d_a_y_courant_de_recharge
       data:
         value: "{{ states('input_number.tesla_max_amps') | int(28) }}"
     - service: script.notify_fabien
@@ -130,7 +130,7 @@
 #####################################################################
 # Detecte la fin de charge HC via deux signaux complementaires :
 #   - batt   : trigger template, sensor batterie >= cible
-#              (signal direct mais polling Fleet API parfois lent)
+#              (signal direct mais polling Tessie parfois lent)
 #   - switch : la voiture s'est arretee seule (limite Tesla atteinte
 #              car auto 1 a force charge_limit = soc_cible). Filet
 #              indispensable pour liberer pending rapidement, sinon
@@ -142,7 +142,7 @@
 # debranche) : on ne libere pending que si la cible est vraiment
 # atteinte cote sensor.
 #
-# Restaure aussi number.f_r_i_d_a_y_charge_limit a tesla_soc_solaire_max
+# Restaure aussi number.f_r_i_d_a_y_limite_de_recharge a tesla_soc_solaire_max
 # (valeur normale solaire, modifiee par l'auto 1 pour limiter a la cible HC).
 #####################################################################
 - id: 'tesla_night_charge_stop_soc'
@@ -150,11 +150,11 @@
   trigger:
     - platform: template
       value_template: >-
-        {{ states('sensor.f_r_i_d_a_y_niveau_de_batterie') | int(0)
+        {{ states('sensor.f_r_i_d_a_y_niveau_de_la_batterie') | int(0)
            >= states('input_number.tesla_soc_cible') | int(50) }}
       id: batt
     - platform: state
-      entity_id: switch.f_r_i_d_a_y_charge
+      entity_id: switch.f_r_i_d_a_y_recharge
       to: 'off'
       id: switch_off
   condition:
@@ -165,15 +165,15 @@
     # considere "SoC atteint" que si le sensor batterie l'atteste.
     - condition: template
       value_template: >-
-        {{ states('sensor.f_r_i_d_a_y_niveau_de_batterie') | int(0)
+        {{ states('sensor.f_r_i_d_a_y_niveau_de_la_batterie') | int(0)
            >= states('input_number.tesla_soc_cible') | int(50) }}
   action:
     - service: switch.turn_off
       target:
-        entity_id: switch.f_r_i_d_a_y_charge
+        entity_id: switch.f_r_i_d_a_y_recharge
     - service: number.set_value
       target:
-        entity_id: number.f_r_i_d_a_y_charge_limit
+        entity_id: number.f_r_i_d_a_y_limite_de_recharge
       data:
         value: "{{ states('input_number.tesla_soc_solaire_max') | int(80) }}"
     - service: input_boolean.turn_off
@@ -184,7 +184,7 @@
         title: Tesla Charge Nocturne
         message: >-
           Charge nocturne terminee. SoC cible atteint :
-          {{ states('sensor.f_r_i_d_a_y_niveau_de_batterie') }}%.
+          {{ states('sensor.f_r_i_d_a_y_niveau_de_la_batterie') }}%.
           Limite de charge restauree a {{ states('input_number.tesla_soc_solaire_max') | int(80) }}%.
   mode: single
 
@@ -213,19 +213,19 @@
     # Duree depuis la derniere transition du switch (charge tournait depuis X s).
     # Capture au firing du trigger, avant toute action qui modifierait last_changed.
     charge_duration_s: >-
-      {% set last_on = states.switch.f_r_i_d_a_y_charge.last_changed %}
+      {% set last_on = states.switch.f_r_i_d_a_y_recharge.last_changed %}
       {{ (now() - last_on).total_seconds() | int if last_on else 0 }}
   condition:
     - condition: state
       entity_id: input_boolean.tesla_night_charge_pending
       state: 'on'
     - condition: state
-      entity_id: switch.f_r_i_d_a_y_charge
+      entity_id: switch.f_r_i_d_a_y_recharge
       state: 'on'
     - condition: template
       value_template: >-
         {% set max_grid = states('sensor.tesla_max_amp_grid') | int(5) %}
-        {% set current  = states('number.f_r_i_d_a_y_charge_current') | int(0) %}
+        {% set current  = states('number.f_r_i_d_a_y_courant_de_recharge') | int(0) %}
         {% set max_amps = states('input_number.tesla_max_amps') | int(28) %}
         {% set target   = [max_grid, max_amps] | min %}
         {{ max_grid < 5 or (target - current) | abs >= 1 }}
@@ -239,7 +239,7 @@
           sequence:
             - service: switch.turn_off
               target:
-                entity_id: switch.f_r_i_d_a_y_charge
+                entity_id: switch.f_r_i_d_a_y_recharge
             # Notif uniquement si la charge tournait depuis > 2 min
             # (silence les micro-oscillations autour du seuil).
             - choose:
@@ -257,7 +257,7 @@
       default:
         - service: number.set_value
           target:
-            entity_id: number.f_r_i_d_a_y_charge_current
+            entity_id: number.f_r_i_d_a_y_courant_de_recharge
           data:
             value: >-
               {% set max_grid = states('sensor.tesla_max_amp_grid') | int(5) %}
@@ -297,19 +297,19 @@
     # Duree depuis la derniere transition du switch (pause depuis X s).
     # Capture au firing, avant turn_on qui ecraserait last_changed.
     pause_duration_s: >-
-      {% set last_off = states.switch.f_r_i_d_a_y_charge.last_changed %}
+      {% set last_off = states.switch.f_r_i_d_a_y_recharge.last_changed %}
       {{ (now() - last_off).total_seconds() | int if last_off else 0 }}
   condition:
     - condition: state
       entity_id: input_boolean.tesla_night_charge_pending
       state: 'on'
     - condition: state
-      entity_id: switch.f_r_i_d_a_y_charge
+      entity_id: switch.f_r_i_d_a_y_recharge
       state: 'off'
     - condition: or
       conditions:
         - condition: state
-          entity_id: device_tracker.f_r_i_d_a_y_location
+          entity_id: device_tracker.f_r_i_d_a_y_emplacement
           state: home
         - condition: state
           entity_id: device_tracker.tesla_y
@@ -319,21 +319,21 @@
       state: '2'
   action:
     # Re-applique la cible HC avant turn_on (defense contre une derive
-    # cote Tesla pendant la pause reseau : commande Fleet API perdue
+    # cote Tesla pendant la pause reseau : commande Tessie perdue
     # avec voiture endormie, modif via app, etc.).
     - service: number.set_value
       target:
-        entity_id: number.f_r_i_d_a_y_charge_limit
+        entity_id: number.f_r_i_d_a_y_limite_de_recharge
       data:
         value: "{{ states('input_number.tesla_soc_cible') | int(50) }}"
     - service: switch.turn_on
       target:
-        entity_id: switch.f_r_i_d_a_y_charge
+        entity_id: switch.f_r_i_d_a_y_recharge
     - delay:
         seconds: 5
     - service: number.set_value
       target:
-        entity_id: number.f_r_i_d_a_y_charge_current
+        entity_id: number.f_r_i_d_a_y_courant_de_recharge
       data:
         value: >-
           {% set max_grid = states('sensor.tesla_max_amp_grid') | int(5) %}
@@ -380,24 +380,24 @@
     - choose:
         - conditions:
             - condition: state
-              entity_id: switch.f_r_i_d_a_y_charge
+              entity_id: switch.f_r_i_d_a_y_recharge
               state: 'on'
           sequence:
             - service: switch.turn_off
               target:
-                entity_id: switch.f_r_i_d_a_y_charge
+                entity_id: switch.f_r_i_d_a_y_recharge
             - service: script.notify_fabien
               data:
                 title: Tesla Charge Nocturne
                 message: >-
                   Charge nocturne arretee (retour heures pleines detecte par le compteur).
-                  Batterie : {{ states('sensor.f_r_i_d_a_y_niveau_de_batterie') }}%
+                  Batterie : {{ states('sensor.f_r_i_d_a_y_niveau_de_la_batterie') }}%
                   (objectif {{ states('input_number.tesla_soc_cible') | int }}% non atteint).
     # Restaure la limite a tesla_soc_solaire_max (modifiee par auto 1 pour
     # s'arreter a la cible HC). Filet de securite si auto 2 n'a pas eu lieu.
     - service: number.set_value
       target:
-        entity_id: number.f_r_i_d_a_y_charge_limit
+        entity_id: number.f_r_i_d_a_y_limite_de_recharge
       data:
         value: "{{ states('input_number.tesla_soc_solaire_max') | int(80) }}"
     - service: input_boolean.turn_off
@@ -417,7 +417,7 @@
   alias: Tesla Night Charge - Cable debranche
   trigger:
     - platform: state
-      entity_id: binary_sensor.f_r_i_d_a_y_charge_cable
+      entity_id: binary_sensor.f_r_i_d_a_y_cable_de_charge
       to: 'off'
       for:
         seconds: 30
@@ -428,13 +428,13 @@
   action:
     - service: switch.turn_off
       target:
-        entity_id: switch.f_r_i_d_a_y_charge
+        entity_id: switch.f_r_i_d_a_y_recharge
     # Restaure la limite a tesla_soc_solaire_max (modifiee par auto 1 pour
     # s'arreter a la cible HC). Indispensable : sinon la prochaine charge
     # solaire serait plafonnee a la cible HC au lieu du SoC max solaire.
     - service: number.set_value
       target:
-        entity_id: number.f_r_i_d_a_y_charge_limit
+        entity_id: number.f_r_i_d_a_y_limite_de_recharge
       data:
         value: "{{ states('input_number.tesla_soc_solaire_max') | int(80) }}"
     - service: input_boolean.turn_off
@@ -445,7 +445,7 @@
         title: Tesla Charge Nocturne
         message: >-
           Cable debranche en cours de charge nocturne.
-          Batterie : {{ states('sensor.f_r_i_d_a_y_niveau_de_batterie') }}%
+          Batterie : {{ states('sensor.f_r_i_d_a_y_niveau_de_la_batterie') }}%
           (objectif {{ states('input_number.tesla_soc_cible') | int }}%).
   mode: single
 
@@ -454,7 +454,7 @@
 #####################################################################
 # Quand l'utilisateur modifie la cible HC depuis le dashboard pendant
 # une charge nocturne en cours, propage immediatement la nouvelle
-# valeur a number.f_r_i_d_a_y_charge_limit. La voiture s'arretera
+# valeur a number.f_r_i_d_a_y_limite_de_recharge. La voiture s'arretera
 # nativement a la nouvelle cible.
 #
 # Ne fait rien hors charge HC : la nouvelle cible sera utilisee au
@@ -472,7 +472,7 @@
   action:
     - service: number.set_value
       target:
-        entity_id: number.f_r_i_d_a_y_charge_limit
+        entity_id: number.f_r_i_d_a_y_limite_de_recharge
       data:
         value: "{{ states('input_number.tesla_soc_cible') | int(50) }}"
     - service: script.notify_fabien
@@ -480,6 +480,6 @@
         title: Tesla Charge Nocturne
         message: >-
           {% set cible = states('input_number.tesla_soc_cible') | int(50) %}
-          {% set bat = states('sensor.f_r_i_d_a_y_niveau_de_batterie') | int(0) %}
+          {% set bat = states('sensor.f_r_i_d_a_y_niveau_de_la_batterie') | int(0) %}
           Cible HC mise a jour : {{ cible }}%. Charge en cours, batterie : {{ bat }}%.
   mode: single

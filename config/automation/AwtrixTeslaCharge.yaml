@@ -11,28 +11,28 @@
   mode: queued
   trigger:
     - platform: state
-      entity_id: switch.f_r_i_d_a_y_charge
+      entity_id: switch.f_r_i_d_a_y_recharge
       to: "on"
       id: "On"
     - platform: state
-      entity_id: switch.f_r_i_d_a_y_charge
+      entity_id: switch.f_r_i_d_a_y_recharge
       to: "off"
       id: "Off"
     - platform: state
-      entity_id: sensor.f_r_i_d_a_y_charger_current
+      entity_id: sensor.f_r_i_d_a_y_courant_du_chargeur
       id: Changes
   action:
     - variables:
         my_display: 'awtrix_dd33c0'
         app_name: 'TeslaCharge'
         my_text: >
-          {{ states('sensor.f_r_i_d_a_y_charger_current') | int(0) }} Amps
+          {{ states('sensor.f_r_i_d_a_y_courant_du_chargeur') | int(0) }} Amps
         my_icon: 1018
         text_case: 2
         text_color: '[255,255,255]'
         my_progress: >
-          {% set bat = states('sensor.f_r_i_d_a_y_niveau_de_batterie') | float(0) %}
-          {% set lim = states('number.f_r_i_d_a_y_charge_limit') | float(80) %}
+          {% set bat = states('sensor.f_r_i_d_a_y_niveau_de_la_batterie') | float(0) %}
+          {% set lim = states('number.f_r_i_d_a_y_limite_de_recharge') | float(80) %}
           {{ (bat / lim * 100) | int if lim > 0 else 0 }}
     - choose:
     #####################################################################
@@ -85,12 +85,12 @@
               - condition: trigger
                 id: Changes
               - condition: state
-                entity_id: switch.f_r_i_d_a_y_charge
+                entity_id: switch.f_r_i_d_a_y_recharge
                 state: "on"
               - condition: not
                 conditions:
                   - condition: state
-                    entity_id: sensor.f_r_i_d_a_y_charger_current
+                    entity_id: sensor.f_r_i_d_a_y_courant_du_chargeur
                     state:
                       - unavailable
                       - unknown

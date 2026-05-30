@@ -44,7 +44,7 @@ flowchart TD
     Trig -->|cable debranche 30s<br/>OR sun -> below_horizon| A9[9. Reset limite SoC max solaire]
     Trig -->|tesla_soc_solaire_max change| A10[10. Sync helper SoC max]
     Trig -->|charge_current change| A11[11. Refresh apres set amps<br/>delay 10s + update_entity<br/>mode restart]
-    Trig -->|arrivee home<br/>OU connexion WiFi| A0[0/0b. Refresh donnees<br/>3 min ou 1 min 30]
+    Trig -->|arrivee home<br/>OU connexion WiFi| A0[0/0b. Refresh donnees<br/>delai 30s]
     Trig -->|arrivee home<br/>OU connexion WiFi<br/>+ HP + charge on + pas surplus| A0e[0e. Stop charge HP<br/>immediat switch OFF]
 
     A1 --> CondSurplus{surplus >= 5A<br/>+ batterie < limite<br/>+ cable + home<br/>+ charge off ?}
@@ -54,7 +54,7 @@ flowchart TD
     A3 --> DoStart
     A3b --> SolarFlagOn[solar_charging = ON<br/>idempotent]
     A4 --> DoStop[switch OFF<br/>Awtrix + notif<br/>+ refresh]
-    A5 --> CondDelta{delta >= 1A<br/>ET cooldown 60s ?}
+    A5 --> CondDelta{delta >= 1A ?}
     CondDelta -->|oui| SetAmps["set amps<br/>= clamp(opt, 5, tesla_max_amps)"]
     A6 --> CondLow{charge on<br/>ET surplus < 5A ?}
     CondLow -->|oui| Pause[switch OFF]
@@ -106,80 +106,83 @@ flowchart TD
     EndCable --> Done
 ```
 
-## Entites Tesla (Fleet API)
+## Entites Tesla (Tessie)
 
 ### Entites utilisees dans la config actuelle
 
 | Entite | Type | Description |
 |---|---|---|
-| `switch.f_r_i_d_a_y_charge` | switch | Demarre/arrete la charge. **Sert aussi d'indicateur d'etat** : on = charge en cours |
-| `number.f_r_i_d_a_y_charge_current` | number | Regle l'amperage cible (5-32A). **Valeur commandee** utilisee par les templates (plus fiable que le sensor API, polling 30-60 s) |
-| `sensor.f_r_i_d_a_y_charger_current` | sensor | Amperage reel de charge (A). Lecture API Fleet, utilise seulement par le trigger `amps_too_low` de l'automation 4 |
-| `sensor.f_r_i_d_a_y_niveau_de_batterie` | sensor | Niveau batterie (%) |
-| `sensor.f_r_i_d_a_y_vitesse_de_charge` | sensor | Vitesse de charge |
-| `sensor.f_r_i_d_a_y_charging` | sensor | Statut de charge (Charging, Stopped, Disconnected, Complete...) |
-| `number.f_r_i_d_a_y_charge_limit` | number | Limite de charge configuree (%) |
-| `device_tracker.f_r_i_d_a_y_location` | device_tracker | Position (home/away) |
-| `binary_sensor.f_r_i_d_a_y_charge_cable` | binary_sensor | Cable de charge branche (on = connected) |
-| `cover.f_r_i_d_a_y_trappe_de_charge` | cover | Trappe de charge (ouvrir/fermer) |
-| `sensor.f_r_i_d_a_y_charger_power` | sensor | Puissance de charge instantanee (kW). Lue par `sensor.power_tesla` (×1000 → W) |
+| `switch.f_r_i_d_a_y_recharge` | switch | Demarre/arrete la charge. **Sert aussi d'indicateur d'etat** : on = charge en cours |
+| `number.f_r_i_d_a_y_courant_de_recharge` | number | Regle l'amperage cible (5-32A). **Valeur commandee** utilisee par les templates (plus fiable que le sensor Tessie poll toutes les ~30s) |
+| `sensor.f_r_i_d_a_y_courant_du_chargeur` | sensor | Amperage reel de charge (A). Lecture Tessie, utilise seulement par le trigger `amps_too_low` de l'automation 4 |
+| `sensor.f_r_i_d_a_y_niveau_de_la_batterie` | sensor | Niveau batterie (%) |
+| `sensor.f_r_i_d_a_y_vitesse_de_recharge` | sensor | Vitesse de charge |
+| `sensor.f_r_i_d_a_y_charge` | sensor | Statut de charge (Charging, Stopped, Disconnected, Complete...) |
+| `number.f_r_i_d_a_y_limite_de_recharge` | number | Limite de charge configuree (%) |
+| `device_tracker.f_r_i_d_a_y_emplacement` | device_tracker | Position (home/away) |
+| `binary_sensor.f_r_i_d_a_y_cable_de_charge` | binary_sensor | Cable de charge branche (on = connected) |
+| `cover.f_r_i_d_a_y_port_de_charge` | cover | Trappe de charge (ouvrir/fermer) |
+| `sensor.f_r_i_d_a_y_puissance_du_chargeur` | sensor | Puissance de charge instantanee (kW). Lue par `sensor.power_tesla` (×1000 → W) |
 
-### Entites Fleet API disponibles mais NON utilisees
+### Entites Tessie disponibles mais NON utilisees dans les automations
 
-L'integration Tesla Fleet expose de nombreuses entites supplementaires qui pourraient servir aux automatisations energie :
+L'integration Tessie expose de nombreuses entites supplementaires qui pourraient servir aux automatisations energie :
 
 #### Charge et batterie
 
-| Entite (probable) | Type | Description |
+| Entite | Type | Description |
 |---|---|---|
-| `sensor.f_r_i_d_a_y_battery_range` | sensor | Autonomie estimee (km) |
-| `sensor.f_r_i_d_a_y_charge_energy_added` | sensor | Energie ajoutee cette session (kWh) |
-| `sensor.f_r_i_d_a_y_charge_rate` | sensor | Vitesse de charge (km/h ajoutes) |
-| `sensor.f_r_i_d_a_y_charger_voltage` | sensor | Tension chargeur (V) |
-| `sensor.f_r_i_d_a_y_time_to_full_charge` | sensor | Temps restant pour charge complete (h) |
-| `sensor.f_r_i_d_a_y_usable_battery_level` | sensor | Niveau batterie utilisable (%) |
-| `binary_sensor.f_r_i_d_a_y_charge_cable` | binary_sensor | Cable branche oui/non |
-| `binary_sensor.f_r_i_d_a_y_scheduled_charging_pending` | binary_sensor | Charge programmee en attente |
-| `lock.f_r_i_d_a_y_charge_cable_lock` | lock | Verrou du cable de charge |
+| `sensor.f_r_i_d_a_y_autonomie` | sensor | Autonomie estimee (km) |
+| `sensor.f_r_i_d_a_y_energie_ajoutee_derniere_recharge` | sensor | Energie ajoutee cette session (kWh) |
+| `sensor.f_r_i_d_a_y_vitesse_de_recharge` | sensor | Vitesse de charge (km/h ajoutes) |
+| `sensor.f_r_i_d_a_y_tension_du_chargeur` | sensor | Tension chargeur (V) |
+| `sensor.f_r_i_d_a_y_temps_avant_la_charge_complete` | sensor | Temps restant pour charge complete |
+| `sensor.f_r_i_d_a_y_energy_remaining` | sensor | Energie restante dans la batterie (kWh) |
+| `binary_sensor.f_r_i_d_a_y_cable_de_charge` | binary_sensor | Cable branche oui/non |
+| `binary_sensor.f_r_i_d_a_y_recharge_planifiee` | binary_sensor | Charge programmee en attente |
+| `lock.f_r_i_d_a_y_port_de_charge` | lock | Verrou du cable de charge |
 
 #### Climat
 
-| Entite (probable) | Type | Description |
+| Entite | Type | Description |
 |---|---|---|
-| `climate.f_r_i_d_a_y_climate` | climate | Climatisation (pre-conditionnement) |
-| `climate.f_r_i_d_a_y_cabin_overheat_protection` | climate | Protection surchauffe habitacle |
-| `sensor.f_r_i_d_a_y_inside_temperature` | sensor | Temperature interieure (C) |
-| `sensor.f_r_i_d_a_y_outside_temperature` | sensor | Temperature exterieure (C) |
-| `switch.f_r_i_d_a_y_defrost` | switch | Degivrage |
-| `select.f_r_i_d_a_y_seat_heater_*` | select | Sieges chauffants (front L/R, rear L/R/C) |
+| `climate.f_r_i_d_a_y_climatisation` | climate | Climatisation (pre-conditionnement) |
+| `sensor.f_r_i_d_a_y_temperature_interieure` | sensor | Temperature interieure (C) |
+| `sensor.f_r_i_d_a_y_temperature_exterieure` | sensor | Temperature exterieure (C) |
+| `switch.f_r_i_d_a_y_degivrage` | switch | Degivrage |
+| `select.f_r_i_d_a_y_siege_chauffant_gauche` | select | Siege chauffant avant gauche |
+| `select.f_r_i_d_a_y_siege_chauffant_droit` | select | Siege chauffant avant droit |
+| `select.f_r_i_d_a_y_siege_chauffant_arriere_gauche` | select | Siege chauffant arriere gauche |
+| `select.f_r_i_d_a_y_siege_chauffant_arriere_droit` | select | Siege chauffant arriere droit |
+| `switch.f_r_i_d_a_y_volant_chauffant` | switch | Volant chauffant |
 
 #### Securite et controle
 
-| Entite (probable) | Type | Description |
+| Entite | Type | Description |
 |---|---|---|
-| `lock.f_r_i_d_a_y_door_lock` | lock | Verrou portes |
-| `switch.f_r_i_d_a_y_sentry_mode` | switch | Mode sentinelle |
-| `binary_sensor.f_r_i_d_a_y_user_present` | binary_sensor | Utilisateur present dans le vehicule |
-| `button.f_r_i_d_a_y_flash_lights` | button | Flash des phares |
-| `button.f_r_i_d_a_y_honk_horn` | button | Klaxon |
-| `cover.f_r_i_d_a_y_frunk` | cover | Coffre avant |
-| `cover.f_r_i_d_a_y_trunk` | cover | Coffre arriere |
-| `update.f_r_i_d_a_y_*` | update | Mise a jour logicielle |
+| `lock.f_r_i_d_a_y_verrouillage` | lock | Verrou portes |
+| `switch.f_r_i_d_a_y_mode_sentinelle` | switch | Mode sentinelle |
+| `binary_sensor.f_r_i_d_a_y_conducteur` | binary_sensor | Utilisateur present dans le vehicule |
+| `button.f_r_i_d_a_y_appel_de_phares` | button | Flash des phares |
+| `button.f_r_i_d_a_y_klaxon` | button | Klaxon |
+| `cover.f_r_i_d_a_y_coffre_avant` | cover | Coffre avant |
+| `cover.f_r_i_d_a_y_coffre_arriere` | cover | Coffre arriere |
+| `update.f_r_i_d_a_y_mise_a_jour` | update | Mise a jour logicielle |
 
-### Commandes Fleet API (actions/services)
+### Commandes Tessie (actions/services)
 
-Au-dela des entites, le Tesla Fleet API expose des **commandes directes** utilisables via `tesla_fleet.` ou via les services HA standards :
+Tessie expose les commandes Tesla via des services HA standards (pas de domaine `tesla_fleet.` — tout passe par les entites Tessie) :
 
 #### Commandes de charge
 
-| Commande API | Service HA equivalent | Description |
+| Action | Service HA | Description |
 |---|---|---|
-| `charge_start` | `switch.turn_on` sur charge | Demarre la charge |
-| `charge_stop` | `switch.turn_off` sur charge | Arrete la charge |
-| `set_charging_amps` | `number.set_value` sur charge_current | Modifie l'amperage (0-32A) |
-| `set_charge_limit` | `number.set_value` sur charge_limit | Modifie la limite SoC (50-100%) |
-| `charge_port_door_open` | `cover.open_cover` | Ouvre la trappe |
-| `charge_port_door_close` | `cover.close_cover` | Ferme la trappe |
+| Demarrer la charge | `switch.turn_on` sur `switch.f_r_i_d_a_y_recharge` | Demarre la charge |
+| Arreter la charge | `switch.turn_off` sur `switch.f_r_i_d_a_y_recharge` | Arrete la charge |
+| Regler l'amperage | `number.set_value` sur `number.f_r_i_d_a_y_courant_de_recharge` | Modifie l'amperage (0-32A) |
+| Regler la limite SoC | `number.set_value` sur `number.f_r_i_d_a_y_limite_de_recharge` | Modifie la limite SoC (50-100%) |
+| Ouvrir le port de charge | `cover.open_cover` sur `cover.f_r_i_d_a_y_port_de_charge` | Ouvre la trappe |
+| Fermer le port de charge | `cover.close_cover` sur `cover.f_r_i_d_a_y_port_de_charge` | Ferme la trappe |
 
 #### Commandes de planification (firmware >= 2024.26)
 
@@ -239,7 +242,7 @@ A titre de reference : 16A triphase ≈ 6 375 W, 28A triphase ≈ 11 150 W, 40A 
 ```
 voltage    = tension mesuree P1 meter L1 (defaut 230V)
 p1_power   = puissance active P1 totale triphasee (positif=soutirage, negatif=injection)
-tesla_amps = number.f_r_i_d_a_y_charge_current (A par phase, commandee HA)
+tesla_amps = number.f_r_i_d_a_y_courant_de_recharge (A par phase, commandee HA)
              0 si switch OFF OU cable OFF (valeur obsolete au rebranchement)
 sqrt3      = 1.732
 
@@ -258,7 +261,7 @@ optimal_amp = surplus_w / (sqrt3 * voltage)    # A par phase
 ```
 voltage      = tension mesuree P1 meter L1 (defaut 230V)
 p1_power     = puissance active P1 totale triphasee (positif=soutirage, negatif=injection)
-tesla_amps   = number.f_r_i_d_a_y_charge_current (A par phase, commandee HA)
+tesla_amps   = number.f_r_i_d_a_y_courant_de_recharge (A par phase, commandee HA)
                0 si switch OFF OU cable OFF
 grid_limit   = input_number.tesla_grid_limit (defaut 15500W, triphase sans neutre 40A)
 max_user_amps = input_number.tesla_max_amps (defaut 28A, configurable UI)
@@ -273,7 +276,7 @@ max_amps    = headroom_w / (sqrt3 * voltage)     # A par phase
 => clamp(max_amps, 0, max_user_amps)
 ```
 
-**Choix de `tesla_amps`** : les templates utilisent la valeur **commandee** (`number.f_r_i_d_a_y_charge_current`) plutot que la valeur **lue** (`sensor.f_r_i_d_a_y_charger_current`). Le sensor API Fleet est poll toutes les 30-60 s, ce qui provoque des oscillations dans les calculs. La garde `switch=on ET cable=on` force `tesla_amps = 0` quand la Tesla ne charge pas, pour eviter une valeur obsolete au rebranchement.
+**Choix de `tesla_amps`** : les templates utilisent la valeur **commandee** (`number.f_r_i_d_a_y_courant_de_recharge`) plutot que la valeur **lue** (`sensor.f_r_i_d_a_y_courant_du_chargeur`). Le sensor Tessie est poll toutes les ~30s, ce qui provoque des oscillations dans les calculs. La garde `switch=on ET cable=on` force `tesla_amps = 0` quand la Tesla ne charge pas, pour eviter une valeur obsolete au rebranchement.
 
 **Logique** : Calcule combien d'amperes la Tesla peut consommer sans que le soutirage total depasse la limite du compteur (`input_number.tesla_grid_limit` - 500W marge). La borne haute est `input_number.tesla_max_amps` (defaut 28A, configurable depuis l'UI). Installation triphase sans neutre 40A → max theorique ~15 930W, limite par defaut 15 500W. Utilise comme plafond par `tesla_optimized_amp` et par le suivi amperage nocturne.
 
@@ -291,45 +294,45 @@ Toute la logique est dans un fichier unique : `automation/TeslaSmartCharge.yaml`
 
 - **`input_boolean.tesla_smart_charge`** = **maitre absolu** (intention utilisateur) — conditionne toute recharge automatique, solaire ET HC. Jamais modifie par les automations.
 - **`input_boolean.tesla_night_charge_pending`** = **verrou operationnel HC** — mis a ON par l'evaluation 21h, remis a OFF a la fin de la charge HC. Les automations solaires le verifient (`= off`) pour se mettre en veille pendant la charge HC sans toucher au maitre.
-- **`switch.f_r_i_d_a_y_charge`** = la charge **tourne reellement** (etat)
+- **`switch.f_r_i_d_a_y_recharge`** = la charge **tourne reellement** (etat)
 - **`script.tesla_refresh`** = reveille la voiture et force la mise a jour des capteurs cles (batterie, vitesse de charge, courant). Centralise le pattern wake+delay+update, utilise par 6 automations
-- **`script.tesla_update_no_wake`** = force un poll Fleet API sans wake (rafraichit charger_*, charge_limit, charge_cable, status). Utile pour bouton dashboard quand la voiture est deja en ligne — pas de consommation 12V
+- **`script.tesla_update_no_wake`** = force un poll Tessie sans wake (rafraichit courant_du_chargeur, limite_de_recharge, cable_de_charge, etat). Utile pour bouton dashboard quand la voiture est deja en ligne — pas de consommation 12V
 - Le suivi amperage est toujours actif, ses conditions internes l'empechent d'agir quand la charge est arretee
 
 ### Les 17 automations
 
 ```
-0. Refresh donnees (arrivee a la maison via Fleet API) :
-   Trigger: device_tracker.f_r_i_d_a_y_location -> home
-   Action: delay 3 min + script.tesla_refresh
-   (force un refresh des capteurs Fleet API quand la voiture rentre)
+0. Refresh donnees (arrivee a la maison via Tessie GPS) :
+   Trigger: device_tracker.f_r_i_d_a_y_emplacement -> home
+   Action: delay 30s + script.tesla_refresh
+   (wake + force poll Tessie quand la voiture rentre)
 
 0b. Refresh donnees (connexion WiFi via Netgear) :
    Trigger: device_tracker.tesla_y -> home
-   Action: delay 1 min 30 + script.tesla_refresh
+   Action: delay 30s + script.tesla_refresh
    (declenche au plus tot apres l'entree au garage, complete l'auto 0)
 
 0c. Refresh sur saut de conso (desync charge demarree) :
    Trigger: sensor.p1_power_delta_2min > 3000 W
    Conditions: f_r_i_d_a_y_status on + charging != charging/starting
    Action: script.tesla_update_no_wake
-   (detecte un demarrage de charge non encore vu par la Fleet API :
-    saut de conso maison + voiture awake + API dit pas charge -> poll force)
+   (detecte un demarrage de charge non encore vu par Tessie :
+    saut de conso maison + voiture awake + Tessie dit pas charge -> poll force)
 
 0d. Refresh sur chute de conso (desync charge arretee) :
    Trigger: sensor.p1_power_delta_2min < -3000 W
-   Conditions: f_r_i_d_a_y_status on + location home (GPS OU WiFi) + charging in charging/starting
+   Conditions: f_r_i_d_a_y_etat on + emplacement home (GPS OU WiFi) + charge in charging/starting
    Action: script.tesla_update_no_wake
-   (symetrique de 0c : detecte un arret de charge non encore vu par la Fleet API)
+   (symetrique de 0c : detecte un arret de charge non encore vu par Tessie)
 
 0e. Stop charge HP a l'arrivee (GPS ou WiFi) :
-   Trigger: device_tracker.f_r_i_d_a_y_location -> home
+   Trigger: device_tracker.f_r_i_d_a_y_emplacement -> home
             OU device_tracker.tesla_y -> home
    Conditions: HC pending off + tarif HP (T1) + charge on + tesla_optimized_amp < 5A
    Action: switch.turn_off + input_boolean.turn_on(tesla_smart_charge) + notification
    Note: reaction immediate (pas de delai). Complement de l'auto 6 qui necessite
          3 min de charge active avant d'agir. La Tesla peut demarrer seule au
-         branchement avant que HA la detecte (lag Fleet API ~10-20 min).
+         branchement avant que HA la detecte (lag Tessie ~1-2 min).
          Pas de condition sur location = home (si WiFi trigger, GPS peut encore
          etre away).
          Active automatiquement le mode solaire : l'auto 3 (trigger power_available)
@@ -365,7 +368,7 @@ input_boolean.tesla_smart_charge (MAITRE)
       + switch.turn_on + set 5A + Awtrix + notification (message selon trigger.id)
 
 3b. Sync flag solar_charging (charge demarree hors auto 3) :
-  Trigger: switch.f_r_i_d_a_y_charge off → on
+  Trigger: switch.f_r_i_d_a_y_recharge off → on
   Conditions: maitre on + HC pending off + solar_charging off + home (GPS OU WiFi)
   --> input_boolean.turn_on(tesla_solar_charging)
       + awtrix_toggle_tesla = OFF (affichage charge)
@@ -391,16 +394,15 @@ input_boolean.tesla_smart_charge (MAITRE)
 
 5. Suivi amperage solaire (state-change avec garde de stabilite) :
   Trigger: sensor.tesla_optimized_amp stable depuis 30s
-  Conditions: maitre on + HC pending off + charge on + home (GPS OU WiFi) + delta >= 1A + cooldown 60s
+  Conditions: maitre on + HC pending off + charge on + home (GPS OU WiFi) + delta >= 1A
   --> number.set_value(clamp(optimized_amp, 5, tesla_max_amps))
-  Note: reagit en ~30-90s aux vraies variations (nuages, appareils qui demarrent),
-        ignore les oscillations courtes. Budget indicatif : 5-15 ordres/h normal,
-        30-40 ordres/h par ciel tres variable.
+  Note: 30s aligne sur le polling Tessie (~30s) — plancher pertinent.
+        Reagit aux vraies variations, ignore les oscillations < 30s.
 
 6. Pause solaire :
   Triggers:
     - tesla_optimized_amp < 5 pendant 3 min (surplus qui chute en cours de charge)
-    - switch.f_r_i_d_a_y_charge = on depuis 3 min (demarrage sans soleil : pas de transition detectable)
+    - switch.f_r_i_d_a_y_recharge = on depuis 3 min (demarrage sans soleil : pas de transition detectable)
   Conditions: maitre on + HC pending off + charge on + home (GPS OU WiFi) + tesla_optimized_amp < 5
   --> switch.turn_off (temporaire)
 
@@ -409,7 +411,7 @@ input_boolean.tesla_smart_charge (MAITRE)
   Conditions: maitre on + HC pending off + charge off + home (GPS OU WiFi)
   --> set charge_limit = tesla_soc_solaire_max + switch.turn_on + set amperage optimal
   Note: re-applique la limite avant turn_on (defense contre une derive
-        cote Tesla pendant la pause : commande Fleet API perdue avec
+        cote Tesla pendant la pause : commande Tessie perdue avec
         voiture endormie, modif manuelle via app, etc.).
 
 8. Protection reseau (reaction rapide, charge solaire uniquement) :
@@ -422,11 +424,11 @@ input_boolean.tesla_smart_charge (MAITRE)
 
 9. Reset limite + solar_charging :
   Triggers:
-    - cable    : binary_sensor.f_r_i_d_a_y_charge_cable = off pendant 30s
+    - cable    : binary_sensor.f_r_i_d_a_y_cable_de_charge = off pendant 30s
     - nuit     : sun.sun = below_horizon
   Conditions: HC pending = off
               ET (limite != tesla_soc_solaire_max OU solar_charging = on)
-  --> if limite differente : set charge_limit = tesla_soc_solaire_max  (evite appel Fleet API inutile)
+  --> if limite differente : set charge_limit = tesla_soc_solaire_max  (evite appel Tessie inutile)
   --> toujours : solar_charging = OFF + notification (raison, batterie, limite)
   Note: le OR sur solar_charging est indispensable — en charge solaire normale,
         la limite est deja a soc_solaire_max des le demarrage. Sans le OR,
@@ -448,15 +450,10 @@ input_boolean.tesla_smart_charge (MAITRE)
         Bloquee pendant HC : la HC utilise tesla_soc_cible, le helper sera
         applique automatiquement par les auto 2/4/5 a la fin HC.
 
-11. Refresh donnees apres set amperage (utilitaire, mode: restart) :
-  Trigger: state change number.f_r_i_d_a_y_charge_current
-  --> delay 10s + homeassistant.update_entity sur :
-      number.charge_current, number.charge_limit, sensor.charger_current,
-      sensor.charger_power, sensor.niveau_de_batterie
-  Note: poll Fleet API sans wake (la voiture est forcement online pendant
-        une charge active). mode: restart pour ne refresh qu'une fois si
-        plusieurs set_value s'enchainent. Detecte aussi les modifs externes
-        (app Tesla, ecran tactile) qui remontent au polling.
+11. (Supprimee) Refresh donnees apres set amperage :
+  Generait 5 appels Fleet API apres chaque set_value amperage → depassement quota.
+  Avec Tessie : pas de quota direct — Tessie gere le polling Tesla de son cote.
+  Le coordinator Tessie poll automatiquement toutes les ~30s quand la voiture est eveilee.
 ```
 
 ## Scenarios d'arrivee et demarrage de charge
@@ -465,13 +462,13 @@ Cette matrice couvre tous les cas possibles quand la voiture rentre et se branch
 
 | # | Scenario | Tarif | Surplus | switch (HA) | Chaine d'automations | solar_charging |
 |---|---|---|---|---|---|---|
-| 1 | Arrivee + cable branche (Fleet API pas encore mis a jour) | HP/HC | any | OFF | `charger_plugin` 30s → auto 3 | ON ✓ |
-| 2 | Arrivee + Tesla demarre seule en < 30s (Fleet API rapide) | HP | any | OFF→ON | transition switch → auto 3b | ON ✓ |
+| 1 | Arrivee + cable branche (Tessie pas encore mis a jour) | HP/HC | any | OFF | `charger_plugin` 30s → auto 3 | ON ✓ |
+| 2 | Arrivee + Tesla demarre seule en < 30s (Tessie rapide) | HP | any | OFF→ON | transition switch → auto 3b | ON ✓ |
 | 3 | Arrivee HP, switch deja ON, pas de surplus | HP | < 5A | ON | auto 0e : stoppe + smart_charge ON → `power_available` → auto 3 | ON ✓ |
 | 4 | Arrivee en HC (night_charge_pending = ON) | HC | any | any | automations solaires bloquees (pending = ON) | N/A ✓ |
 | 5 | Voiture deja home, cable branche, surplus atteint le seuil | HP | > 2A for 1 min | OFF | `power_available` → auto 3 | ON ✓ |
 
-**Cas limite residuel (tres rare)** : si la voiture arrive avec switch = ON stale dans HA ET que le refresh des autos 0/0b n'est pas encore effectue ET que l'utilisateur branche le cable dans les < 90s suivant l'arrivee, aucune transition `off→on` n'est detectee. Dans ce cas, l'auto 6 (Pause solaire, trigger `switch ON depuis 3 min`) detecra l'absence de surplus et mettra en pause ; solar_charging restera OFF jusqu'a un prochain `off→on`. En pratique, le refresh des autos 0/0b precede le branchement manuel (1 min 30 minimum de delai).
+**Cas limite residuel (tres rare)** : si la voiture arrive avec switch = ON stale dans HA ET que le refresh des autos 0/0b n'est pas encore effectue ET que l'utilisateur branche le cable dans les < 90s suivant l'arrivee, aucune transition `off→on` n'est detectee. Dans ce cas, l'auto 6 (Pause solaire, trigger `switch ON depuis 3 min`) detecra l'absence de surplus et mettra en pause ; solar_charging restera OFF jusqu'a un prochain `off→on`. En pratique, le refresh des autos 0/0b precede le branchement manuel (30s minimum de delai).
 
 **Complement auto 3 / auto 3b** : les deux automations sont mutuellement exclusives grace a l'ordre des actions.
 - Auto 3 pose `solar_charging = ON` **avant** `switch.turn_on`. Quand le switch passe ON, auto 3b voit `solar_charging = ON` → sa condition echoue → elle ne fire pas.
@@ -482,17 +479,17 @@ Pas de doublon possible : une seule des deux automations envoie une notification
 
 | Protection | Mecanisme |
 |---|---|
-| **Rate-limit Fleet API** | Suivi solaire : trigger stable 30s + cooldown 60s. Suivi nocturne : tick 60s + delta ≥ 1A |
+| **Pas de quota direct (Tessie)** | Tessie gere le polling Tesla — pas de quota HA a surveiller. Garde conservee : trigger stable 30s + delta >= 1A. Auto 11 supprimee (etait la principale source de depassement quota Fleet API). Cooldown 120s supprime (n'etait utile que pour limiter les appels Fleet API). |
 | **Anti-flapping** | Hystéresis 3 min avant pause/resume |
 | **Micro-ajustements** | Commande envoyee seulement si delta >= 1A |
 | **Minimum amperage** | 5A minimum (contrainte Tesla) |
 | **Maximum amperage** | 28A maximum (limite installation, configurable via `input_number.tesla_max_amps`) |
 | **Pas de soleil** | Detection via le signe de `p1_power` (negatif = injection). Si la charge demarre sans surplus, l'automation 6 la met en pause au bout de 3 min (trigger `switch=on depuis 3 min`) |
-| **Geolocalisation** | Uniquement quand la voiture est a la maison — condition `or` : `device_tracker.f_r_i_d_a_y_location` (Fleet API GPS) OU `device_tracker.tesla_y` (WiFi Netgear) |
-| **Arret HP a l'arrivee** | Auto 0e coupe immediatement la charge si arrivee en HP sans surplus solaire, **puis active tesla_smart_charge** pour que l'auto 3 reprenne la charge automatiquement quand le soleil devient suffisant. Lag Fleet API ~10-20 min : reagit des que GPS ou WiFi detecte l'arrivee |
+| **Geolocalisation** | Uniquement quand la voiture est a la maison — condition `or` : `device_tracker.f_r_i_d_a_y_emplacement` (Tessie GPS) OU `device_tracker.tesla_y` (WiFi Netgear) |
+| **Arret HP a l'arrivee** | Auto 0e coupe immediatement la charge si arrivee en HP sans surplus solaire, **puis active tesla_smart_charge** pour que l'auto 3 reprenne la charge automatiquement quand le soleil devient suffisant. Lag Tessie ~1-2 min : reagit des que GPS ou WiFi detecte l'arrivee |
 | **Limite compteur** | `sensor.tesla_max_amp_grid` plafonne l'amperage a la capacite reseau (`tesla_grid_limit` - 500W marge) |
 | **Protection rapide** | Automation 8 reagit en < 20s si soutirage > (`tesla_grid_limit` - 500W marge), defaut 15 000W |
-| **Arret HC precis au %** | Auto 1 force `charge_limit = soc_cible` au demarrage HC : la voiture s'arrete nativement a la cible (independant du polling Fleet API). La limite est restauree a `tesla_soc_solaire_max` par les auto 2/4/5 a la fin HC |
+| **Arret HC precis au %** | Auto 1 force `limite_de_recharge = soc_cible` au demarrage HC : la voiture s'arrete nativement a la cible (independant du polling Tessie). La limite est restauree a `tesla_soc_solaire_max` par les auto 2/4/5 a la fin HC |
 
 ## Affichage Awtrix
 
@@ -505,17 +502,17 @@ L'automation **Awtrix Tesla Charging** affiche sur l'afficheur LED :
 
 ```
 [P1 Meter]     --> active_power + active_voltage_l1 --|-----> sensor.tesla_max_amp_grid
-[HA commande]  --> number.f_r_i_d_a_y_charge_current --|            |
+[HA commande]  --> number.f_r_i_d_a_y_courant_de_recharge --|            |
                    (garde: switch=on ET cable=on sinon 0)           |
                                                        v            v
                                      sensor.tesla_optimized_amp (double cap: solaire + reseau)
                                                   |
-                                5. Suivi amperage (state-change + 30s stable, cooldown 60s) --- normal
+                                5. Suivi amperage (state-change + 30s stable) --- normal
                                 8. Protection reseau (10s) --- urgence (> 14 500W)
                                                   |
-                                number.set_value (number.f_r_i_d_a_y_charge_current)
+                                number.set_value (number.f_r_i_d_a_y_courant_de_recharge)
                                                   |
-                                            [Tesla Fleet API]
+                                         [Tessie API → Tesla]
 ```
 
 `sensor.solar_total` (defini dans `power_and_energy.yaml` avec unique_id `sensor.solar_total_power` mais entity_id derive du nom) sert uniquement aux notifications. Il n'intervient plus dans le calcul de l'amperage optimal — le signe de `p1_power` suffit.
@@ -558,13 +555,13 @@ Sept automations (6 + 1 sync helper). L'evaluation de `tesla_charge_nocturne_nec
 1. Demarrage HC :
   Triggers:
     - tariff  : sensor.p1_meter_3c39e7284d28_active_tariff passe a '2' (HC)
-    - cable   : binary_sensor.f_r_i_d_a_y_charge_cable = on pendant 30s
+    - cable   : binary_sensor.f_r_i_d_a_y_cable_de_charge = on pendant 30s
     - restart : homeassistant.event = start
   Conditions: maitre on + tarif=2 + home (GPS OU WiFi) + cable + batterie < cible
               + (trigger=restart ET pending=on)
                 OU sensor.tesla_charge_nocturne_necessaire IN ['oui_semaine','oui_meteo']
   Action: pending ON + script.tesla_refresh
-          + number.f_r_i_d_a_y_charge_limit = soc_cible (arret natif Tesla)
+          + number.f_r_i_d_a_y_limite_de_recharge = soc_cible (arret natif Tesla)
           + switch.turn_on + set max_amps + notif
   Note: se declenche sur toutes les plages HC (nocturne et midi).
         Restart HA : reprend la charge si pending etait deja actif.
@@ -575,7 +572,7 @@ Sept automations (6 + 1 sync helper). L'evaluation de `tesla_charge_nocturne_nec
 2. Arret - SoC atteint :
   Triggers:
     - batt       : sensor batterie >= SoC cible (trigger template)
-    - switch_off : switch.f_r_i_d_a_y_charge passe a off
+    - switch_off : switch.f_r_i_d_a_y_recharge passe a off
                    (voiture arretee seule a charge_limit native)
   Conditions: pending on + sensor batterie >= SoC cible
               (filtre les pauses reseau et cable debranche)
@@ -612,7 +609,7 @@ Sept automations (6 + 1 sync helper). L'evaluation de `tesla_charge_nocturne_nec
   Note: charge_limit restauree par securite (filet si auto 2 ratee).
 
 5. Cable debranche :
-  Trigger: binary_sensor.f_r_i_d_a_y_charge_cable = off pendant 30s
+  Trigger: binary_sensor.f_r_i_d_a_y_cable_de_charge = off pendant 30s
   Conditions: pending on
   Action: switch.turn_off + charge_limit = tesla_soc_solaire_max + pending OFF + notification
   Evite que resume reseau tente de relancer en boucle jusqu'a la fin HC.
@@ -671,16 +668,16 @@ Les notifications sont envoyees a Fabien via `script.notify_fabien` avec des det
 
 1. **Integration prix spot** : Si tarif dynamique (Belpex), charger quand le prix est bas
 2. **Priorite electromenager** : Reduire la charge Tesla quand la machine a laver ou le seche-linge tournent (sensors existants : `binary_sensor.machine_a_laver_en_cours`, `binary_sensor.sechoir_en_cours`)
-3. **Historique et stats** : Tracker l'energie chargee en solaire vs reseau via `charge_energy_added`
-4. **Pre-conditionnement intelligent** : Utiliser `add_precondition_schedule` ou `auto_conditioning_start` pour chauffer/refroidir l'habitacle avant depart (basee sur le trajet matin Waze)
+3. **Historique et stats** : Tracker l'energie chargee en solaire vs reseau via `sensor.f_r_i_d_a_y_energie_ajoutee_derniere_recharge`
+4. **Pre-conditionnement intelligent** : Utiliser `climate.f_r_i_d_a_y_climatisation` ou `auto_conditioning_start` pour chauffer/refroidir l'habitacle avant depart (basee sur le trajet matin Waze)
 
 ### Fichiers
 
 | Fichier | Contenu |
 |---|---|
-| `automation/TeslaSmartCharge.yaml` | Smart charge solaire : 18 automations (incl. stop HP arrivee, sync flag solar_charging, refresh WiFi Netgear, refresh sur saut/chute conso, protection reseau, reset + sync helper SoC max, refresh apres set amps) |
+| `automation/TeslaSmartCharge.yaml` | Smart charge solaire : 18 automations (incl. stop HP arrivee, sync flag solar_charging, refresh WiFi Netgear, refresh sur saut/chute conso, protection reseau, reset + sync helper SoC max) |
 | `automation/TeslaNightCharge.yaml` | Charge HC (tarif P1 Meter) : 7 automations (incl. suivi reseau, cable debranche, sync helper cible) |
-| `script/tesla_refresh.yaml` | Scripts utilitaires : `tesla_refresh` (wake + update) et `tesla_update_no_wake` (poll Fleet sans wake) |
+| `script/tesla_refresh.yaml` | Scripts utilitaires : `tesla_refresh` (wake + poll Tessie 10s) et `tesla_update_no_wake` (poll Tessie sans wake) |
 | `template_sensors/tesla_smart_charge.yaml` | Calcul `sensor.tesla_optimized_amp` et `sensor.tesla_max_amp_grid` |
 | `template_sensors/power_and_energy.yaml` | Definit `sensor.solar_total` (unique_id `sensor.solar_total_power`) utilise par les notifs |
 | `template_sensors/tesla_night_charge.yaml` | Decision charge HC, detection tarif, duree estimee |
@@ -689,8 +686,8 @@ Les notifications sont envoyees a Fabien via `script.notify_fabien` avec des det
 
 ### Notes
 
-- Les conditions de geolocalisation acceptent `device_tracker.f_r_i_d_a_y_location` (Fleet API GPS) OU `device_tracker.tesla_y` (WiFi Netgear) — la premiere arrivee l'emporte
-- Detection cable branche via `binary_sensor.f_r_i_d_a_y_charge_cable`
+- **Integration** : Tessie (remplace Tesla Fleet API depuis 2026-05-30). Vehicule : F.R.I.D.A.Y. — prefixe entites `f_r_i_d_a_y_`. Tessie gere le quota Tesla de son cote, pas de limite HA.
+- Les conditions de geolocalisation acceptent `device_tracker.f_r_i_d_a_y_emplacement` (Tessie GPS) OU `device_tracker.tesla_y` (WiFi Netgear) — la premiere arrivee l'emporte
+- Detection cable branche via `binary_sensor.f_r_i_d_a_y_cable_de_charge`
 - Amperage max borne a 28A (limite installation), configurable via `input_number.tesla_max_amps`
 - Previsions solaires via integration Forecast.Solar (`sensor.energy_production_tomorrow`)
-- Les noms d'entites "probables" dans la section non utilisee doivent etre verifies dans HA (Outils dev > Etats)
