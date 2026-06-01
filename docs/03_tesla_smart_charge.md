@@ -37,6 +37,7 @@ flowchart TD
     Trig -->|cable branche 30s<br/>OR vitesse > 0<br/>OR surplus > 2A pendant 1 min| A3[3. Demarrage auto]
     Trig -->|switch off → on<br/>+ maitre on + pending off<br/>+ solar_charging off + home| A3b[3b. Sync flag<br/>solar_charging]
     Trig -->|trappe fermee 1 min<br/>OR vitesse < 1 pendant 1 min<br/>OR amps < 1 pendant 1 min| A4[4. Arret auto]
+    Trig -->|charge = complete pendant 30s<br/>+ solar_charging on| A4b[4b. Charge complete<br/>limite atteinte]
     Trig -->|optimized_amp stable 30s| A5[5. Suivi amperage]
     Trig -->|surplus < 5A pendant 3 min<br/>OR switch ON depuis 3 min| A6[6. Pause solaire]
     Trig -->|surplus > 4A pendant 3 min| A7[7. Resume solaire]
@@ -53,12 +54,13 @@ flowchart TD
 
     A3 --> DoStart
     A3b --> SolarFlagOn[solar_charging = ON<br/>idempotent]
-    A4 --> DoStop[switch OFF<br/>Awtrix + notif<br/>+ refresh]
+    A4 --> DoStop[switch OFF<br/>solar_charging OFF<br/>Awtrix + notif<br/>+ refresh]
+    A4b --> DoStopComplete[switch OFF idempotent<br/>solar_charging OFF<br/>Awtrix + notif limite]
     A5 --> CondDelta{delta >= 1A ?}
     CondDelta -->|oui| SetAmps["set amps<br/>= clamp(opt, 5, tesla_max_amps)"]
     A6 --> CondLow{charge on<br/>ET surplus < 5A ?}
     CondLow -->|oui| Pause[switch OFF]
-    A7 --> CondResume{charge off<br/>ET home ?}
+    A7 --> CondResume{solar_charging on<br/>ET charge off<br/>ET bat < limite-1 ?}
     CondResume -->|oui| Resume[set charge_limit = soc_solaire_max<br/>switch ON<br/>+ set amps optimal]
     A8 --> CondGrid{max_grid < 5A ?}
     CondGrid -->|oui| GridPause[switch OFF + notif<br/>protection reseau]
@@ -299,7 +301,7 @@ Toute la logique est dans un fichier unique : `automation/TeslaSmartCharge.yaml`
 - **`script.tesla_update_no_wake`** = force un poll Tessie sans wake (rafraichit courant_du_chargeur, limite_de_recharge, cable_de_charge, etat). Utile pour bouton dashboard quand la voiture est deja en ligne — pas de consommation 12V
 - Le suivi amperage est toujours actif, ses conditions internes l'empechent d'agir quand la charge est arretee
 
-### Les 17 automations
+### Les 18 automations
 
 ```
 0. Refresh donnees (arrivee a la maison via Tessie GPS) :
@@ -359,17 +361,23 @@ input_boolean.tesla_smart_charge (MAITRE)
     - manual_start   : vitesse_de_charge > 0
     - charger_plugin : charge_cable = on pendant 30s
     - power_available: tesla_optimized_amp > 2 pendant 1 min
-  Conditions: maitre on + HC pending off + home (GPS OU WiFi) + charge off + batterie pas pleine
+  Conditions: maitre on + HC pending off + home (GPS OU WiFi) + cable branche + charge off
+              + batterie pas pleine
               + derniere `tesla_smart_charge_pause_surplus_insuffisant` > 5 min
                 (entity_id reel de l'auto 6 dans la registry HA)
                 (anti-doublon : si auto 6 vient de pauser, laisse Resume #7
                  gerer la reprise — seuils plus robustes : 4A pendant 3 min)
   --> script.tesla_refresh + set charge_limit = tesla_soc_solaire_max
       + switch.turn_on + set 5A + Awtrix + notification (message selon trigger.id)
+  Note: la condition cable est indispensable pour les triggers manual_start et
+        power_available. power_available est base sur le P1 meter (independant
+        de la voiture) : il fire des que le solaire est suffisant, meme si la
+        voiture est absente. Sans cable=on, un GPS Tessie encore stale sur "home"
+        provoque le demarrage et la notification alors que la voiture est partie.
 
 3b. Sync flag solar_charging (charge demarree hors auto 3) :
   Trigger: switch.f_r_i_d_a_y_recharge off → on
-  Conditions: maitre on + HC pending off + solar_charging off + home (GPS OU WiFi)
+  Conditions: maitre on + HC pending off + solar_charging off + home (GPS OU WiFi) + cable branche
   --> input_boolean.turn_on(tesla_solar_charging)
       + awtrix_toggle_tesla = OFF (affichage charge)
       + notification "Smart Charge detecte (charge demarree par la voiture)"
@@ -379,8 +387,10 @@ input_boolean.tesla_smart_charge (MAITRE)
         Ne fire PAS dans le cas normal (auto 3 pose solar_charging AVANT switch.turn_on
         depuis cette version — voir ordre des actions autos 1 et 3) : la condition
         solar_charging=off est fausse quand c'est auto 3 qui demarre.
-        Ne fire QUE si c'est la voiture qui a demarre seule. Dans ce cas il envoie
-        la notification et met a jour l'Awtrix.
+        Ne fire QUE si c'est la voiture qui a demarre seule (home + cable).
+        La condition cable empeche solar_charging d'etre pose ON si la voiture charge
+        ailleurs (Supercharger) avec un GPS Tessie encore stale sur "home" : sans cette
+        garde, auto 7 (Resume) enverrait ensuite des commandes a la voiture absente.
         Sans ce filet, solar_charging resterait OFF → auto 7 (Resume) ne pourrait
         pas reprendre apres une pause solaire.
 
@@ -390,7 +400,21 @@ input_boolean.tesla_smart_charge (MAITRE)
     - manual_stop    : vitesse_de_charge < 1 pendant 1 min
     - amps_too_low   : charger_current < 1 pendant 1 min
   Conditions: maitre on + HC pending off + charge on
-  --> switch.turn_off + Awtrix + notification (message selon trigger.id) + script.tesla_refresh
+  --> switch.turn_off + solar_charging OFF + Awtrix + notification (message selon trigger.id) + script.tesla_refresh
+
+4b. Charge complete — limite Tesla atteinte :
+  Trigger: sensor.f_r_i_d_a_y_charge -> 'complete' pendant 30s
+  Conditions: maitre on + HC pending off + solar_charging on
+  --> switch.turn_off (idempotent) + solar_charging OFF + Awtrix + notification "limite atteinte"
+  Note: comble le cas ou la Tesla s'arrete seule a sa limite de charge.
+        L'auto 4 ne peut pas intercepter cet evenement : ses triggers
+        (vitesse/courant < 1 for:1min) arrivent apres que Tessie a deja
+        remonte switch = OFF → sa condition switch = on echoue →
+        solar_charging reste bloque a ON → auto 7 (Resume) relance
+        la charge en boucle sans envoyer de notification.
+        Condition solar_charging = on : evite le double-fire avec auto 4
+        quand c'est HA qui arrete la charge (auto 4 clear solar_charging
+        avant que la transition 'complete' soit stable 30s).
 
 5. Suivi amperage solaire (state-change avec garde de stabilite) :
   Trigger: sensor.tesla_optimized_amp stable depuis 30s
@@ -408,11 +432,17 @@ input_boolean.tesla_smart_charge (MAITRE)
 
 7. Resume solaire :
   Trigger: tesla_optimized_amp > 4 pendant 3 min
-  Conditions: maitre on + HC pending off + charge off + home (GPS OU WiFi)
+  Conditions: maitre on + HC pending off + solar_charging on + charge off
+              + batterie < charge_limit - 1  (filet : n'essaie pas si limite deja atteinte)
   --> set charge_limit = tesla_soc_solaire_max + switch.turn_on + set amperage optimal
-  Note: re-applique la limite avant turn_on (defense contre une derive
+  Note: solar_charging remplace le check home/cable : si la session est active,
+        la voiture est forcement home + branchee (reset par autos 2/4/4b/9).
+        Re-applique la limite avant turn_on (defense contre une derive
         cote Tesla pendant la pause : commande Tessie perdue avec
         voiture endormie, modif manuelle via app, etc.).
+        Condition SoC : filet de securite contre la boucle de relance si
+        auto 4b a rate (ex : transition 'complete' manquee car voiture endormie).
+        Fix primaire = auto 4b.
 
 8. Protection reseau (reaction rapide, charge solaire uniquement) :
   Trigger: template — p1_active_power > (tesla_grid_limit - 500W) pendant 10s
@@ -426,9 +456,11 @@ input_boolean.tesla_smart_charge (MAITRE)
   Triggers:
     - cable    : binary_sensor.f_r_i_d_a_y_cable_de_charge = off pendant 30s
     - nuit     : sun.sun = below_horizon
+    - depart   : device_tracker.f_r_i_d_a_y_emplacement -> not_home pendant 60s
   Conditions: HC pending = off
               ET (limite != tesla_soc_solaire_max OU solar_charging = on)
-  --> if limite differente : set charge_limit = tesla_soc_solaire_max  (evite appel Tessie inutile)
+  --> if trigger != depart ET limite differente : set charge_limit = tesla_soc_solaire_max
+      (evite appel Tessie inutile ; skip si depart car voiture inaccessible)
   --> toujours : solar_charging = OFF + notification (raison, batterie, limite)
   Note: le OR sur solar_charging est indispensable — en charge solaire normale,
         la limite est deja a soc_solaire_max des le demarrage. Sans le OR,
@@ -438,6 +470,10 @@ input_boolean.tesla_smart_charge (MAITRE)
         Resume a envoyer des commandes a la voiture a distance).
         sun.sun plutot que tarif T2 — la HC midi (11h-17h) ne doit pas resetter
         la limite alors que le surplus est encore exploitable.
+        Trigger depart : filet contre le lag Tessie sur cable=OFF. Si la voiture
+        part et que Tessie n'a pas encore mis a jour cable=OFF, solar_charging
+        reste ON. Des que le GPS detecte le depart (60s), la session est resetee
+        sans attendre la nuit ou le prochain poll cable.
 
 10. Sync helper tesla_soc_solaire_max :
   Trigger: state change input_number.tesla_soc_solaire_max
@@ -485,7 +521,8 @@ Pas de doublon possible : une seule des deux automations envoie une notification
 | **Minimum amperage** | 5A minimum (contrainte Tesla) |
 | **Maximum amperage** | 28A maximum (limite installation, configurable via `input_number.tesla_max_amps`) |
 | **Pas de soleil** | Detection via le signe de `p1_power` (negatif = injection). Si la charge demarre sans surplus, l'automation 6 la met en pause au bout de 3 min (trigger `switch=on depuis 3 min`) |
-| **Geolocalisation** | Uniquement quand la voiture est a la maison — condition `or` : `device_tracker.f_r_i_d_a_y_emplacement` (Tessie GPS) OU `device_tracker.tesla_y` (WiFi Netgear) |
+| **Geolocalisation** | Uniquement quand la voiture est a la maison — condition `or` : `device_tracker.f_r_i_d_a_y_emplacement` (Tessie GPS) OU `device_tracker.tesla_y` (WiFi Netgear). Autos 3 et 3b ajoutent aussi la condition cable pour neutraliser un GPS Tessie stale |
+| **Protection GPS stale** | Les autos 3 et 3b exigent `cable_de_charge = on` en plus de `home` : le trigger `power_available` (base sur le P1 meter) fire meme sans voiture ; sans cable=on, un GPS encore home provoque une charge fantome. Auto 9 reset `solar_charging` des que le GPS detecte le depart (60s), sans attendre la nuit |
 | **Arret HP a l'arrivee** | Auto 0e coupe immediatement la charge si arrivee en HP sans surplus solaire, **puis active tesla_smart_charge** pour que l'auto 3 reprenne la charge automatiquement quand le soleil devient suffisant. Lag Tessie ~1-2 min : reagit des que GPS ou WiFi detecte l'arrivee |
 | **Limite compteur** | `sensor.tesla_max_amp_grid` plafonne l'amperage a la capacite reseau (`tesla_grid_limit` - 500W marge) |
 | **Protection rapide** | Automation 8 reagit en < 20s si soutirage > (`tesla_grid_limit` - 500W marge), defaut 15 000W |
@@ -651,6 +688,7 @@ Les notifications sont envoyees a Fabien via `script.notify_fabien` avec des det
 | Smart Charge demarre (auto 3) | Raison (cable/solaire/manuel), batterie %, limite %, production solaire W |
 | Smart Charge detecte (auto 3b) | Charge demarree par la voiture elle-meme (auto-charge native) — batterie %, limite % |
 | Smart Charge arrete | Raison (debranche/manuel/termine), batterie %, energie ajoutee kWh |
+| **Charge complete — limite atteinte** (auto 4b) | Limite SoC %, batterie %, energie ajoutee kWh — envoyee quand la Tesla s'arrete seule a sa limite (cas non couvert par auto 4) |
 | Smart Charge active/desactive | Batterie %, limite %, production solaire W, energie ajoutee |
 | Charge HC demarree | Raison (semaine/meteo), batterie actuelle → cible, amperage, duree estimee, prevision solaire |
 | Charge HC SoC atteint | Batterie % |
@@ -675,7 +713,7 @@ Les notifications sont envoyees a Fabien via `script.notify_fabien` avec des det
 
 | Fichier | Contenu |
 |---|---|
-| `automation/TeslaSmartCharge.yaml` | Smart charge solaire : 18 automations (incl. stop HP arrivee, sync flag solar_charging, refresh WiFi Netgear, refresh sur saut/chute conso, protection reseau, reset + sync helper SoC max) |
+| `automation/TeslaSmartCharge.yaml` | Smart charge solaire : 18 automations (incl. charge complete limite atteinte, stop HP arrivee, sync flag solar_charging, refresh WiFi Netgear, refresh sur saut/chute conso, protection reseau, reset + sync helper SoC max) |
 | `automation/TeslaNightCharge.yaml` | Charge HC (tarif P1 Meter) : 7 automations (incl. suivi reseau, cable debranche, sync helper cible) |
 | `script/tesla_refresh.yaml` | Scripts utilitaires : `tesla_refresh` (wake + poll Tessie 10s) et `tesla_update_no_wake` (poll Tessie sans wake) |
 | `template_sensors/tesla_smart_charge.yaml` | Calcul `sensor.tesla_optimized_amp` et `sensor.tesla_max_amp_grid` |

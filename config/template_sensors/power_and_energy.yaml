@@ -9,7 +9,7 @@
 #   - P1 Meter HomeWizard  : soutirage / injection reseau
 #   - Onduleurs SMA x2     : production solaire (sb5_0_1av_41_*)
 #   - Prises Shelly/Nous   : consommation par circuit
-#   - Fleet API Tesla      : charge vehicule
+#   - Tessie               : charge vehicule
 #
 # Puissances (W) :
 #   - Lights Power    : eclairage (21 circuits Shelly)

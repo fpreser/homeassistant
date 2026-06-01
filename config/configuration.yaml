@@ -246,6 +246,16 @@ command_line:
 # vu par la Fleet API par ex.) sans dependre du seuil absolu.
 # Utilise par : automation.tesla_smart_charge_refresh_load_jump
 sensor:
+  # Intégrale de la puissance chargeur Tesla (kW) -> énergie chargée (kWh).
+  # Remplace lifetime_energy_used (qui incluait les Superchargeurs).
+  # Démarre à 0 à chaque restart HA ; total_increasing permet les stats HA.
+  - platform: integration
+    source: sensor.f_r_i_d_a_y_puissance_du_chargeur
+    name: "F.R.I.D.A.Y. Énergie Chargée"
+    unique_id: friday-energie-chargee
+    round: 3
+    method: left
+
   - platform: statistics
     name: "P1 Power Delta 2min"
     unique_id: p1_power_delta_2min

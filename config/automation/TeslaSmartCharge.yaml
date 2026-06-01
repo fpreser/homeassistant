@@ -15,6 +15,7 @@
 #  0c. Refresh sur saut conso (delta P1 > 3kW + voiture awake + API dit pas charge)
 #  0d. Refresh sur chute conso (delta P1 < -3kW + voiture home/awake + API dit charge)
 #  0e. Stop charge HP a l'arrivee (GPS ou WiFi, HP, pas de surplus) + active mode solaire
+#  0f. Verification au demarrage HA (solar_charging stale + voiture absente → reset)
 #   1. Activation du mode    (toggle ON + surplus solaire)
 #  1b. Activation en attente (toggle ON sans soleil → notif)
 #   2. Desactivation du mode (toggle OFF)
@@ -25,7 +26,7 @@
 #   6. Pause solaire         (surplus < 5A pendant 3 min)
 #   7. Resume solaire        (surplus >= 5A pendant 3 min)
 #   8. Protection reseau     (soutirage > tesla_grid_limit - 500W marge)
-#   9. Reset limite + solar_charging (cable debranche ou nuit tombee)
+#   9. Reset limite + solar_charging (cable debranche, nuit tombee, ou depart maison)
 #  10. Sync helper SoC max   (modification utilisateur depuis le dashboard)
 #  11. Refresh apres amps    (poll Tessie 10s apres set ampérage)
 #
@@ -141,6 +142,63 @@
           {% set bat = states('sensor.f_r_i_d_a_y_niveau_de_la_batterie') | int(0) %}
           Charge arretee a l'arrivee (heures pleines, pas de surplus). Batterie : {{ bat }}%.
           Mode solaire active — reprendra automatiquement des que le surplus est suffisant.
+  mode: single
+
+#####################################################################
+# 0f. VERIFICATION AU DEMARRAGE HA (restart)
+#####################################################################
+# Au demarrage de HA, verifie la coherence de solar_charging.
+#
+# Cas couvert : HA redemarré alors que solar_charging etait deja stale
+# (voiture partie avant le restart, device_tracker deja not_home).
+# Dans ce cas l'auto 9 trigger "depart" ne peut plus fire (aucune
+# transition not_home → il faut relancer l'etat).
+# Sans ce check, solar_charging reste ON → l'auto 7 (Resume) peut
+# envoyer des commandes a la voiture absente des que le solaire monte.
+#
+# Delai 60s : attend l'initialisation des integrations Tessie et
+# Netgear avant de lire les device_trackers (peuvent etre "unknown"
+# les premieres secondes apres demarrage).
+# Le if interne re-verifie la position apres le delai : si la voiture
+# rentre pendant ce temps, on ne touche pas a solar_charging.
+#####################################################################
+- id: 'tesla_smart_charge_startup_check'
+  alias: Tesla Smart Charge - Verification au demarrage
+
+  trigger:
+    - platform: homeassistant
+      event: start
+
+  condition:
+    - condition: state
+      entity_id: input_boolean.tesla_solar_charging
+      state: 'on'
+    - condition: state
+      entity_id: input_boolean.tesla_night_charge_pending
+      state: 'off'
+
+  action:
+    - delay:
+        seconds: 60
+    - if:
+        - condition: state
+          entity_id: input_boolean.tesla_solar_charging
+          state: 'on'
+        - condition: template
+          value_template: >-
+            {{ not is_state('device_tracker.f_r_i_d_a_y_emplacement', 'home')
+               and not is_state('device_tracker.tesla_y', 'home') }}
+      then:
+        - service: input_boolean.turn_off
+          target:
+            entity_id: input_boolean.tesla_solar_charging
+        - service: script.notify_fabien
+          data:
+            title: Tesla Smart Charge
+            message: >-
+              {% set bat = states('sensor.f_r_i_d_a_y_niveau_de_la_batterie') | int(0) %}
+              Demarrage HA : session solaire nettoyee (voiture absente, solar_charging remis a OFF).
+              Batterie : {{ bat }}%.
   mode: single
 
 #####################################################################
@@ -439,6 +497,14 @@
         - condition: state
           entity_id: device_tracker.tesla_y
           state: home
+    # Garde cable obligatoire : empeche le trigger power_available (base sur
+    # le P1 meter, independant de la voiture) de demarrer la charge quand la
+    # voiture est absente avec un device_tracker GPS encore stale sur "home".
+    # Empeche aussi manual_start de reagir si la voiture charge ailleurs
+    # (Supercharger) pendant que Tessie n'a pas encore mis a jour le GPS.
+    - condition: state
+      entity_id: binary_sensor.f_r_i_d_a_y_cable_de_charge
+      state: 'on'
     - condition: state
       entity_id: switch.f_r_i_d_a_y_recharge
       state: 'off'
@@ -545,6 +611,13 @@
         - condition: state
           entity_id: device_tracker.tesla_y
           state: home
+    # Garde cable : si la Tesla demarre une charge ailleurs (Supercharger) et
+    # que le GPS est encore stale sur "home", on ne pose pas solar_charging=ON.
+    # Sans cette garde, solar_charging resterait ON et l'auto 7 (Resume)
+    # enverrait des commandes a la voiture absente.
+    - condition: state
+      entity_id: binary_sensor.f_r_i_d_a_y_cable_de_charge
+      state: 'on'
   action:
     - service: input_boolean.turn_on
       target:
@@ -629,6 +702,68 @@
           Batterie : {{ bat }}%.
           {% if energy > 0 %}Energie ajoutee : {{ energy }} kWh.{% endif %}
     - service: script.tesla_refresh
+  mode: single
+
+#####################################################################
+# 4b. CHARGE COMPLETE — LIMITE TESLA ATTEINTE
+#####################################################################
+# Quand la Tesla atteint sa limite de charge et s'arrete elle-meme
+# (sensor.f_r_i_d_a_y_charge passe a 'complete'), l'auto 4 ne peut
+# pas s'executer : ses triggers (vitesse/courant < 1 for 1 min)
+# arrivent apres que Tessie a deja remonte switch = OFF, donc sa
+# condition switch = on echoue et solar_charging reste bloque a ON.
+# L'auto 7 (Resume) voit alors solar_charging=ON + switch=OFF +
+# surplus > 4A et tente de relancer la charge en boucle.
+#
+# Cette auto comble ce cas :
+#   - clear solar_charging (bloque auto 7)
+#   - arrete le switch (idempotent si deja OFF)
+#   - envoie la notification "charge terminee — limite atteinte"
+#
+# Condition solar_charging = on : evite le double-fire avec auto 4
+# quand c'est HA qui a arrete la charge (auto 4 clear solar_charging
+# avant que cette auto fasse la transition 'complete').
+#####################################################################
+- id: 'tesla_smart_charge_charge_complete'
+  alias: Tesla Smart Charge - Charge complete (limite atteinte)
+
+  trigger:
+    - platform: state
+      entity_id: sensor.f_r_i_d_a_y_charge
+      to: 'complete'
+      for:
+        seconds: 30
+  condition:
+    - condition: state
+      entity_id: input_boolean.tesla_smart_charge
+      state: 'on'
+    - condition: state
+      entity_id: input_boolean.tesla_night_charge_pending
+      state: 'off'
+    - condition: state
+      entity_id: input_boolean.tesla_solar_charging
+      state: 'on'
+  action:
+    - service: switch.turn_off
+      target:
+        entity_id: switch.f_r_i_d_a_y_recharge
+    - service: input_boolean.turn_off
+      target:
+        entity_id: input_boolean.tesla_solar_charging
+    - delay:
+        seconds: 3
+    - service: input_boolean.turn_on
+      target:
+        entity_id: input_boolean.awtrix_toggle_tesla
+    - service: script.notify_fabien
+      data:
+        title: Tesla Smart Charge
+        message: >-
+          {% set bat = states('sensor.f_r_i_d_a_y_niveau_de_la_batterie') | int(0) %}
+          {% set lim = states('number.f_r_i_d_a_y_limite_de_recharge') | int(0) %}
+          {% set energy = states('sensor.f_r_i_d_a_y_energie_ajoutee_derniere_recharge') | float(0) | round(1) %}
+          Charge terminee — limite {{ lim }}% atteinte. Batterie : {{ bat }}%.
+          {% if energy > 0 %}Energie ajoutee : {{ energy }} kWh.{% endif %}
   mode: single
 
 #####################################################################
@@ -792,6 +927,14 @@
     - condition: state
       entity_id: switch.f_r_i_d_a_y_recharge
       state: 'off'
+    # Filet de securite : n'essaie pas de relancer si la batterie
+    # a deja atteint la limite (auto 4b est le fix primaire, mais
+    # solar_charging peut rester ON si auto 4b rate aussi — ex :
+    # transition 'complete' manquee car voiture deja endormie).
+    - condition: template
+      value_template: >-
+        {{ states('sensor.f_r_i_d_a_y_niveau_de_la_batterie') | int
+           < (states('number.f_r_i_d_a_y_limite_de_recharge') | int - 1) }}
   action:
     # Reveille la voiture si elle dort (evite la perte de commandes
     # quand la voiture s'endort pendant une longue pause solaire).
@@ -909,6 +1052,15 @@
 # a tesla_soc_solaire_max quand :
 #   - le cable est debranche pendant 30s (la voiture part)
 #   - le soleil se couche (sun.sun -> below_horizon)
+#   - la voiture quitte la maison (GPS Tessie -> not_home, delai 60s)
+#
+# Le trigger "depart" est un filet de securite : si Tessie tarde a
+# remonter cable=OFF (voiture partie mais sensor encore stale), les
+# triggers cable et nuit ne peuvent pas fire. Des que le GPS detecte
+# le depart, solar_charging est immediatement reset pour empecher
+# l'auto 7 (Resume) d'envoyer des commandes a la voiture absente.
+# Pour ce trigger, on ne touche pas a charge_limit via Tessie : la
+# voiture est en mouvement ou inaccessible.
 #
 # Condition : pending=off ET (limite differente OU solar_charging=on).
 # Le OR sur solar_charging est indispensable : en charge solaire normale
@@ -920,7 +1072,8 @@
 # enverrait des commandes a la voiture absente.
 #
 # Le set_value charge_limit est conditionnel (if-then) : evite un appel
-# Tessie inutile quand la limite est deja correcte.
+# Tessie inutile quand la limite est deja correcte, et est skip pour
+# le trigger "depart" (voiture inaccessible).
 #
 # Filet de securite : si une charge HC a modifie la limite et que les
 # autos NightCharge 2/4/5 n'ont pas reset, cette auto restaure la valeur.
@@ -944,6 +1097,15 @@
       entity_id: sun.sun
       to: 'below_horizon'
       id: nuit
+    # Filet de securite : reset solar_charging des que le GPS detecte le
+    # depart, sans attendre que Tessie mette a jour le sensor cable.
+    # Delai 60s : evite les faux positifs sur une sortie de zone GPS breve.
+    - platform: state
+      entity_id: device_tracker.f_r_i_d_a_y_emplacement
+      to: 'not_home'
+      for:
+        seconds: 60
+      id: depart
   condition:
     # Pas pendant une charge HC active (l'auto 1 NightCharge a fixe
     # la limite a la cible HC volontairement).
@@ -962,13 +1124,15 @@
             != states('input_number.tesla_soc_solaire_max') | int(80))
            or is_state('input_boolean.tesla_solar_charging', 'on') }}
   action:
-    # Reset la limite seulement si elle differe (evite un appel Tessie
-    # inutile quand la limite est deja correcte).
+    # Reset la limite seulement si elle differe ET si la voiture est
+    # accessible (cable ou nuit). Pour le trigger "depart" (voiture en
+    # mouvement / inaccessible), on skip l'appel Tessie.
     - if:
         - condition: template
           value_template: >-
-            {{ states('number.f_r_i_d_a_y_limite_de_recharge') | int(0)
-               != states('input_number.tesla_soc_solaire_max') | int(80) }}
+            {{ trigger.id != 'depart'
+               and states('number.f_r_i_d_a_y_limite_de_recharge') | int(0)
+                   != states('input_number.tesla_soc_solaire_max') | int(80) }}
       then:
         - service: number.set_value
           target:
@@ -984,7 +1148,8 @@
         message: >-
           {% set reasons = {
             'cable': 'cable debranche',
-            'nuit': 'coucher du soleil'
+            'nuit': 'coucher du soleil',
+            'depart': 'voiture quittee la maison'
           } %}
           {% set bat = states('sensor.f_r_i_d_a_y_niveau_de_la_batterie') | int(0) %}
           {% set lim = states('input_number.tesla_soc_solaire_max') | int(80) %}

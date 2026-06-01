@@ -405,7 +405,7 @@
                             "name": "Bureau Fabien"
                           },
                           {
-                            "entity": "sensor.temp_bureau_gillian",
+                            "entity": "sensor.temp_chambre_amis",
                             "name": "Bureau Gillian"
                           },
                           {

@@ -98,7 +98,7 @@ Utilisés par les automations de gestion thermique :
 | `sensor.temp_chambre_emma` | Chambre Emma |
 | `sensor.temp_chambre_louis` | Chambre Louis |
 | `sensor.temp_bureau_fabien` | Bureau Fabien |
-| `sensor.temp_bureau_gillian` | Bureau Gillian / Chambre amis |
+| `sensor.temp_chambre_amis` | Chambre d'Amis |
 | `sensor.temp_salle_de_bain` | Salle de bain |
 | `sensor.temp_hall_entree` | Hall d'entrée |
 | `sensor.chambre_inside_temperature` | Chambre grenier |
