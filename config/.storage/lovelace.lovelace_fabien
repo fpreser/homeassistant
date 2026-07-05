@@ -3049,7 +3049,54 @@
                     "cards": [
                       {
                         "type": "custom:mushroom-title-card",
-                        "title": "Jardin"
+                        "title": "Garage"
+                      },
+                      {
+                        "type": "horizontal-stack",
+                        "cards": [
+                          {
+                            "type": "custom:mushroom-light-card",
+                            "entity": "light.garage",
+                            "show_brightness_control": false,
+                            "collapsible_controls": false,
+                            "name": "Garage"
+                          },
+                          {
+                            "type": "custom:mushroom-light-card",
+                            "entity": "light.petite_porte",
+                            "name": "Petite porte"
+                          },
+                          {
+                            "type": "custom:mushroom-light-card",
+                            "entity": "light.cour_entree",
+                            "show_brightness_control": false,
+                            "collapsible_controls": false,
+                            "name": "Cour"
+                          }
+                        ]
+                      },
+                      {
+                        "type": "horizontal-stack",
+                        "cards": [
+                          {
+                            "type": "custom:mushroom-light-card",
+                            "entity": "light.garage_gauche",
+                            "show_brightness_control": false,
+                            "collapsible_controls": false,
+                            "name": "Garage Gauche"
+                          },
+                          {
+                            "type": "custom:mushroom-light-card",
+                            "entity": "light.garage_droite",
+                            "show_brightness_control": false,
+                            "collapsible_controls": false,
+                            "name": "Garage Droite"
+                          }
+                        ]
+                      },
+                      {
+                        "type": "custom:mushroom-title-card",
+                        "title": "Extérieur"
                       },
                       {
                         "type": "horizontal-stack",
@@ -3063,27 +3110,16 @@
                           },
                           {
                             "type": "custom:mushroom-light-card",
-                            "entity": "light.spot_garage",
-                            "show_brightness_control": false,
-                            "collapsible_controls": false,
-                            "name": "Spot garage"
+                            "entity": "light.jardin_passage",
+                            "show_brightness_control": true,
+                            "collapsible_controls": true,
+                            "name": "Passage"
                           }
                         ]
                       },
                       {
-                        "type": "custom:mushroom-title-card",
-                        "title": "Terrasse"
-                      },
-                      {
                         "type": "horizontal-stack",
                         "cards": [
-                          {
-                            "type": "custom:mushroom-light-card",
-                            "entity": "light.jardin_passage",
-                            "show_brightness_control": true,
-                            "collapsible_controls": false,
-                            "name": "Passage"
-                          },
                           {
                             "type": "custom:mushroom-light-card",
                             "entity": "light.terasse",
