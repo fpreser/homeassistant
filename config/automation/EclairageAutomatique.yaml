@@ -1,0 +1,81 @@
+####################################################################
+## Éclairage automatique - synchronise Jardin Passage / Porte Extérieure
+## avec Petite porte, Cour entrée, Garage gauche/droite
+#####################################################################
+- alias: Éclairage automatique
+  id: 32dcd8e2-e87c-4d18-82bc-b7f9b53a1625
+  description: Quand light.jardin_passage ou light.jardin_exterieur_porte s'allume/s'éteint, synchronise les autres lumières extérieures
+  trigger:
+  - platform: state
+    entity_id: light.jardin_passage
+    from: 'off'
+    to: 'on'
+    id: passage_on
+  - platform: state
+    entity_id: light.jardin_passage
+    from: 'on'
+    to: 'off'
+    id: passage_off
+  - platform: state
+    entity_id: light.jardin_exterieur_porte
+    from: 'off'
+    to: 'on'
+    id: porte_on
+  - platform: state
+    entity_id: light.jardin_exterieur_porte
+    from: 'on'
+    to: 'off'
+    id: porte_off
+  condition: []
+  action:
+  - choose:
+    - conditions:
+      - condition: trigger
+        id: passage_on
+      sequence:
+      - service: light.turn_on
+        target:
+          entity_id:
+          - light.petite_porte
+          - light.cour_entree
+          - light.garage_gauche
+          - light.garage_droite
+          - light.jardin_exterieur_porte
+    - conditions:
+      - condition: trigger
+        id: passage_off
+      sequence:
+      - service: light.turn_off
+        target:
+          entity_id:
+          - light.petite_porte
+          - light.cour_entree
+          - light.garage_gauche
+          - light.garage_droite
+          - light.jardin_exterieur_porte
+    - conditions:
+      - condition: trigger
+        id: porte_on
+      sequence:
+      - service: light.turn_on
+        target:
+          entity_id:
+          - light.petite_porte
+          - light.cour_entree
+          - light.garage_gauche
+          - light.garage_droite
+          - light.jardin_passage
+    - conditions:
+      - condition: trigger
+        id: porte_off
+      sequence:
+      - service: light.turn_off
+        target:
+          entity_id:
+          - light.petite_porte
+          - light.cour_entree
+          - light.garage_gauche
+          - light.garage_droite
+          - light.jardin_passage
+    default: []
+  mode: single

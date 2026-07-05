@@ -2,7 +2,8 @@
 
 > Généré le 2026-05-17 depuis Fibaro HC3 (192.168.1.12) et registre HA  
 > Nettoyage 2026-05-17 : 55 entités supprimées (fantômes + doublons) + 70 renames (IDs techniques retirés)  
-> Mise à jour 2026-05-28 : remplacement module Z-Wave Node 57 (HC3 232/233 → 271/272/273) + nettoyage fantômes 142/143
+> Mise à jour 2026-05-28 : remplacement module Z-Wave Node 57 (HC3 232/233 → 271/272/273) + nettoyage fantômes 142/143  
+> Vérifié le 2026-07-05 : correction Cuisine Évier (86/88 n'ont pas d'entité `light.*`) et Fer à repasser (plus de `light.guirlande_escalier`) ; ajout Node 57.0 (270, non affecté) et nouveau module Node 58 (275, non affecté)
 
 
 ## Salon
@@ -44,9 +45,9 @@
 | HC3 ID | HC3 Nom | Type | Entité HA |
 |--------|---------|------|-----------|
 | 85 | Heat Detector - Evier | 🔥 | `binary_sensor.cuisine_evier_heat_detector` |
-| 86 | Evier | 💡 | `light.cuisine_evier_86` |
+| 86 | Evier | 💡 | `—` (uniquement `sensor.cuisine_evier_86_energy/power`) |
 | 87 | Evier | 💡 | `light.cuisine_evier` |
-| 88 | Binary Switch - Evier | 💡 | `light.cuisine_binary_switch_evier_88` |
+| 88 | Binary Switch - Evier | 💡 | `—` (uniquement `sensor.cuisine_binary_switch_evier_88_energy/power`, unavailable) |
 | 91 | Heat Detector - Ilôt | 🔥 | `binary_sensor.cuisine_ilot_heat_detector` |
 | 92 | 19.0 Binary Switch | 💡 | `—` |
 | 93 | Ilôt | 💡 | `light.cuisine_ilot` |
@@ -148,7 +149,7 @@
 | 200 | Ampérage Machine à Laver | 📡 | `sensor.buanderie_machine_a_laver_amperage` |
 | 201 | Machine à laver | 💡 | `switch.buanderie_machine_a_laver_201` |
 | 249 | Frigos buanderie | 📡 | `switch.buanderie_frigos_buanderie_249` |
-| 262 | Fer à repasser | 📡 | `light.guirlande_escalier`, `switch.buanderie_fer_a_repasser_262` |
+| 262 | Fer à repasser | 📡 | `switch.buanderie_fer_a_repasser_262` |
 
 ## Garage
 
@@ -221,6 +222,10 @@
 
 ## Default Room
 
+Devices/circuits Z-Wave pas encore affectés à une pièce dans HC3.
+
 | HC3 ID | HC3 Nom | Type | Entité HA |
 |--------|---------|------|-----------|
 | 1 | zwave | 📡 | `switch.default_room_zwave_1` |
+| 270 | 57.0 Binary Switch (Node 57, cf. Hall d'entrée 271/272/273) | 💡 | `light.default_room_57_0_binary_switch_270` |
+| 275 | 58.0 Binary Switch (Node 58, nouveau module, pièce non définie) | 💡 | `light.default_room_58_0_binary_switch_275` |

@@ -149,9 +149,16 @@ Selectionne une photo aleatoire depuis un NAS Synology pour affichage (ecran, da
 
 ## Eclairage automatique
 
-### Spot garage (`automation/SpotGarage.yaml`)
+### Éclairage extérieur synchronisé (`automation/EclairageAutomatique.yaml`)
 
-**"Spot Garage Auto"** : synchronise le spot de garage (`light.spot_garage`) avec la lumiere de passage jardin (`light.jardin_passage`) — s'allume et s'eteint ensemble.
+**"Éclairage automatique"** (ex-"Spot Garage Auto", meme `id` conserve) : synchronise l'eclairage exterieur autour de deux points d'entree croises.
+
+- Quand `light.jardin_passage` passe on/off → repercute le meme etat sur `light.petite_porte`, `light.cour_entree`, `light.garage_gauche`, `light.garage_droite`, `light.jardin_exterieur_porte`
+- Quand `light.jardin_exterieur_porte` passe on/off → repercute le meme etat sur `light.petite_porte`, `light.cour_entree`, `light.garage_gauche`, `light.garage_droite`, `light.jardin_passage`
+
+Triggers avec `from`/`to` explicites (pas juste `to`) pour eviter toute boucle infinie entre les deux triggers croises (passage ↔ porte exterieure) : une lumiere deja dans l'etat cible ne redeclenche pas l'automation.
+
+`light.spot_garage` n'est plus dans la boucle (retire le 05/07/2026, entite unavailable — module Z-Wave garage deconnecte).
 
 ---
 
@@ -187,5 +194,5 @@ Selectionne une photo aleatoire depuis un NAS Synology pour affichage (ecran, da
 | `python_scripts/poll_antargazremote.py` | Scraping niveau citerne Antargaz (remote Selenium) |
 | `python_scripts/poll_antargazlocal.py` | Variante locale sans Selenium Hub |
 | `python_scripts/random_synology_photo.py` | Selection photo aleatoire NAS Synology |
-| `automation/SpotGarage.yaml` | Spot garage synchro avec passage jardin |
+| `automation/EclairageAutomatique.yaml` | Éclairage exterieur synchro passage jardin ↔ porte exterieure ↔ petite porte/cour entree/garage |
 | `template_sensors/household_applicances.yaml` | binary_sensor machine/sechoir, sensor tony_status, washing_machine_time_to_complete |
