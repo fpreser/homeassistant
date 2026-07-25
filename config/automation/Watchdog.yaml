@@ -19,7 +19,7 @@
 #   - Tessie (Tesla)            : sensor.f_r_i_d_a_y_niveau_de_la_batterie
 #   - SMA Solar (345 + 208)     : sensor.sb5_0_1av_41_*_status
 #   - P1 Meter (HomeWizard)     : sensor.p1_meter_*_active_power_l1
-#   - Remote HA Garage          : sensor.remote_connection_to_192_168_1_103_8123_2
+#   - Remote HA Garage          : sensor.garage_ha_garage_remote_connection_to_192_168_1_103_8123
 #
 ######################################################################
 
@@ -216,7 +216,7 @@
       event: start
       id: ha_start
     - platform: state
-      entity_id: sensor.remote_connection_to_192_168_1_103_8123_2
+      entity_id: sensor.garage_ha_garage_remote_connection_to_192_168_1_103_8123
       to: 'disconnected'
       for: '00:05:00'
       id: disconnected
@@ -230,17 +230,17 @@
     - condition: not
       conditions:
         - condition: state
-          entity_id: sensor.remote_connection_to_192_168_1_103_8123_2
+          entity_id: sensor.garage_ha_garage_remote_connection_to_192_168_1_103_8123
           state: 'connected'
     - service: homeassistant.reload_config_entry
       target:
-        entity_id: sensor.remote_connection_to_192_168_1_103_8123_2
+        entity_id: sensor.garage_ha_garage_remote_connection_to_192_168_1_103_8123
     - delay: '00:01:30'
     - if:
         - condition: not
           conditions:
             - condition: state
-              entity_id: sensor.remote_connection_to_192_168_1_103_8123_2
+              entity_id: sensor.garage_ha_garage_remote_connection_to_192_168_1_103_8123
               state: 'connected'
       then:
         - service: script.notify_fabien

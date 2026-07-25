@@ -106,7 +106,12 @@
       target:
         entity_id: number.f_r_i_d_a_y_courant_de_recharge
       data:
-        value: "{{ states('input_number.tesla_max_amps') | int(28) }}"
+        value: >-
+          {# Clamp au max reel de l'entite : evite un out_of_range si le max
+             rapporte par le vehicule (fluctue parfois 27/28) est sous le
+             helper utilisateur (bug 2026-07-09, cf resume solaire). #}
+          {{ [states('input_number.tesla_max_amps') | int(28),
+              state_attr('number.f_r_i_d_a_y_courant_de_recharge', 'max') | int(28)] | min }}
     - service: script.notify_fabien
       data:
         title: Tesla Charge Nocturne
@@ -226,7 +231,7 @@
       value_template: >-
         {% set max_grid = states('sensor.tesla_max_amp_grid') | int(5) %}
         {% set current  = states('number.f_r_i_d_a_y_courant_de_recharge') | int(0) %}
-        {% set max_amps = states('input_number.tesla_max_amps') | int(28) %}
+        {% set max_amps = [states('input_number.tesla_max_amps') | int(28), state_attr('number.f_r_i_d_a_y_courant_de_recharge', 'max') | int(28)] | min %}
         {% set target   = [max_grid, max_amps] | min %}
         {{ max_grid < 5 or (target - current) | abs >= 1 }}
   action:
@@ -261,7 +266,7 @@
           data:
             value: >-
               {% set max_grid = states('sensor.tesla_max_amp_grid') | int(5) %}
-              {% set max_amps = states('input_number.tesla_max_amps') | int(28) %}
+              {% set max_amps = [states('input_number.tesla_max_amps') | int(28), state_attr('number.f_r_i_d_a_y_courant_de_recharge', 'max') | int(28)] | min %}
               {{ [5, [max_grid, max_amps] | min] | max }}
   mode: single
 
@@ -337,7 +342,7 @@
       data:
         value: >-
           {% set max_grid = states('sensor.tesla_max_amp_grid') | int(5) %}
-          {% set max_amps = states('input_number.tesla_max_amps') | int(28) %}
+          {% set max_amps = [states('input_number.tesla_max_amps') | int(28), state_attr('number.f_r_i_d_a_y_courant_de_recharge', 'max') | int(28)] | min %}
           {{ [5, [max_grid, max_amps] | min] | max }}
     # Notif uniquement sur reprise "significative" : trigger seuil
     # (sortie franche de saturation) ET pause > 2 min.
@@ -351,7 +356,7 @@
                 title: Tesla Charge Nocturne
                 message: >-
                   {% set max_grid = states('sensor.tesla_max_amp_grid') | int(5) %}
-                  {% set max_amps = states('input_number.tesla_max_amps') | int(28) %}
+                  {% set max_amps = [states('input_number.tesla_max_amps') | int(28), state_attr('number.f_r_i_d_a_y_courant_de_recharge', 'max') | int(28)] | min %}
                   {% set amps = [5, [max_grid, max_amps] | min] | max %}
                   {% set mins = (pause_duration_s / 60) | int %}
                   Charge nocturne reprise apres {{ mins }} min de pause ({{ amps }}A).

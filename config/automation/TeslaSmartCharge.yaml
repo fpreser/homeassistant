@@ -476,9 +476,15 @@
       for:
         seconds: 30
       id: charger_plugin
+    # Seuil aligne sur le plancher reel de charge (5A, force au demarrage
+    # ligne courant_de_recharge ci-dessous) et sur le seuil de Pause (auto 6,
+    # <5A). Avant le fix du 2026-07-25, le seuil etait a 2A : un demarrage
+    # pouvait etre déclenché avec un surplus insuffisant pour tenir le
+    # minimum de 5A, menant a une pause quasi immediate (cycle demarre/pause
+    # inutile a l'aube quand le solaire est encore faible et instable).
     - platform: numeric_state
       entity_id: sensor.tesla_optimized_amp
-      above: 2
+      above: 4
       for:
         minutes: 1
       id: power_available
@@ -653,9 +659,16 @@
       for:
         minutes: 1
       id: charger_plugout
-    - platform: numeric_state
-      entity_id: sensor.f_r_i_d_a_y_vitesse_de_recharge
-      below: 1
+    # Etat brut Tessie (fix 2026-07-25) : anciennement base sur
+    # sensor.f_r_i_d_a_y_vitesse_de_recharge < 1, une valeur derivee/calculee
+    # qui s'est averee peu fiable juste apres un (re)demarrage a faible
+    # ampérage (vue a -28 alors que la voiture chargeait reellement a 6A).
+    # sensor.f_r_i_d_a_y_charge est l'etat brut rapporte par l'API, sans
+    # calcul ni delai de stabilisation — declenchait le cycle demarre/
+    # suspend/redemarre observe a l'aube.
+    - platform: state
+      entity_id: sensor.f_r_i_d_a_y_charge
+      to: 'stopped'
       for:
         minutes: 1
       id: manual_stop
@@ -773,12 +786,21 @@
 # Toujours active — les conditions empechent toute action
 # quand la charge est arretee ou le mode desactive.
 #
-# Trigger : sensor.tesla_optimized_amp stable depuis 30s
-#   → aligne sur le polling Tessie (~30s), plancher pertinent.
+# Trigger : sensor.tesla_optimized_amp stable depuis 15s
+#   → reactivite face aux passages nuageux (fix 2026-07-25, voir marge
+#     de securite ci-dessous). Anciennement 30s : trop lent face a un
+#     nuage qui fait chuter le surplus en quelques secondes, causant un
+#     tirage reseau le temps que la baisse d'amperage soit appliquee.
 #
 # Filtres qualite (pas de quota Tessie) :
-#   - for: 30s sur le trigger
+#   - for: 15s sur le trigger
 #   - Commande uniquement si |target - current| >= 1A
+#
+# Marge de securite -1A (fix 2026-07-25) : vise systematiquement
+# surplus-1A plutot que le surplus exact. Absorbe les variations entre
+# deux cycles de mesure sans tirer sur le reseau — au prix d'un leger
+# sous-usage du surplus par ciel stable. Ne s'applique qu'au-dessus du
+# plancher de 5A (le plancher lui-meme reste inchange, cf. auto 1/3).
 #####################################################################
 - id: 'tesla_smart_charge_update_amps'
   alias: Tesla Smart Charge - Suivi amperage
@@ -787,7 +809,7 @@
     - platform: state
       entity_id: sensor.tesla_optimized_amp
       for:
-        seconds: 30
+        seconds: 15
   condition:
     - condition: state
       entity_id: input_boolean.tesla_smart_charge
@@ -808,7 +830,7 @@
           state: home
     - condition: template
       value_template: >-
-        {% set target = states('sensor.tesla_optimized_amp') | int(0) %}
+        {% set target = states('sensor.tesla_optimized_amp') | int(0) - 1 %}
         {% set current = states('number.f_r_i_d_a_y_courant_de_recharge') | int(0) %}
         {{ (target - current) | abs >= 1 }}
   action:
@@ -817,8 +839,8 @@
         entity_id: number.f_r_i_d_a_y_courant_de_recharge
       data:
         value: >-
-          {% set opt = states('sensor.tesla_optimized_amp') | int(0) %}
-          {% set max_amps = states('input_number.tesla_max_amps') | int(28) %}
+          {% set opt = states('sensor.tesla_optimized_amp') | int(0) - 1 %}
+          {% set max_amps = [states('input_number.tesla_max_amps') | int(28), state_attr('number.f_r_i_d_a_y_courant_de_recharge', 'max') | int(28)] | min %}
           {{ [5, [opt, max_amps] | min] | max }}
   mode: single
 
@@ -900,6 +922,15 @@
 # Action : reveille la voiture avant d'envoyer les commandes (fix
 #   bug 2026-05-17 : commandes perdues quand la voiture s'endort
 #   pendant une pause solaire de >10 min).
+#
+# Trigger periodique (filet, bug 2026-07-09) : le trigger numeric_state
+# ne se declenche que sur un FRONT montant du capteur. Si optimized_amp
+# est deja > 4A en continu quand la charge s'arrete (ex : fin de charge
+# HC de midi avec du solaire dispo depuis un moment), aucun nouveau
+# franchissement n'a lieu et la charge solaire reste bloquee a l'arret
+# indefiniment. Le trigger toutes les 5 min reevalue l'etat courant
+# independamment de tout franchissement, sur le meme modele que
+# TeslaNightCharge.yaml auto 3b (resume apres protection reseau).
 #####################################################################
 - id: 'tesla_smart_charge_resume'
   alias: Tesla Smart Charge - Resume solaire
@@ -910,6 +941,10 @@
       above: 4
       for:
         minutes: 3
+      id: seuil
+    - platform: time_pattern
+      minutes: '/5'
+      id: periodique
   condition:
     - condition: state
       entity_id: input_boolean.tesla_smart_charge
@@ -927,6 +962,12 @@
     - condition: state
       entity_id: switch.f_r_i_d_a_y_recharge
       state: 'off'
+    # Filet periodique : re-verifie le seuil (le trigger time_pattern
+    # n'a lui-meme aucune notion de valeur de capteur, contrairement
+    # au trigger numeric_state qui garantit deja > 4A pour l'autre voie).
+    - condition: numeric_state
+      entity_id: sensor.tesla_optimized_amp
+      above: 4
     # Filet de securite : n'essaie pas de relancer si la batterie
     # a deja atteint la limite (auto 4b est le fix primaire, mais
     # solar_charging peut rester ON si auto 4b rate aussi — ex :
@@ -953,13 +994,14 @@
         entity_id: switch.f_r_i_d_a_y_recharge
     - delay:
         seconds: 5
+    # Marge de securite -1A : cf. auto 5 (Suivi amperage)
     - service: number.set_value
       target:
         entity_id: number.f_r_i_d_a_y_courant_de_recharge
       data:
         value: >-
-          {% set opt = states('sensor.tesla_optimized_amp') | int(0) %}
-          {% set max_amps = states('input_number.tesla_max_amps') | int(28) %}
+          {% set opt = states('sensor.tesla_optimized_amp') | int(0) - 1 %}
+          {% set max_amps = [states('input_number.tesla_max_amps') | int(28), state_attr('number.f_r_i_d_a_y_courant_de_recharge', 'max') | int(28)] | min %}
           {{ [5, [opt, max_amps] | min] | max }}
     - service: script.notify_fabien
       data:
@@ -1221,13 +1263,14 @@
                 entity_id: switch.f_r_i_d_a_y_recharge
             - delay:
                 seconds: 5
+            # Marge de securite -1A : cf. auto 5 (Suivi amperage)
             - service: number.set_value
               target:
                 entity_id: number.f_r_i_d_a_y_courant_de_recharge
               data:
                 value: >-
-                  {% set opt = states('sensor.tesla_optimized_amp') | int(0) %}
-                  {% set max_amps = states('input_number.tesla_max_amps') | int(28) %}
+                  {% set opt = states('sensor.tesla_optimized_amp') | int(0) - 1 %}
+                  {% set max_amps = [states('input_number.tesla_max_amps') | int(28), state_attr('number.f_r_i_d_a_y_courant_de_recharge', 'max') | int(28)] | min %}
                   {{ [5, [opt, max_amps] | min] | max }}
             - service: script.notify_fabien
               data:

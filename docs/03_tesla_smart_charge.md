@@ -34,11 +34,11 @@ flowchart TD
     Start([Evenement]) --> Trig{Type de trigger}
 
     Trig -->|toggle ON| A1[1. Activation]
-    Trig -->|cable branche 30s<br/>OR vitesse > 0<br/>OR surplus > 2A pendant 1 min| A3[3. Demarrage auto]
+    Trig -->|cable branche 30s<br/>OR vitesse > 0<br/>OR surplus > 4A pendant 1 min| A3[3. Demarrage auto]
     Trig -->|switch off → on<br/>+ maitre on + pending off<br/>+ solar_charging off + home| A3b[3b. Sync flag<br/>solar_charging]
-    Trig -->|trappe fermee 1 min<br/>OR vitesse < 1 pendant 1 min<br/>OR amps < 1 pendant 1 min| A4[4. Arret auto]
+    Trig -->|trappe fermee 1 min<br/>OR charge = stopped pendant 1 min<br/>OR amps < 1 pendant 1 min| A4[4. Arret auto]
     Trig -->|charge = complete pendant 30s<br/>+ solar_charging on| A4b[4b. Charge complete<br/>limite atteinte]
-    Trig -->|optimized_amp stable 30s| A5[5. Suivi amperage]
+    Trig -->|optimized_amp stable 15s| A5[5. Suivi amperage]
     Trig -->|surplus < 5A pendant 3 min<br/>OR switch ON depuis 3 min| A6[6. Pause solaire]
     Trig -->|surplus > 4A pendant 3 min| A7[7. Resume solaire]
     Trig -->|P1 > tesla_grid_limit - 500W<br/>pendant 10s| A8[8. Protection reseau]
@@ -57,7 +57,7 @@ flowchart TD
     A4 --> DoStop[switch OFF<br/>solar_charging OFF<br/>Awtrix + notif<br/>+ refresh]
     A4b --> DoStopComplete[switch OFF idempotent<br/>solar_charging OFF<br/>Awtrix + notif limite]
     A5 --> CondDelta{delta >= 1A ?}
-    CondDelta -->|oui| SetAmps["set amps<br/>= clamp(opt, 5, tesla_max_amps)"]
+    CondDelta -->|oui| SetAmps["set amps<br/>= clamp(opt-1, 5, tesla_max_amps)"]
     A6 --> CondLow{charge on<br/>ET surplus < 5A ?}
     CondLow -->|oui| Pause[switch OFF]
     A7 --> CondResume{solar_charging on<br/>ET charge off<br/>ET bat < limite-1 ?}
@@ -118,8 +118,8 @@ flowchart TD
 | `number.f_r_i_d_a_y_courant_de_recharge` | number | Regle l'amperage cible (5-32A). **Valeur commandee** utilisee par les templates (plus fiable que le sensor Tessie poll toutes les ~30s) |
 | `sensor.f_r_i_d_a_y_courant_du_chargeur` | sensor | Amperage reel de charge (A). Lecture Tessie, utilise seulement par le trigger `amps_too_low` de l'automation 4 |
 | `sensor.f_r_i_d_a_y_niveau_de_la_batterie` | sensor | Niveau batterie (%) |
-| `sensor.f_r_i_d_a_y_vitesse_de_recharge` | sensor | Vitesse de charge |
-| `sensor.f_r_i_d_a_y_charge` | sensor | Statut de charge (Charging, Stopped, Disconnected, Complete...) |
+| `sensor.f_r_i_d_a_y_vitesse_de_recharge` | sensor | Vitesse de charge (valeur derivee, non fiable juste apres un redemarrage — plus utilisee comme trigger d'arret depuis le fix 2026-07-25) |
+| `sensor.f_r_i_d_a_y_charge` | sensor | Statut de charge (Charging, Stopped, Disconnected, Complete...). Utilise par le trigger `manual_stop` de l'auto 4 (fix 2026-07-25) |
 | `number.f_r_i_d_a_y_limite_de_recharge` | number | Limite de charge configuree (%) |
 | `device_tracker.f_r_i_d_a_y_emplacement` | device_tracker | Position (home/away) |
 | `binary_sensor.f_r_i_d_a_y_cable_de_charge` | binary_sensor | Cable de charge branche (on = connected) |
@@ -360,13 +360,18 @@ input_boolean.tesla_smart_charge (MAITRE)
   Triggers:
     - manual_start   : vitesse_de_charge > 0
     - charger_plugin : charge_cable = on pendant 30s
-    - power_available: tesla_optimized_amp > 2 pendant 1 min
+    - power_available: tesla_optimized_amp > 4 pendant 1 min
   Conditions: maitre on + HC pending off + home (GPS OU WiFi) + cable branche + charge off
               + batterie pas pleine
               + derniere `tesla_smart_charge_pause_surplus_insuffisant` > 5 min
                 (entity_id reel de l'auto 6 dans la registry HA)
                 (anti-doublon : si auto 6 vient de pauser, laisse Resume #7
                  gerer la reprise — seuils plus robustes : 4A pendant 3 min)
+  Note (fix 2026-07-25) : seuil releve de 2A a 4A, aligne sur le plancher
+        reel de charge (5A, force au demarrage) et sur le seuil de Pause
+        (auto 6, <5A). Avant le fix, un demarrage a 2-3A de surplus etait
+        quasi condamne a une pause 3 min plus tard (5A commandes > surplus
+        reel) — cycle demarre/pause inutile a l'aube.
   --> script.tesla_refresh + set charge_limit = tesla_soc_solaire_max
       + switch.turn_on + set 5A + Awtrix + notification (message selon trigger.id)
   Note: la condition cable est indispensable pour les triggers manual_start et
@@ -397,10 +402,16 @@ input_boolean.tesla_smart_charge (MAITRE)
 4. Arret auto (solaire) :
   Triggers:
     - charger_plugout: trappe_de_charge = closed pendant 1 min
-    - manual_stop    : vitesse_de_charge < 1 pendant 1 min
+    - manual_stop    : sensor.f_r_i_d_a_y_charge = 'stopped' pendant 1 min
     - amps_too_low   : charger_current < 1 pendant 1 min
   Conditions: maitre on + HC pending off + charge on
   --> switch.turn_off + solar_charging OFF + Awtrix + notification (message selon trigger.id) + script.tesla_refresh
+  Note (fix 2026-07-25) : manual_stop utilisait sensor.f_r_i_d_a_y_vitesse_de_recharge
+        (valeur derivee/calculee) — peu fiable juste apres un (re)demarrage a
+        faible amperage (vue a -28 alors que la charge tournait reellement a
+        6A), causant des arrets a tort et un cycle demarre/suspend/redemarre
+        a l'aube. Remplace par l'etat brut sensor.f_r_i_d_a_y_charge (Tessie),
+        sans calcul ni delai de stabilisation.
 
 4b. Charge complete — limite Tesla atteinte :
   Trigger: sensor.f_r_i_d_a_y_charge -> 'complete' pendant 30s
@@ -417,11 +428,16 @@ input_boolean.tesla_smart_charge (MAITRE)
         avant que la transition 'complete' soit stable 30s).
 
 5. Suivi amperage solaire (state-change avec garde de stabilite) :
-  Trigger: sensor.tesla_optimized_amp stable depuis 30s
+  Trigger: sensor.tesla_optimized_amp stable depuis 15s
   Conditions: maitre on + HC pending off + charge on + home (GPS OU WiFi) + delta >= 1A
-  --> number.set_value(clamp(optimized_amp, 5, tesla_max_amps))
-  Note: 30s aligne sur le polling Tessie (~30s) — plancher pertinent.
-        Reagit aux vraies variations, ignore les oscillations < 30s.
+  --> number.set_value(clamp(optimized_amp - 1, 5, tesla_max_amps))
+  Note: 15s (etait 30s avant le fix 2026-07-25) — reagit plus vite aux
+        passages nuageux qui font chuter le surplus en quelques secondes.
+        Marge de securite -1A (meme fix) : vise surplus-1A plutot que le
+        surplus exact, pour absorber les variations entre deux cycles de
+        mesure sans tirer sur le reseau (constate : jusqu'a 2,7 kW d'import
+        le temps que la baisse d'amperage soit appliquee). Meme marge
+        appliquee aux autos 7 (Resume) et 10 (Sync helper SoC max).
 
 6. Pause solaire :
   Triggers:
@@ -502,7 +518,7 @@ Cette matrice couvre tous les cas possibles quand la voiture rentre et se branch
 | 2 | Arrivee + Tesla demarre seule en < 30s (Tessie rapide) | HP | any | OFF→ON | transition switch → auto 3b | ON ✓ |
 | 3 | Arrivee HP, switch deja ON, pas de surplus | HP | < 5A | ON | auto 0e : stoppe + smart_charge ON → `power_available` → auto 3 | ON ✓ |
 | 4 | Arrivee en HC (night_charge_pending = ON) | HC | any | any | automations solaires bloquees (pending = ON) | N/A ✓ |
-| 5 | Voiture deja home, cable branche, surplus atteint le seuil | HP | > 2A for 1 min | OFF | `power_available` → auto 3 | ON ✓ |
+| 5 | Voiture deja home, cable branche, surplus atteint le seuil | HP | > 4A for 1 min | OFF | `power_available` → auto 3 | ON ✓ |
 
 **Cas limite residuel (tres rare)** : si la voiture arrive avec switch = ON stale dans HA ET que le refresh des autos 0/0b n'est pas encore effectue ET que l'utilisateur branche le cable dans les < 90s suivant l'arrivee, aucune transition `off→on` n'est detectee. Dans ce cas, l'auto 6 (Pause solaire, trigger `switch ON depuis 3 min`) detecra l'absence de surplus et mettra en pause ; solar_charging restera OFF jusqu'a un prochain `off→on`. En pratique, le refresh des autos 0/0b precede le branchement manuel (30s minimum de delai).
 
@@ -518,6 +534,7 @@ Pas de doublon possible : une seule des deux automations envoie une notification
 | **Pas de quota direct (Tessie)** | Tessie gere le polling Tesla — pas de quota HA a surveiller. Garde conservee : trigger stable 30s + delta >= 1A. Auto 11 supprimee (etait la principale source de depassement quota Fleet API). Cooldown 120s supprime (n'etait utile que pour limiter les appels Fleet API). |
 | **Anti-flapping** | Hystéresis 3 min avant pause/resume |
 | **Micro-ajustements** | Commande envoyee seulement si delta >= 1A |
+| **Marge de securite reseau** | Cible = surplus - 1A (autos 5/7/10) + reaction en 15s (auto 5, etait 30s). Absorbe les variations solaires (nuages) entre deux cycles de mesure sans tirer sur le reseau (fix 2026-07-25) |
 | **Minimum amperage** | 5A minimum (contrainte Tesla) |
 | **Maximum amperage** | 28A maximum (limite installation, configurable via `input_number.tesla_max_amps`) |
 | **Pas de soleil** | Detection via le signe de `p1_power` (negatif = injection). Si la charge demarre sans surplus, l'automation 6 la met en pause au bout de 3 min (trigger `switch=on depuis 3 min`) |
@@ -544,7 +561,7 @@ L'automation **Awtrix Tesla Charging** affiche sur l'afficheur LED :
                                                        v            v
                                      sensor.tesla_optimized_amp (double cap: solaire + reseau)
                                                   |
-                                5. Suivi amperage (state-change + 30s stable) --- normal
+                                5. Suivi amperage (state-change + 15s stable, cible -1A) --- normal
                                 8. Protection reseau (10s) --- urgence (> 14 500W)
                                                   |
                                 number.set_value (number.f_r_i_d_a_y_courant_de_recharge)
