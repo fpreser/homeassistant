@@ -31,35 +31,35 @@ soleil 6h-10h  │      soleil 14h-20h
 
 | Entité | Emplacement |
 |---|---|
-| `cover.volet_poly_pelouse` / `_low_speed` | Polyvalent côté jardin |
-| `cover.volet_bureau_fabien` / `_low_speed` | Bureau Fabien |
-| `cover.volet_bureau_gillian` / `_low_speed` | Bureau Gillian (chambre amis) |
-| `cover.volet_cuisine` / `_low_speed` | Cuisine |
+| `cover.volet_poly_pelouse` | Polyvalent côté jardin |
+| `cover.volet_bureau_fabien` | Bureau Fabien |
+| `cover.volet_bureau_gillian` | Bureau Gillian (chambre amis) |
+| `cover.volet_cuisine` | Cuisine |
 | `cover.volet_velux_chambre` | Volet occultant du vélux chambre grenier |
 
 ### Volets — façade OUEST (soleil 14h-20h, priorité 2 en été)
 
 | Entité | Emplacement |
 |---|---|
-| `cover.volet_tv` / `_low_speed` | Salon côté TV |
-| `cover.volet_poly_route` / `_low_speed` | Polyvalent côté rue |
-| `cover.volet_emma_route` / `_low_speed` | Chambre Emma (fenêtre rue) |
+| `cover.volet_tv` | Salon côté TV |
+| `cover.volet_poly_route` | Polyvalent côté rue |
+| `cover.volet_emma_route` | Chambre Emma (fenêtre rue) |
 
 ### Volets — façade EST (soleil 6h-10h, impact faible)
 
 | Entité | Emplacement |
 |---|---|
-| `cover.volet_chambre` / `_low_speed` | Chambre grenier |
+| `cover.volet_chambre` | Chambre grenier |
 
 ### Volets — façade NORD (pas d'exposition directe)
 
 | Entité | Emplacement |
 |---|---|
-| `cover.volet_salle_de_bain` / `_low_speed` | Salle de bain |
-| `cover.volet_salle_a_manger` / `_low_speed` | Salle à manger |
-| `cover.volet_louis` / `_low_speed` | Chambre Louis |
-| `cover.volet_canape` / `_low_speed` | Salon côté canapé |
-| `cover.volet_emma_gauche` / `_low_speed` | Chambre Emma (fenêtre gauche) |
+| `cover.volet_salle_de_bain` | Salle de bain |
+| `cover.volet_salle_a_manger` | Salle à manger |
+| `cover.volet_louis` | Chambre Louis |
+| `cover.volet_canape` | Salon côté canapé |
+| `cover.volet_emma_gauche` | Chambre Emma (fenêtre gauche) |
 
 ### Vélux (fenêtres de toit)
 
@@ -138,10 +138,10 @@ Contrôle manuel via télécommande Harmony Hub (Emulated Roku) :
 
 | Bouton | Action |
 |---|---|
-| `Up` | Ouvre `volet_tv_low_speed` + `volet_canape` |
+| `Up` | Ouvre `volet_tv` (`speed: slow`) + `volet_canape` |
 | `Down` | Ferme `volet_canape` + `volet_tv` |
-| `Left` | Toggle `volet_canape_low_speed` + `volet_tv_low_speed` |
-| `Right` | Toggle `volet_salle_a_manger_low_speed` |
+| `Left` | Bascule lente (`speed: slow`) `volet_canape` + `volet_tv` |
+| `Right` | Bascule lente (`speed: slow`) `volet_salle_a_manger` |
 
 ### Aération Vélux (id: 1681121951553)
 
@@ -164,8 +164,8 @@ Vélux contrôlés : `velux_sdd_droite`, `velux_sdd_gauche`, `velux_escalier`.
 
 | Script | Fichier | Action |
 |---|---|---|
-| `script.sieste_chambre_grenier` | `script/sieste_chambre_grenier.yaml` | Ferme `volet_chambre_low_speed` + `volet_velux_chambre`, lance la clim |
-| `script.fin_sieste_chambre_grenier` | `script/fin_sieste_chambre_grenier.yaml` | Ouvre `volet_chambre_low_speed` + `volet_velux_chambre`, éteint la clim |
+| `script.sieste_chambre_grenier` | `script/sieste_chambre_grenier.yaml` | Ferme `volet_chambre` (`speed: slow`) + `volet_velux_chambre`, lance la clim |
+| `script.fin_sieste_chambre_grenier` | `script/fin_sieste_chambre_grenier.yaml` | Ouvre `volet_chambre` (`speed: slow`) + `volet_velux_chambre`, éteint la clim |
 
 ---
 

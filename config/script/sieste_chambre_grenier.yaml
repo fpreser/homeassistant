@@ -2,9 +2,10 @@ sieste_chambre_grenier:
   alias: Sièste Chambre Grenier
   sequence:
   - service: cover.close_cover
-    data: {}
+    data:
+      speed: slow
     target:
-      entity_id: cover.volet_chambre_low_speed
+      entity_id: cover.volet_chambre
   - service: cover.close_cover
     data: {}
     target:

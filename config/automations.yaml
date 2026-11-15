@@ -894,14 +894,18 @@
       - condition: trigger
         id:
         - Up
+      - service: cover.open_cover
+        metadata: {}
+        data:
+          speed: slow
+        target:
+          entity_id: cover.volet_tv
       sequence:
       - service: cover.open_cover
         metadata: {}
         data: {}
         target:
-          entity_id:
-          - cover.volet_tv_low_speed
-          - cover.volet_canape
+          entity_id: cover.volet_canape
     - conditions:
       - condition: trigger
         id:
@@ -919,13 +923,19 @@
         id:
         - Left
       sequence:
-      - service: cover.toggle
-        metadata: {}
-        data: {}
-        target:
-          entity_id:
-          - cover.volet_canape_low_speed
-          - cover.volet_tv_low_speed
+      # cover.toggle n'accepte pas "speed" : bascule lente emulee par entite
+      - repeat:
+          for_each:
+          - cover.volet_canape
+          - cover.volet_tv
+          sequence:
+          - service: >-
+              {{ 'cover.open_cover' if states(repeat.item) in ['closed', 'closing']
+              else 'cover.close_cover' }}
+            data:
+              speed: slow
+            target:
+              entity_id: '{{ repeat.item }}'
     - conditions:
       - condition: trigger
         id:
@@ -957,11 +967,14 @@
         id:
         - Right
       sequence:
-      - service: cover.toggle
-        metadata: {}
-        data: {}
+      # cover.toggle n'accepte pas "speed" : bascule lente emulee
+      - service: >-
+          {{ 'cover.open_cover' if states('cover.volet_salle_a_manger') in ['closed', 'closing']
+          else 'cover.close_cover' }}
+        data:
+          speed: slow
         target:
-          entity_id: cover.volet_salle_a_manger_low_speed
+          entity_id: cover.volet_salle_a_manger
   mode: single
 - id: '1730208337109'
   alias: Gillian arrive

@@ -53,23 +53,23 @@ Lance `script.start_aeration` → ouvre `velux_sdd_droite`, `velux_sdd_gauche`, 
 
 | Ligne | Volet gauche | Volet droit |
 |---|---|---|
-| 1 | `volet_tv_low_speed` — TV | `volet_canape_low_speed` — Canapé |
-| 2 | `volet_salle_a_manger_low_speed` — S-M | `volet_cuisine_low_speed` — Cuisine |
+| 1 | `volet_tv` — TV | `volet_canape` — Canapé |
+| 2 | `volet_salle_a_manger` — S-M | `volet_cuisine` — Cuisine |
 
 ### Tab 1 — 1er étage (`mdi:home-floor-1`)
 
 | Ligne | Volet gauche | Volet droit |
 |---|---|---|
-| 1 | `volet_poly_pelouse_low_speed` — Poly Pelouse | `volet_poly_route_low_speed` — Poly Route |
-| 2 | `volet_emma_route_low_speed` — Emma Route | `volet_emma_gauche_low_speed` — Emma Gauche |
-| 3 | `volet_louis_low_speed` — Louis | `volet_salle_de_bain_low_speed` — Sdb |
-| 4 | `volet_bureau_fabien` — Bureau | `volet_bureau_gillian_low_speed` — Ch Amis |
+| 1 | `volet_poly_pelouse` — Poly Pelouse | `volet_poly_route` — Poly Route |
+| 2 | `volet_emma_route` — Emma Route | `volet_emma_gauche` — Emma Gauche |
+| 3 | `volet_louis` — Louis | `volet_salle_de_bain` — Sdb |
+| 4 | `volet_bureau_fabien` — Bureau | `volet_bureau_gillian` — Ch Amis |
 
 ### Tab 2 — Grenier (`mdi:home-floor-2`)
 
 | Ligne | Carte gauche | Carte droite |
 |---|---|---|
-| 1 | `volet_velux_chambre` — Occultant | `volet_chambre_low_speed` — Fenêtre Est |
+| 1 | `volet_velux_chambre` — Occultant | `volet_chambre` — Fenêtre Est |
 | 2 | `velux_escalier` — Escalier | `velux_chambre` — Vélux Chambre |
 | 3 | `velux_sdd_gauche` — SDD Gauche | `velux_sdd_droite` — SDD Droite |
 
@@ -77,4 +77,4 @@ Lance `script.start_aeration` → ouvre `velux_sdd_droite`, `velux_sdd_gauche`, 
 
 ## Notes
 
-- `cover.volet_bureau_fabien` (tab 1er, ligne 4) n'a pas de variante `_low_speed` — c'est intentionnel, le volet ne dispose pas de cette entité.
+- Depuis HA 2026.11, les entités `_low_speed` Overkiz sont dépréciées (retrait 2027.5.0) : le dashboard pointe sur l entité principale (vitesse normale) ; la vitesse lente se fait via `speed: slow` dans les actions open/close/set_position.

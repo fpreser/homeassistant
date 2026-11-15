@@ -547,7 +547,7 @@
               "cards": [
                 {
                   "type": "custom:mushroom-cover-card",
-                  "entity": "cover.volet_salle_a_manger_low_speed",
+                  "entity": "cover.volet_salle_a_manger",
                   "show_position_control": false,
                   "show_tilt_position_control": false,
                   "show_buttons_control": true,
@@ -620,7 +620,7 @@
               "cards": [
                 {
                   "type": "custom:mushroom-cover-card",
-                  "entity": "cover.volet_cuisine_low_speed",
+                  "entity": "cover.volet_cuisine",
                   "show_position_control": false,
                   "show_tilt_position_control": false,
                   "show_buttons_control": true,
@@ -710,7 +710,7 @@
                 },
                 {
                   "type": "custom:mushroom-cover-card",
-                  "entity": "cover.volet_chambre_low_speed",
+                  "entity": "cover.volet_chambre",
                   "show_position_control": false,
                   "show_tilt_position_control": false,
                   "show_buttons_control": true,
@@ -5293,7 +5293,7 @@
                         "cards": [
                           {
                             "type": "custom:mushroom-cover-card",
-                            "entity": "cover.volet_tv_low_speed",
+                            "entity": "cover.volet_tv",
                             "show_position_control": false,
                             "show_tilt_position_control": false,
                             "show_buttons_control": true,
@@ -5301,7 +5301,7 @@
                           },
                           {
                             "type": "custom:mushroom-cover-card",
-                            "entity": "cover.volet_canape_low_speed",
+                            "entity": "cover.volet_canape",
                             "show_position_control": false,
                             "show_tilt_position_control": false,
                             "show_buttons_control": true,
@@ -5314,7 +5314,7 @@
                         "cards": [
                           {
                             "type": "custom:mushroom-cover-card",
-                            "entity": "cover.volet_salle_a_manger_low_speed",
+                            "entity": "cover.volet_salle_a_manger",
                             "show_position_control": false,
                             "show_tilt_position_control": false,
                             "show_buttons_control": true,
@@ -5322,7 +5322,7 @@
                           },
                           {
                             "type": "custom:mushroom-cover-card",
-                            "entity": "cover.volet_cuisine_low_speed",
+                            "entity": "cover.volet_cuisine",
                             "show_position_control": false,
                             "show_tilt_position_control": false,
                             "show_buttons_control": true,
@@ -5346,7 +5346,7 @@
                         "cards": [
                           {
                             "type": "custom:mushroom-cover-card",
-                            "entity": "cover.volet_poly_pelouse_low_speed",
+                            "entity": "cover.volet_poly_pelouse",
                             "show_position_control": false,
                             "show_tilt_position_control": false,
                             "show_buttons_control": true,
@@ -5354,7 +5354,7 @@
                           },
                           {
                             "type": "custom:mushroom-cover-card",
-                            "entity": "cover.volet_poly_route_low_speed",
+                            "entity": "cover.volet_poly_route",
                             "show_position_control": false,
                             "show_tilt_position_control": false,
                             "show_buttons_control": true,
@@ -5367,7 +5367,7 @@
                         "cards": [
                           {
                             "type": "custom:mushroom-cover-card",
-                            "entity": "cover.volet_emma_route_low_speed",
+                            "entity": "cover.volet_emma_route",
                             "show_position_control": false,
                             "show_tilt_position_control": false,
                             "show_buttons_control": true,
@@ -5375,7 +5375,7 @@
                           },
                           {
                             "type": "custom:mushroom-cover-card",
-                            "entity": "cover.volet_emma_gauche_low_speed",
+                            "entity": "cover.volet_emma_gauche",
                             "show_position_control": false,
                             "show_tilt_position_control": false,
                             "show_buttons_control": true,
@@ -5388,7 +5388,7 @@
                         "cards": [
                           {
                             "type": "custom:mushroom-cover-card",
-                            "entity": "cover.volet_louis_low_speed",
+                            "entity": "cover.volet_louis",
                             "show_position_control": false,
                             "show_tilt_position_control": false,
                             "show_buttons_control": true,
@@ -5396,7 +5396,7 @@
                           },
                           {
                             "type": "custom:mushroom-cover-card",
-                            "entity": "cover.volet_salle_de_bain_low_speed",
+                            "entity": "cover.volet_salle_de_bain",
                             "show_position_control": false,
                             "show_tilt_position_control": false,
                             "show_buttons_control": true,
@@ -5417,7 +5417,7 @@
                           },
                           {
                             "type": "custom:mushroom-cover-card",
-                            "entity": "cover.volet_bureau_gillian_low_speed",
+                            "entity": "cover.volet_bureau_gillian",
                             "show_position_control": false,
                             "show_tilt_position_control": false,
                             "show_buttons_control": true,
@@ -5449,7 +5449,7 @@
                           },
                           {
                             "type": "custom:mushroom-cover-card",
-                            "entity": "cover.volet_chambre_low_speed",
+                            "entity": "cover.volet_chambre",
                             "show_position_control": false,
                             "show_tilt_position_control": false,
                             "show_buttons_control": true,

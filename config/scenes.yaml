@@ -17,15 +17,15 @@
       friendly_name: Volet Vélux chambre
       supported_features: 15
       state: closed
-    cover.volet_chambre_low_speed:
+    cover.volet_chambre:
       current_position: 0
       device_class: shutter
-      friendly_name: Volet chambre Low speed
+      friendly_name: Volet chambre
       supported_features: 15
       state: closed
   icon: mdi:sleep
   metadata:
-    cover.volet_chambre_low_speed:
+    cover.volet_chambre:
       entity_only: true
     cover.volet_velux_chambre:
       entity_only: true

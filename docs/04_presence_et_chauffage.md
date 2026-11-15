@@ -274,7 +274,7 @@ Deux radiateurs electriques surveilles en puissance et coupes automatiquement :
 ### Script sieste chambre grenier (`script/sieste_chambre_grenier.yaml`)
 
 Sequence automatisee pour une sieste :
-1. Ferme le volet (`cover.volet_chambre_low_speed`)
+1. Ferme le volet (`cover.volet_chambre`, `speed: slow`)
 2. Ferme le velux chambre (`cover.volet_velux_chambre`)
 3. Allume la clim (`climate.chambre`)
 4. Attend la duree `input_datetime.ac_timer`
