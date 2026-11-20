@@ -1,0 +1,98 @@
+######################################################################
+#                EVOHOME — ALERTE DEFAUTS (PILES, CAPTEURS...)
+######################################################################
+#
+# Previent quand une zone Evohome (ou le systeme) a un defaut actif :
+# pile faible capteur/actionneur, perte de communication, etc.
+#
+#   - Source : attribut status.activeFaults de chaque climate.* Evohome
+#     (et status.activeSystemFaults de climate.home).
+#   - Le defaut doit durer 30 min avant d'alerter : le log HA a deja
+#     montre des defauts « pile faible » intermittents (Salle de Bain,
+#     2026-11-15) qui disparaissent seuls et ne s'affichent pas sur
+#     l'ecran du controleur Honeywell.
+#   - Notification : persistante dans HA + push sur l'iPhone de Fabien.
+#   - Retablissement : quand plus aucun defaut pendant 5 min, la
+#     notification persistante est supprimee (pas de push de retablissement).
+#
+# Les piles sont changees quand l'ecran du controleur remonte un defaut ;
+# cette alerte sert a le savoir sans regarder l'ecran.
+######################################################################
+
+- id: 'evohome_alerte_defauts'
+  alias: Evohome — Alerte défauts zones
+
+  trigger:
+    - platform: template
+      id: defaut
+      value_template: >-
+        {{ (states.climate
+              | selectattr('attributes.status', 'defined')
+              | selectattr('attributes.status', 'mapping')
+              | map(attribute='attributes.status')
+              | selectattr('activeFaults', 'defined')
+              | map(attribute='activeFaults') | select | list | count)
+           + (states.climate
+              | selectattr('attributes.status', 'defined')
+              | selectattr('attributes.status', 'mapping')
+              | map(attribute='attributes.status')
+              | selectattr('activeSystemFaults', 'defined')
+              | map(attribute='activeSystemFaults') | select | list | count) > 0 }}
+      for: '00:30:00'
+    - platform: template
+      id: retabli
+      value_template: >-
+        {{ (states.climate
+              | selectattr('attributes.status', 'defined')
+              | selectattr('attributes.status', 'mapping')
+              | map(attribute='attributes.status')
+              | selectattr('activeFaults', 'defined')
+              | map(attribute='activeFaults') | select | list | count)
+           + (states.climate
+              | selectattr('attributes.status', 'defined')
+              | selectattr('attributes.status', 'mapping')
+              | map(attribute='attributes.status')
+              | selectattr('activeSystemFaults', 'defined')
+              | map(attribute='activeSystemFaults') | select | list | count) == 0 }}
+      for: '00:05:00'
+
+  condition: []
+
+  action:
+    - choose:
+        - conditions:
+            - condition: trigger
+              id: defaut
+          sequence:
+            - variables:
+                detail: >-
+                  {% set ns = namespace(l=[]) %}
+                  {% for s in states.climate
+                       if s.attributes.status is mapping
+                       and (s.attributes.status.get('activeFaults')
+                            or s.attributes.status.get('activeSystemFaults')) %}
+                    {% set f = s.attributes.status.get('activeFaults')
+                               or s.attributes.status.get('activeSystemFaults') %}
+                    {% set ns.l = ns.l + [s.name ~ ' : ' ~ (f | string)] %}
+                  {% endfor %}
+                  {{ ns.l | join('\n') }}
+            - service: persistent_notification.create
+              data:
+                title: Evohome — défaut détecté
+                notification_id: evohome_defauts
+                message: "{{ detail }}"
+            - service: notify.mobile_app_iphone_16_pro_de_fabien
+              data:
+                title: Evohome — défaut détecté
+                message: "{{ detail }}"
+                data:
+                  tag: evohome_defauts
+        - conditions:
+            - condition: trigger
+              id: retabli
+          sequence:
+            - service: persistent_notification.dismiss
+              data:
+                notification_id: evohome_defauts
+
+  mode: single

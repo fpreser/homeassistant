@@ -8,6 +8,9 @@ et les stocke dans /config/evohome_schedules.json.
 Services exposés :
   pyscript.evohome_fetch_schedules  — synchronisation manuelle ou via dashboard
   pyscript.evohome_reset_zone       — annule l'override d'une zone (entity_id requis)
+  pyscript.evohome_set_zone_schedule — remplace le planning d'une zone (zone_name, schedule) ;
+                                       7 jours requis, jours FR (min./capitalisés, accents tolérés)
+                                       ou EN minuscules ; erreur → log + notification + exception
 
 Sensor mis à jour :
   sensor.evohome_schedule_status   — "ok" / "error" + attributs (zones, fetched_at)
@@ -26,6 +29,8 @@ Config requise dans configuration.yaml :
 """
 
 import json
+import re
+import unicodedata
 from datetime import datetime
 
 SCHEDULE_FILE = "/config/evohome_schedules.json"
@@ -41,6 +46,20 @@ _DAYS_NUM_FR = {
     4: "Vendredi", 5: "Samedi", 6: "Dimanche",
 }
 _DAYS_FR_NUM = {v: k for k, v in _DAYS_NUM_FR.items()}
+
+# Valeurs attendues par evohomeasync2 (enum DayOfWeek, snake_case) dans l'ordre lundi→dimanche
+_DAYS_API = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
+_DAYS_FR_BY_API = dict(zip(_DAYS_API, ["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi", "Dimanche"]))
+# Alias acceptés en entrée (après mise en minuscules et suppression des accents)
+_DAY_ALIASES = {
+    "lundi": "monday", "mardi": "tuesday", "mercredi": "wednesday", "jeudi": "thursday",
+    "vendredi": "friday", "samedi": "saturday", "dimanche": "sunday",
+    "monday": "monday", "tuesday": "tuesday", "wednesday": "wednesday", "thursday": "thursday",
+    "friday": "friday", "saturday": "saturday", "sunday": "sunday",
+}
+_TIME_RE = re.compile(r"^(\d{1,2}):(\d{2})(?::00)?$")
+_MAX_SWITCHPOINTS = 6          # limite Honeywell par jour
+_TEMP_MIN, _TEMP_MAX = 5.0, 35.0
 
 
 def _normalise_schedule(raw) -> dict:
@@ -260,19 +279,74 @@ async def _daily_fetch():
     await evohome_fetch_schedules()
 
 
+def _norm_day_key(key) -> str:
+    """'Mércredi ' → 'mercredi' (minuscules, sans accents ni espaces)."""
+    decomposed = unicodedata.normalize("NFKD", str(key))
+    return "".join([c for c in decomposed if not unicodedata.combining(c)]).strip().lower()
+
+
 def _schedule_to_api(schedule: dict) -> list:
-    """Convertit {jour_fr: [{time, temp}]} → format API evohomeasync2 2.x."""
+    """Convertit {jour: [{time, temp}]} → format API evohomeasync2 3.x.
+
+    Jours acceptés : français (minuscules ou capitalisés, accents tolérés) ou anglais minuscules.
+    Les 7 jours sont obligatoires. day_of_week est envoyé comme valeur de l'enum DayOfWeek
+    ('monday'…'sunday'), que la bibliothèque convertit ensuite en 'Monday'…'Sunday' pour Honeywell.
+    Lève ValueError avec un message explicite si le dictionnaire est invalide.
+    """
+    if not isinstance(schedule, dict):
+        raise ValueError("schedule doit être un dictionnaire {jour: [{time, temp}, ...]}")
+
+    by_day = {}
+    for key, slots in schedule.items():
+        day = _DAY_ALIASES.get(_norm_day_key(key))
+        if day is None:
+            raise ValueError(
+                f"Jour inconnu '{key}' (attendu : lundi…dimanche ou monday…sunday)"
+            )
+        if day in by_day:
+            raise ValueError(f"Jour en double dans le planning : '{key}'")
+        by_day[day] = slots
+
+    missing = [_DAYS_FR_BY_API[d] for d in _DAYS_API if d not in by_day]
+    if missing:
+        raise ValueError(f"Jours manquants dans le planning (les 7 sont requis) : {', '.join(missing)}")
+
     result = []
-    for day_fr, num in _DAYS_FR_NUM.items():
-        slots = schedule.get(day_fr, [])
+    for day in _DAYS_API:
+        label = _DAYS_FR_BY_API[day]
+        slots = by_day[day]
+        if not isinstance(slots, list) or not slots:
+            raise ValueError(f"{label} : au moins un créneau requis")
+        if len(slots) > _MAX_SWITCHPOINTS:
+            raise ValueError(f"{label} : {len(slots)} créneaux, maximum {_MAX_SWITCHPOINTS}")
         switchpoints = []
-        for sp in sorted(slots, key=lambda s: s["time"]):
-            switchpoints.append({
-                "time_of_day": sp["time"] + ":00",
-                "heat_setpoint": float(sp["temp"]),
-            })
-        if switchpoints:
-            result.append({"day_of_week": num, "switchpoints": switchpoints})
+        seen = set()
+        for sp in slots:
+            if not isinstance(sp, dict) or "time" not in sp or "temp" not in sp:
+                raise ValueError(f"{label} : créneau invalide {sp!r} (attendu {{time: 'HH:MM', temp: °C}})")
+            m = _TIME_RE.match(str(sp["time"]).strip())
+            if not m:
+                raise ValueError(f"{label} : heure invalide '{sp['time']}' (format HH:MM)")
+            hh, mm = int(m.group(1)), int(m.group(2))
+            if hh > 23 or mm > 59 or mm % 10 != 0:
+                raise ValueError(
+                    f"{label} : heure '{sp['time']}' refusée (0-23h, minutes par pas de 10)"
+                )
+            try:
+                temp = float(sp["temp"])
+            except (TypeError, ValueError):
+                raise ValueError(f"{label} : température invalide '{sp['temp']}'")
+            if not (_TEMP_MIN <= temp <= _TEMP_MAX):
+                raise ValueError(
+                    f"{label} : température {temp} hors limites ({_TEMP_MIN}–{_TEMP_MAX} °C)"
+                )
+            tod = f"{hh:02d}:{mm:02d}:00"
+            if tod in seen:
+                raise ValueError(f"{label} : deux créneaux à {tod[:5]}")
+            seen.add(tod)
+            switchpoints.append({"time_of_day": tod, "heat_setpoint": temp})
+        switchpoints.sort(key=lambda s: s["time_of_day"])
+        result.append({"day_of_week": day, "switchpoints": switchpoints})
     return result
 
 
@@ -281,22 +355,52 @@ async def evohome_set_zone_schedule(zone_name=None, schedule=None):
     """Met à jour la planification complète d'une zone Evohome.
 
     zone_name : nom de la zone tel qu'affiché dans l'app Evohome (ex: 'Ch Amis')
-    schedule  : dict {jour_fr: [{time: 'HH:MM', temp: float}]}
+    schedule  : dict {jour: [{time: 'HH:MM', temp: float}]} — les 7 jours sont requis
+                (jours en français minuscules/capitalisés, accents tolérés, ou anglais minuscules)
+
+    Échec (planning invalide, API refusée ou tâche Honeywell en échec) : log d'erreur,
+    notification persistante et exception propagée — jamais de « succès » silencieux.
     """
     if not zone_name or schedule is None:
         raise ValueError("zone_name et schedule requis")
 
-    zone = await _get_zone(zone_name)
-    api_schedule = _schedule_to_api(schedule)
+    try:
+        api_schedule = _schedule_to_api(schedule)
+        zone = await _get_zone(zone_name)
 
-    set_fn = getattr(zone, "set_schedule", None)
-    if not set_fn:
-        raise ValueError(
-            f"Pas de méthode set_schedule sur '{zone_name}' "
-            f"(attrs: {[a for a in dir(zone) if not a.startswith('_')]})"
+        set_fn = getattr(zone, "set_schedule", None)
+        if not set_fn:
+            raise ValueError(
+                f"Pas de méthode set_schedule sur '{zone_name}' "
+                f"(attrs: {[a for a in dir(zone) if not a.startswith('_')]})"
+            )
+
+        comm_task = await set_fn(api_schedule)
+        # Honeywell accepte le PUT puis exécute une « comm task » vers la passerelle :
+        # on attend son succès (le PUT seul ne prouve pas que le planning est appliqué).
+        # Interrogation explicite (max ~90 s) : pyscript ne se prête pas à asyncio.wait_for.
+        if comm_task is not None and hasattr(comm_task, "get_state"):
+            final_state = None
+            for _ in range(30):
+                ct_state = str(await comm_task.get_state()).lower()
+                if ct_state == "succeeded":
+                    final_state = ct_state
+                    break
+                if ct_state == "failed":
+                    raise RuntimeError("la tâche Honeywell (comm task) a échoué")
+                await task.sleep(3)
+            if final_state != "succeeded":
+                raise TimeoutError("la tâche Honeywell n'a pas abouti en 90 s")
+    except Exception as err:
+        msg = f"Planning Evohome '{zone_name}' NON appliqué : {type(err).__name__}: {err}"
+        log.error(f"evohome: {msg}")
+        persistent_notification.create(
+            title="Evohome — échec de mise à jour du planning",
+            message=msg,
+            notification_id=f"evohome_set_schedule_{_zone_slug(str(zone_name))}",
         )
+        raise
 
-    await set_fn(api_schedule)
     log.info(f"evohome: schedule '{zone_name}' mis à jour ({len(api_schedule)} jours)")
     await evohome_fetch_schedules()
 

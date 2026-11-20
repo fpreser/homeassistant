@@ -1,0 +1,118 @@
+{
+ "backup_at": "2026-11-18T00:00:00+01:00",
+ "source": "Hall Entree AVANT passage a 17 C (2026-11-17)",
+ "restore": "pyscript.evohome_set_zone_schedule (service_data JSON) puis pyscript.evohome_fetch_schedules",
+ "zone_name": "Hall Entree",
+ "schedule": {
+  "monday": [
+   {
+    "time": "05:30",
+    "temp": 18.0
+   },
+   {
+    "time": "07:00",
+    "temp": 16.0
+   },
+   {
+    "time": "17:00",
+    "temp": 18.0
+   },
+   {
+    "time": "22:00",
+    "temp": 16.0
+   }
+  ],
+  "tuesday": [
+   {
+    "time": "05:30",
+    "temp": 18.0
+   },
+   {
+    "time": "07:00",
+    "temp": 16.0
+   },
+   {
+    "time": "17:00",
+    "temp": 18.0
+   },
+   {
+    "time": "22:00",
+    "temp": 16.0
+   }
+  ],
+  "wednesday": [
+   {
+    "time": "05:30",
+    "temp": 18.0
+   },
+   {
+    "time": "07:00",
+    "temp": 16.0
+   },
+   {
+    "time": "17:00",
+    "temp": 18.0
+   },
+   {
+    "time": "22:00",
+    "temp": 16.0
+   }
+  ],
+  "thursday": [
+   {
+    "time": "05:30",
+    "temp": 18.0
+   },
+   {
+    "time": "07:00",
+    "temp": 16.0
+   },
+   {
+    "time": "17:00",
+    "temp": 18.0
+   },
+   {
+    "time": "22:00",
+    "temp": 16.0
+   }
+  ],
+  "friday": [
+   {
+    "time": "05:30",
+    "temp": 18.0
+   },
+   {
+    "time": "07:00",
+    "temp": 16.0
+   },
+   {
+    "time": "17:00",
+    "temp": 18.0
+   },
+   {
+    "time": "22:00",
+    "temp": 16.0
+   }
+  ],
+  "saturday": [
+   {
+    "time": "08:00",
+    "temp": 18.0
+   },
+   {
+    "time": "22:00",
+    "temp": 16.0
+   }
+  ],
+  "sunday": [
+   {
+    "time": "08:00",
+    "temp": 18.0
+   },
+   {
+    "time": "22:00",
+    "temp": 16.0
+   }
+  ]
+ }
+}
