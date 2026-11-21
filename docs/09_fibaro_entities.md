@@ -34,11 +34,9 @@
 | 53 | Heat Detector - Salle à manger Extérieur | 🔥 | `binary_sensor.salle_a_manger_exterieur_heat_detector` |
 | 54 | Salle à manger Extérieur | 💡 | `light.salle_a_manger_exterieur` |
 | 55 | 13.2 FGD 212 | 💡 | `—` |
-| 57 | 14.0 Heat Detector | 🔥 | `—` |
-| 58 | 14.0 FGD 212 | 💡 | `—` |
-| 60 | Heat Detector - Table Salle à Manger | 🔥 | `binary_sensor.salle_a_manger_table_heat_detector` |
-| 61 | Table Salle à Manger | 💡 | `light.salle_a_manger_table` |
-| 62 | 14.2 FGD 212 | 💡 | `—` |
+| 279 | 59.0 FGD 212 | 💡 | `light.default_room_59_0_fgd_212_279` |
+| 281 | Table Salle à Manger | 💡 | `light.salle_a_manger_table` |
+| 282 | 59.2 FGD 212 | 💡 | `light.default_room_59_2_fgd_212_282` |
 
 ## Cuisine
 

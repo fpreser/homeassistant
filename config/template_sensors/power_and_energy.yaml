@@ -46,7 +46,7 @@
           'sensor.salon_exterieur_light_power',
           'sensor.salon_prises_power',
           'sensor.salle_a_manger_exterieur_light_power',
-          'sensor.salle_a_manger_table_light_power',
+          'sensor.salle_a_manger_table_power',
           'sensor.cuisine_passage_light_power',
           'sensor.cuisine_ilot_light_power',
           'sensor.cuisine_evier_light_power',

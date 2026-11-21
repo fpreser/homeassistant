@@ -17,9 +17,28 @@
       entity_id: light.jardin_exterieur_porte
       state: 'off'      
   action:
+  # Le garage n'est rallume/eteint que s'il etait eteint a l'arrivee (ne coupe pas
+  # une lumiere deja allumee volontairement). Garage gauche/droite suivent deja la
+  # porte exterieure via "Éclairage automatique".
+  - variables:
+      garage_etait_eteint: "{{ is_state('light.garage', 'off') }}"
   - service: light.turn_on
     entity_id: light.jardin_exterieur_porte
+  - if:
+    - condition: template
+      value_template: "{{ garage_etait_eteint }}"
+    then:
+    - service: light.turn_on
+      target:
+        entity_id: light.garage
   - delay: '00:02:00'
   - service: light.turn_off
-    entity_id: light.jardin_exterieur_porte    
+    entity_id: light.jardin_exterieur_porte
+  - if:
+    - condition: template
+      value_template: "{{ garage_etait_eteint }}"
+    then:
+    - service: light.turn_off
+      target:
+        entity_id: light.garage
   mode: single

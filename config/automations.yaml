@@ -408,22 +408,21 @@
       - condition: trigger
         id: Available
       sequence:
-      - service: "{% set entity_ids = expand(states) | selectattr('entity_id', 'match',
-          '^input_boolean\\\\.') | selectattr('entity_id', 'search', 'awtrix') | list
-          | map(attribute='entity_id') | list %}\n{% for entity_id in entity_ids %}\n
-          \ {% set index = loop.index0 %}\n  {% set toggle_service = { 'service':
-          'input_boolean.toggle', 'data': { 'entity_id': entity_id } } %}\n  {% set
-          delay_service = { 'service': 'delay', 'data': { 'seconds': 2 } } %}\n  -
-          service: script.execute\n    data_template:\n      sequence:\n        -
-          '{{ toggle_service }}'\n        - '{{ delay_service }}'\n{% endfor %}\n"
-      - service: "{% set entity_ids = expand(states) | selectattr('entity_id', 'match',
-          '^input_boolean\\\\.') | selectattr('entity_id', 'search', 'awtrix') | list
-          | map(attribute='entity_id') | list %}\n{% for entity_id in entity_ids %}\n
-          \ {% set index = loop.index0 %}\n  {% set toggle_service = { 'service':
-          'input_boolean.toggle', 'data': { 'entity_id': entity_id } } %}\n  {% set
-          delay_service = { 'service': 'delay', 'data': { 'seconds': 2 } } %}\n  -
-          service: script.execute\n    data_template:\n      sequence:\n        -
-          '{{ toggle_service }}'\n        - '{{ delay_service }}'\n{% endfor %}            \n"
+      - delay:
+          seconds: 10
+      - repeat:
+          for_each: "{{ states.input_boolean | selectattr('entity_id', 'search', 'awtrix_toggle') | map(attribute='entity_id') | list }}"
+          sequence:
+          - service: input_boolean.toggle
+            target:
+              entity_id: "{{ repeat.item }}"
+          - delay:
+              seconds: 2
+          - service: input_boolean.toggle
+            target:
+              entity_id: "{{ repeat.item }}"
+          - delay:
+              seconds: 2
   mode: single
 - id: '1683573543248'
   alias: Awtrix Mercedes
@@ -896,13 +895,13 @@
       - condition: trigger
         id:
         - Up
+      sequence:
       - service: cover.open_cover
         metadata: {}
         data:
           speed: slow
         target:
           entity_id: cover.volet_tv
-      sequence:
       - service: cover.open_cover
         metadata: {}
         data: {}
