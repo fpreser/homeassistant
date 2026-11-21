@@ -1,0 +1,31 @@
+@if (ha.status() !== 'ready') {
+  <div class="login panel">
+    <h1>ORBIT</h1>
+    <p>Connexion à Home Assistant</p>
+    <input [(ngModel)]="url" placeholder="http://homeassistant.local:8123" />
+    <input [(ngModel)]="token" type="password" placeholder="Token d'accès longue durée" />
+    <button (click)="login()" [disabled]="ha.status() === 'connecting'">
+      {{ ha.status() === 'connecting' ? 'Connexion…' : 'Se connecter' }}
+    </button>
+    @if (ha.status() === 'error') {
+      <p class="err">{{ ha.error() }}</p>
+    }
+  </div>
+} @else {
+  <header class="topbar panel">
+    <div class="brand">⌂ <span>Orbit</span></div>
+    <div class="clock">
+      {{ now() | date: 'HH:mm' }}
+      <small>{{ now() | date: 'EEEE d MMMM y' }}</small>
+    </div>
+    <button class="ghost" (click)="ha.logout()" title="Déconnexion">⏻</button>
+  </header>
+  <main class="grid">
+    <app-weather-card class="weather" />
+    <app-solar-card class="solar" />
+    <app-camera-card class="cameras" />
+    <app-power-chart-card class="chart" />
+    <app-controls-card class="controls" />
+    <app-rooms-card class="rooms" />
+  </main>
+}

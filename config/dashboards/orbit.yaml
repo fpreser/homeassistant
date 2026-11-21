@@ -1,0 +1,344 @@
+# Dashboard "Orbit" - inspire d'une maquette sombre/neon (Overview).
+# Mode YAML : edition directe de ce fichier, puis F5 dans le navigateur (pas de restart).
+# Entites : voir docs/02_energie_et_solaire.md et docs/04_presence_et_chauffage.md
+title: Orbit
+views:
+  - title: Overview
+    path: overview
+    icon: mdi:home
+    type: custom:grid-layout
+    layout:
+      grid-template-columns: 1fr 1.4fr 1fr
+      grid-template-areas: |
+        "weather solar cameras"
+        "weather chart controls"
+        "rooms rooms rooms"
+      mediaquery:
+        "(max-width: 900px)":
+          grid-template-columns: 1fr
+          grid-template-areas: |
+            "solar" "weather" "chart" "controls" "cameras" "rooms"
+    cards:
+      # ---------------- METEO ----------------
+      - type: vertical-stack
+        view_layout: {grid-area: weather}
+        cards:
+          - type: custom:button-card
+            name: METEO
+            icon: mdi:weather-partly-rainy
+            tap_action: {action: none}
+            styles: &head
+              card:
+                - 'background: transparent'
+                - 'border: none'
+                - 'box-shadow: none'
+                - 'padding: 14px 16px 4px'
+              grid:
+                - 'grid-template-areas: i n'
+                - 'grid-template-columns: 32px 1fr'
+              name:
+                - 'justify-self: start'
+                - 'font-weight: 700'
+                - 'letter-spacing: 2px'
+                - 'font-size: 15px'
+                - 'color: #e6f4ff'
+              icon:
+                - 'color: #38d6ff'
+                - 'width: 22px'
+          - type: weather-forecast
+            entity: weather.maison
+            show_current: true
+            show_forecast: true
+            forecast_type: hourly
+            card_mod: &glass
+              style: |
+                ha-card { background: rgba(8,22,38,.78); border: 1px solid rgba(56,214,255,.25);
+                  border-radius: 14px; box-shadow: 0 0 18px rgba(56,214,255,.08); color:#e6f4ff; }
+          - type: horizontal-stack
+            cards:
+              - type: custom:button-card
+                entity: sensor.vicare_outside_temperature
+                name: Ext.
+                show_state: true
+                styles: &mini
+                  card:
+                    - 'background: rgba(8,22,38,.78)'
+                    - 'border: 1px solid rgba(56,214,255,.25)'
+                    - 'border-radius: 14px'
+                  name:
+                    - 'font-size: 11px'
+                    - 'color: #8fb4cc'
+                  state:
+                    - 'font-size: 22px'
+                    - 'font-weight: 600'
+                    - 'color: #e6f4ff'
+                  icon:
+                    - 'color: #38d6ff'
+                    - 'width: 20px'
+              - type: custom:button-card
+                entity: sensor.temperature_chauffe_eau
+                name: Eau chaude
+                icon: mdi:water-boiler
+                show_state: true
+                styles: *mini
+      # ---------------- SOLAIRE ----------------
+      - type: vertical-stack
+        view_layout: {grid-area: solar}
+        cards:
+          - type: custom:button-card
+            name: SOLAR LIVE
+            icon: mdi:white-balance-sunny
+            tap_action: {action: navigate, navigation_path: /energy}
+            styles:
+              card:
+                - 'background: transparent'
+                - 'border: none'
+                - 'box-shadow: none'
+                - 'padding: 14px 16px 0'
+              grid:
+                - 'grid-template-areas: i n'
+                - 'grid-template-columns: 32px 1fr'
+              name:
+                - 'justify-self: start'
+                - 'font-weight: 700'
+                - 'letter-spacing: 2px'
+                - 'font-size: 15px'
+                - 'color: #ffc531'
+              icon:
+                - 'color: #ffc531'
+                - 'width: 24px'
+          - type: custom:layout-card
+            layout_type: custom:grid-layout
+            layout:
+              grid-template-columns: 1fr 1fr 1fr
+              grid-template-areas: |
+                ". solar ."
+                "home . grid"
+              grid-gap: 6px
+              padding: 0 8px 12px
+            cards:
+              - type: custom:button-card
+                view_layout: {grid-area: solar}
+                entity: sensor.solar_total
+                name: SOLAR
+                icon: mdi:solar-power
+                show_state: true
+                state_display: "[[[ return (entity.state/1000).toFixed(2) + ' kW'; ]]]"
+                styles:
+                  card:
+                    - 'background: radial-gradient(circle,rgba(255,197,49,.18),rgba(8,22,38,.9))'
+                    - 'border: 2px solid #ffc531'
+                    - 'border-radius: 50%'
+                    - 'aspect-ratio: 1'
+                    - 'box-shadow: 0 0 24px rgba(255,197,49,.45)'
+                  name:
+                    - 'font-size: 12px'
+                    - 'letter-spacing: 2px'
+                    - 'color: #e6f4ff'
+                  state:
+                    - 'font-size: 17px'
+                    - 'font-weight: 700'
+                    - 'color: #ffc531'
+                  icon:
+                    - 'color: #ffc531'
+                    - 'width: 34px'
+              - type: custom:button-card
+                view_layout: {grid-area: home}
+                entity: sensor.power_home
+                name: HOME
+                icon: mdi:home
+                show_state: true
+                state_display: "[[[ return (entity.state/1000).toFixed(2) + ' kW'; ]]]"
+                styles:
+                  card:
+                    - 'background: radial-gradient(circle,rgba(56,214,255,.18),rgba(8,22,38,.9))'
+                    - 'border: 2px solid #38d6ff'
+                    - 'border-radius: 50%'
+                    - 'aspect-ratio: 1'
+                    - 'box-shadow: 0 0 24px rgba(56,214,255,.45)'
+                  name:
+                    - 'font-size: 12px'
+                    - 'letter-spacing: 2px'
+                    - 'color: #e6f4ff'
+                  state:
+                    - 'font-size: 17px'
+                    - 'font-weight: 700'
+                    - 'color: #38d6ff'
+                  icon:
+                    - 'color: #38d6ff'
+                    - 'width: 34px'
+              - type: custom:button-card
+                view_layout: {grid-area: grid}
+                entity: sensor.p1_meter_3c39e7284d28_active_power
+                name: "[[[ return entity.state < 0 ? 'TO GRID' : 'FROM GRID'; ]]]"
+                icon: mdi:transmission-tower
+                show_state: true
+                state_display: "[[[ return (Math.abs(entity.state)/1000).toFixed(2) + ' kW'; ]]]"
+                styles:
+                  card:
+                    - 'background: radial-gradient(circle,rgba(255,138,61,.18),rgba(8,22,38,.9))'
+                    - 'border: 2px solid #ff8a3d'
+                    - 'border-radius: 50%'
+                    - 'aspect-ratio: 1'
+                    - 'box-shadow: 0 0 24px rgba(255,138,61,.45)'
+                  name:
+                    - 'font-size: 12px'
+                    - 'letter-spacing: 2px'
+                    - 'color: #e6f4ff'
+                  state:
+                    - 'font-size: 17px'
+                    - 'font-weight: 700'
+                    - 'color: #ff8a3d'
+                  icon:
+                    - 'color: #ff8a3d'
+                    - 'width: 34px'
+          - type: horizontal-stack
+            cards:
+              - type: custom:button-card
+                entity: sensor.sb5_0_1av_41_208_daily_yield
+                name: Produit aujourd'hui
+                show_state: true
+                icon: mdi:solar-power-variant
+                state_display: >
+                  [[[ const a = Number(states['sensor.sb5_0_1av_41_208_daily_yield'].state)||0;
+                  const b = Number(states['sensor.sb5_0_1av_41_345_daily_yield'].state)||0;
+                  return ((a+b)/1000).toFixed(2) + ' kWh'; ]]]
+                styles: *mini
+              - type: custom:button-card
+                entity: sensor.power_tesla
+                name: Tesla
+                show_state: true
+                icon: mdi:car-electric
+                state_display: "[[[ return (entity.state/1000).toFixed(1) + ' kW'; ]]]"
+                styles: *mini
+      # ---------------- GRAPHE 24H ----------------
+      - type: custom:mini-graph-card
+        view_layout: {grid-area: chart}
+        name: POWER · 24 HOURS
+        hours_to_show: 24
+        points_per_hour: 2
+        line_width: 2
+        smoothing: true
+        show:
+          legend: true
+          icon: false
+          fill: fade
+        entities:
+          - entity: sensor.solar_total
+            name: Solar
+            color: '#ffc531'
+          - entity: sensor.power_home
+            name: Home
+            color: '#ffffff'
+          - entity: sensor.p1_meter_3c39e7284d28_active_power
+            name: Grid
+            color: '#38d6ff'
+        card_mod: *glass
+      # ---------------- CAMERAS ----------------
+      - type: vertical-stack
+        view_layout: {grid-area: cameras}
+        cards:
+          - type: custom:button-card
+            name: CAMERAS
+            icon: mdi:video-outline
+            tap_action: {action: none}
+            styles: *head
+          - type: picture-entity
+            entity: camera.sonnette
+            camera_view: auto
+            show_name: true
+            name: Sonnette
+            show_state: false
+            card_mod: *glass
+      # ---------------- CONTROLES ----------------
+      - type: vertical-stack
+        view_layout: {grid-area: controls}
+        cards:
+          - type: custom:button-card
+            name: CONTROLS
+            icon: mdi:tune
+            tap_action: {action: none}
+            styles: *head
+          - type: horizontal-stack
+            cards:
+              - &ctl
+                type: custom:button-card
+                entity: light.terasse
+                name: Terrasse
+                icon: mdi:lightbulb-outline
+                show_state: true
+                tap_action: {action: toggle}
+                styles:
+                  card:
+                    - 'background: rgba(8,22,38,.78)'
+                    - 'border: 1px solid rgba(56,214,255,.25)'
+                    - 'border-radius: 14px'
+                    - 'padding: 14px 6px'
+                  name:
+                    - 'font-size: 12px'
+                    - 'color: #e6f4ff'
+                  state:
+                    - 'font-size: 10px'
+                    - 'color: #8fb4cc'
+                    - 'text-transform: uppercase'
+                  icon:
+                    - 'width: 26px'
+                state:
+                  - value: 'on'
+                    styles:
+                      card:
+                        - 'border: 1px solid #38d6ff'
+                        - 'box-shadow: 0 0 14px rgba(56,214,255,.4)'
+                      icon:
+                        - 'color: #38d6ff'
+              - <<: *ctl
+                entity: light.salon_exterieur
+                name: Salon ext.
+              - <<: *ctl
+                entity: light.terasse_bois
+                name: Bois
+      # ---------------- PIECES ----------------
+      - type: horizontal-stack
+        view_layout: {grid-area: rooms}
+        cards:
+          - &room
+            type: custom:button-card
+            entity: sensor.honeywell_3
+            name: Salon
+            icon: mdi:thermometer
+            show_state: true
+            state_display: "[[[ return Number(entity.state).toFixed(1) + ' °C'; ]]]"
+            tap_action: {action: more-info}
+            styles:
+              card:
+                - 'background: linear-gradient(135deg,rgba(8,22,38,.95),rgba(20,50,70,.7))'
+                - 'border: 1px solid rgba(56,214,255,.25)'
+                - 'border-radius: 14px'
+                - 'padding: 14px'
+              grid:
+                - 'grid-template-areas: n" "s'
+                - 'text-align: left'
+              name:
+                - 'justify-self: start'
+                - 'font-size: 13px'
+                - 'color: #e6f4ff'
+              state:
+                - 'justify-self: start'
+                - 'font-size: 22px'
+                - 'font-weight: 600'
+                - 'color: #ff9f5a'
+          - <<: *room
+            entity: sensor.honeywell_4
+            name: Salle à manger
+          - <<: *room
+            entity: sensor.honeywell_5
+            name: Cuisine
+          - <<: *room
+            entity: sensor.honeywell_8
+            name: Emma
+          - <<: *room
+            entity: sensor.honeywell_9
+            name: Louis
+          - <<: *room
+            entity: sensor.honeywell_10
+            name: Bureau
