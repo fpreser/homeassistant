@@ -18,4 +18,6 @@ Analyse en lecture seule : ne modifier AUCUN planning, consigne ou réglage sans
 - `ch_amis` n'a pas de `sensor.temp_*` (le script ne montre donc pas sa température), mais `climate.chambre_amis` fonctionne : son déficit à 0 est normal quand elle est au-dessus de sa consigne (16 °C).
 - Les 4 caractères accentués s'affichent mal sous la console Windows sans `PYTHONIOENCODING=utf-8`.
 - Les puissances de la chaudière ne sont pas exposées ; le gaz est du propane en citerne (1 m³ ViCare ≈ 1,6 L).
+- Le programme actif de la chaudière (`active_vicare_program` de `climate.vicare_heating` : normal / reducedEnergySaving / reduced) n'est PAS dans Prometheus mais dans la base HA (états + attributs) : il montre quand le contact Evohome (module Viessmann EM-EA1) est fermé ; une période continue en « normal » > 90 min la nuit sans zone en déficit est à signaler.
+- Les réglages de courbe (pente, décalage), consignes normal/réduit/confort et température ECS sont des `number.e3_vitodens_200_0419_*` modifiables depuis HA : ne les changer qu'avec l'accord de l'utilisateur.
 - Le brûleur est piloté par Evohome via un relais (tout/rien, cycle de 10 min) : les impulsions de 2 min toutes les 10 min viennent du relais, pas de la chaudière.
