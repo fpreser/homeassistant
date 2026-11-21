@@ -1,0 +1,95 @@
+######################################################################
+#        CHAUDIERE — ALERTE « NORMAL » CONTINU LA NUIT SANS BESOIN
+######################################################################
+#
+# Contexte (audit chauffage du 2026-11-21) : le contact du relais Evohome
+# entre dans le module Viessmann EM-EA1 et fait passer le circuit de chauffe
+# de « reduit » (3 degres) a « normal » (23 degres, courbe de chauffe).
+# La nuit du 20 au 21/11, la chaudiere est restee en « normal » pendant ~8 h
+# (22:03 -> 06:05) alors qu'aucune piece n'etait sous sa consigne : bruleur
+# au minimum de modulation (~10 %), ~18 kWh de propane pour rien.
+# Cause inconnue cote Evohome (zone en demande invisible, relais BDR91 ou
+# liaison radio bloquee, ou perturbation apres reecriture des plannings).
+#
+# Cette alerte previent AU MOMENT de l'episode pour qu'on puisse observer
+# (ecran/leds du relais, appli Evohome) et garde un instantane des zones.
+#
+#   - Declencheur : entre 22:00 et 05:00, programme actif de la chaudiere
+#     (climate.vicare_heating -> active_vicare_program) different de
+#     « reduit » ET deficit max Evohome (sensor.evohome_deficit_ranking)
+#     < 0,3 degre, pendant 90 minutes d'affilee.
+#   - Notification : persistante dans HA + push discret (non sonore) sur
+#     l'iPhone de Fabien.
+#   - Retablissement : programme « reduit » depuis 10 min -> la
+#     notification persistante est supprimee.
+#
+# Seuils a ajuster ici si trop/pas assez sensible : 90 min, 0,3 degre.
+######################################################################
+
+- id: 'chaudiere_normal_nuit_sans_besoin'
+  alias: Chaudière — Alerte « normal » continu la nuit sans besoin
+
+  trigger:
+    - platform: template
+      id: normal_nuit
+      value_template: >-
+        {{ (now().hour >= 22 or now().hour < 5)
+           and state_attr('climate.vicare_heating', 'active_vicare_program')
+               in ['normal', 'comfort', 'forcedLastFromSchedule']
+           and (states('sensor.evohome_deficit_ranking') | float(1)) < 0.3 }}
+      for: '01:30:00'
+    - platform: template
+      id: retabli
+      value_template: >-
+        {{ state_attr('climate.vicare_heating', 'active_vicare_program')
+           in ['reduced', 'reducedEnergySaving', 'standby'] }}
+      for: '00:10:00'
+
+  condition: []
+
+  action:
+    - choose:
+        - conditions:
+            - condition: trigger
+              id: normal_nuit
+          sequence:
+            - variables:
+                zones: >-
+                  {% set ns = namespace(l=[]) %}
+                  {% for s in states.climate
+                       if s.attributes.status is mapping
+                       and s.attributes.status.get('zone_id') %}
+                    {% set ns.l = ns.l + [s.name ~ ' ' ~ s.attributes.current_temperature ~ '/' ~ s.attributes.temperature] %}
+                  {% endfor %}
+                  {{ ns.l | join(' · ') }}
+                detail: >-
+                  La chaudière est en programme « {{ state_attr('climate.vicare_heating', 'active_vicare_program') }} »
+                  depuis plus de 90 min la nuit alors qu'aucune pièce n'est sous sa consigne
+                  (déficit max {{ states('sensor.evohome_deficit_ranking') }} °C).
+                  Ext {{ states('sensor.vicare_outside_temperature') }} °C,
+                  brûleur {{ states('binary_sensor.vicare_burner_active') }},
+                  modulation {{ states('sensor.vicare_burner_modulation') }} %,
+                  départ {{ states('sensor.vicare_supply_temperature') }} °C.
+                  Zones (T/consigne) : {{ zones }}
+            - service: persistent_notification.create
+              data:
+                title: Chaudière en « normal » sans besoin
+                notification_id: chaudiere_normal_nuit
+                message: "{{ detail }}"
+            - service: notify.mobile_app_iphone_16_pro_de_fabien
+              data:
+                title: Chaudière en « normal » sans besoin
+                message: "{{ detail }}"
+                data:
+                  tag: chaudiere_normal_nuit
+                  push:
+                    interruption-level: passive
+        - conditions:
+            - condition: trigger
+              id: retabli
+          sequence:
+            - service: persistent_notification.dismiss
+              data:
+                notification_id: chaudiere_normal_nuit
+
+  mode: single

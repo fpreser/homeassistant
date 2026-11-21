@@ -1,0 +1,91 @@
+######################################################################
+#     CHAUDIERE — ALERTE « REDUIT » CONTINU ALORS QUE LA MAISON REFROIDIT
+######################################################################
+#
+# Cas inverse de ChaudiereNormalNuit.yaml. Le contact du relais Evohome
+# passe par le module Viessmann EM-EA1 : contact ferme = programme
+# « normal » (23 degres), contact ouvert = « reduit » (3 degres = chauffage
+# coupe). Si Evohome (controleur, relais BDR91, liaison radio) tombe en
+# panne contact ouvert, la chaudiere reste en reduit et plus rien ne chauffe.
+#
+# En fonctionnement normal le programme alterne « normal »/« reduit »
+# (impulsions du relais toutes les 10 min) : un « reduit » CONTINU pendant
+# 2 h alors que des pieces sont nettement sous leur consigne n'arrive
+# qu'en cas de panne.
+#
+#   - Declencheur : programme actif de la chaudiere = reduit/standby, sans
+#     interruption pendant 2 h, ET au moins 2 zones Evohome avec un deficit
+#     >= 1,5 degre, ET temperature exterieure < 14 degres.
+#   - Notification : persistante dans HA + push sur l'iPhone de Fabien
+#     (normal, pas passif : la maison se refroidit).
+#   - Retablissement : plus de 2 zones en deficit (< 2 zones >= 1,5 degre)
+#     OU programme « normal » pendant 10 min -> notification supprimee.
+#
+# Seuils a ajuster : 2 h, 2 zones, 1,5 degre, 14 degres.
+######################################################################
+
+- id: 'chaudiere_reduit_maison_froide'
+  alias: Chaudière — Alerte « réduit » continu, maison qui refroidit
+
+  trigger:
+    - platform: template
+      id: reduit_froid
+      value_template: >-
+        {% set zones = ['salon','cuisine','salle_a_manger','salle_de_bain','hall_entree','wc_bas',
+                        'hall_nuit','polyvalent','ch_emma','ch_louis','bureau_fabien','ch_amis'] %}
+        {% set ns = namespace(n=0) %}
+        {% for z in zones %}
+          {% if (states('sensor.evohome_deficit_' ~ z) | float(0)) >= 1.5 %}{% set ns.n = ns.n + 1 %}{% endif %}
+        {% endfor %}
+        {{ state_attr('climate.vicare_heating', 'active_vicare_program') in ['reduced', 'reducedEnergySaving', 'standby']
+           and ns.n >= 2
+           and (states('sensor.vicare_outside_temperature') | float(20)) < 14 }}
+      for: '02:00:00'
+    - platform: template
+      id: retabli
+      value_template: >-
+        {{ state_attr('climate.vicare_heating', 'active_vicare_program') in ['normal', 'comfort', 'forcedLastFromSchedule'] }}
+      for: '00:10:00'
+
+  condition: []
+
+  action:
+    - choose:
+        - conditions:
+            - condition: trigger
+              id: reduit_froid
+          sequence:
+            - variables:
+                froides: >-
+                  {% set ns = namespace(l=[]) %}
+                  {% for z in ['salon','cuisine','salle_a_manger','salle_de_bain','hall_entree','wc_bas',
+                               'hall_nuit','polyvalent','ch_emma','ch_louis','bureau_fabien','ch_amis'] %}
+                    {% set d = states('sensor.evohome_deficit_' ~ z) | float(0) %}
+                    {% if d >= 1.0 %}{% set ns.l = ns.l + [state_attr('sensor.evohome_deficit_' ~ z, 'zone_name') ~ ' −' ~ d ~ ' °C'] %}{% endif %}
+                  {% endfor %}
+                  {{ ns.l | join(' · ') }}
+                detail: >-
+                  La chaudière est restée en programme « {{ state_attr('climate.vicare_heating', 'active_vicare_program') }} »
+                  pendant 2 h alors que des pièces sont sous leur consigne : {{ froides }}.
+                  Ext {{ states('sensor.vicare_outside_temperature') }} °C, brûleur {{ states('binary_sensor.vicare_burner_active') }}.
+                  Vérifier le contrôleur/relais Evohome (BDR91), l'appli Evohome et les défauts système.
+            - service: persistent_notification.create
+              data:
+                title: Chaudière en « réduit », la maison refroidit
+                notification_id: chaudiere_reduit_froid
+                message: "{{ detail }}"
+            - service: notify.mobile_app_iphone_16_pro_de_fabien
+              data:
+                title: Chaudière en « réduit », la maison refroidit
+                message: "{{ detail }}"
+                data:
+                  tag: chaudiere_reduit_froid
+        - conditions:
+            - condition: trigger
+              id: retabli
+          sequence:
+            - service: persistent_notification.dismiss
+              data:
+                notification_id: chaudiere_reduit_froid
+
+  mode: single
