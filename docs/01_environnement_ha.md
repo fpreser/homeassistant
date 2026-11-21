@@ -21,7 +21,7 @@
 | **Tesla Fleet API** | Voiture Tesla Model Y "F.R.I.D.A.Y" | `switch.f_r_i_d_a_y_charge`, `number.f_r_i_d_a_y_charge_current`, `sensor.f_r_i_d_a_y_charger_current`, `sensor.f_r_i_d_a_y_niveau_de_batterie`, `number.f_r_i_d_a_y_charge_limit`, `device_tracker.f_r_i_d_a_y_location` |
 | **SMA (Solar)** | 2 onduleurs photovoltaiques SB 5.0 | `sensor.sb5_0_1av_41_208_grid_power`, `sensor.sb5_0_1av_41_345_grid_power`, `sensor.sb5_0_1av_41_208_voltage_l1`, `sensor.sb5_0_1av_41_345_voltage_l1` |
 | **P1 Meter** (HomeWizard) | Compteur electrique reseau bi-directionnel (T1/T2) + tarif actif | `sensor.p1_meter_3c39e7284d28_active_power`, imports/exports T1 (HP) et T2 (HC), `sensor.p1_meter_3c39e7284d28_active_tariff` |
-| **ViCare** (Viessmann) | Chaudiere Vitodens (chauffage + eau chaude) | `water_heater.vicare_water`, `climate.vicare_heating`, conso gaz jour (kWh) |
+| **ViCare** (Viessmann) | Chaudiere Vitodens (chauffage + eau chaude) | `water_heater.vicare_water`, `climate.vicare_heating`, conso de combustible (chauffage/ECS) en « m³ » equivalent gaz naturel (voir Citerne propane) |
 | **Waze** | Temps de trajet (3 segments matin Fabien + direct Gillian) | `sensor.trajet_maison_ecole_emma`, `sensor.trajet_ecole_emma_ecole_louis`, `sensor.trajet_ecole_louis_travail_fabien`, `sensor.trajet_maison_travail_gillian` |
 | **TTS Google Translate** | Annonces vocales en francais (voix Lea) | -- |
 | **Google Home / Cast** | 10 enceintes (salons, chambres, bureaux, SdB) | `media_player.cuisine`, `media_player.ampli_salon`, `media_player.bureau_fabien`, etc. |
@@ -98,7 +98,7 @@ Toutes les lumieres sont monitorees en puissance (W). Zones :
 - **Chaudiere** : Viessmann Vitodens (eau chaude sanitaire)
 - **Climatisation** : Panasonic Comfort Cloud
 - **Radiateurs electriques d'appoint** : Salle de bain + Salle de douche (coupure auto apres 1h/40min)
-- **Citerne gaz** : Antargaz, niveau scrape via Python toutes les 24h
+- **Combustible = propane en citerne** (Antargaz, 2 950 L, pas de gaz de ville) : niveau scrape via Python (`sensor.gaz_tank_level` en %, 1 % ≈ 30 L). Calibration du 2026-11-21 sur 3 mois : **1 « m³ » ViCare ≈ 1,6 L de propane** (≈ 10 kWh/m³, fourchette 1,5-1,75). Livraison 2026-02-06 : 2 190 L a 0,67 €/L HTVA, remise de 0,0744 €/L au-dela de 2 000 L livres (prix net ≈ 0,60 €/L HTVA, 0,72 € TVAC). Attention : un echec du scrape ecrit 0 % (trou du 2026-08-10 au 29) ; ne pas l'interpreter comme une citerne vide
 
 ## Structure des fichiers de config
 

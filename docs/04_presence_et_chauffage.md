@@ -354,7 +354,7 @@ Les 3 pieces forment **un seul volume ouvert** (pas de porte). Une **cassette a 
 - **`water_heater.vicare_water`** : chauffe-eau (temperature actuelle, consigne)
 - **`sensor.temperature_chauffe_eau`** : template sensor extrayant `current_temperature` depuis `water_heater.vicare_water`
 - **`climate.vicare_heating`** : controle de la chaudiere (mode auto/standby, courbe de chauffe slope=1.4 shift=0)
-- Consommation gaz integree dans l'energy dashboard (kWh/jour, chauffage + eau chaude separes)
+- Combustible = **propane en citerne** (Antargaz) ; les sensors `vicare_*_gas_consumption_*` sont en « m³ » equivalent gaz naturel (1 m³ ≈ 1,6 L de propane, voir docs/01). Consommation integree dans l'energy dashboard (chauffage + eau chaude separes)
 
 ### Sensors Vicare cles
 
