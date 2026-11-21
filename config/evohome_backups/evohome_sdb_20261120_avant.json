@@ -1,0 +1,4 @@
+{"backup_at":"2026-11-20T23:30:00+01:00","source":"Salle de Bain AVANT consignes jour reduites (2026-11-20)","restore":"pyscript.evohome_set_zone_schedule (service_data JSON) puis pyscript.evohome_fetch_schedules",
+"zone_name":"Salle de Bain",
+"weekdays":[{"time":"05:00","temp":22.0},{"time":"07:40","temp":17.0}],
+"weekend":[{"time":"07:00","temp":18.0},{"time":"20:00","temp":17.0}]}

@@ -1,0 +1,16 @@
+{
+  "backup_at": "2026-11-21T13:06:00+01:00",
+  "source": "sensor.evohome_sched_bureau_fabien (avant remise du mercredi comme les autres jours)",
+  "restore": {
+    "zone_name": "Bureau Fabien",
+    "schedule": {
+      "monday":    [{"time": "12:00", "temp": 15.0}],
+      "tuesday":   [{"time": "12:00", "temp": 15.0}],
+      "wednesday": [{"time": "06:30", "temp": 19.0}, {"time": "20:00", "temp": 16.0}],
+      "thursday":  [{"time": "12:00", "temp": 15.0}],
+      "friday":    [{"time": "12:00", "temp": 15.0}],
+      "saturday":  [{"time": "10:00", "temp": 18.0}, {"time": "21:00", "temp": 16.0}],
+      "sunday":    [{"time": "10:00", "temp": 18.0}, {"time": "21:00", "temp": 16.0}]
+    }
+  }
+}

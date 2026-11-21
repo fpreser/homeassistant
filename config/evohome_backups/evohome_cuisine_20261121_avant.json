@@ -1,0 +1,16 @@
+{
+  "backup_at": "2026-11-21T14:00:00+01:00",
+  "source": "sensor.evohome_sched_cuisine (avant depart 05:00 -> 04:30 en semaine)",
+  "restore": {
+    "zone_name": "Cuisine",
+    "schedule": {
+      "monday":    [{"time": "05:00", "temp": 20.0}, {"time": "07:30", "temp": 16.0}, {"time": "17:00", "temp": 19.0}, {"time": "23:00", "temp": 18.5}],
+      "tuesday":   [{"time": "05:00", "temp": 20.0}, {"time": "07:30", "temp": 16.0}, {"time": "17:00", "temp": 19.0}, {"time": "23:00", "temp": 18.5}],
+      "wednesday": [{"time": "05:00", "temp": 20.0}, {"time": "07:30", "temp": 16.0}, {"time": "12:00", "temp": 19.0}, {"time": "14:00", "temp": 16.0}, {"time": "17:00", "temp": 19.0}, {"time": "23:00", "temp": 18.5}],
+      "thursday":  [{"time": "05:00", "temp": 20.0}, {"time": "07:30", "temp": 16.0}, {"time": "17:00", "temp": 19.0}, {"time": "23:00", "temp": 18.5}],
+      "friday":    [{"time": "05:00", "temp": 20.0}, {"time": "07:30", "temp": 16.0}, {"time": "17:00", "temp": 19.0}, {"time": "23:00", "temp": 18.5}],
+      "saturday":  [{"time": "07:00", "temp": 19.0}, {"time": "23:00", "temp": 18.0}],
+      "sunday":    [{"time": "07:00", "temp": 19.0}, {"time": "23:00", "temp": 18.0}]
+    }
+  }
+}
