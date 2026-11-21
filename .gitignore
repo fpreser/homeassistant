@@ -59,3 +59,10 @@ tests/
 __pycache__/
 *.pyc
 *.pyo
+
+# Sauvegardes et copies de base HA : tres gros, contiennent historique, jetons et donnees personnelles (depot public)
+db_recovery/
+config/tmp_backups/
+config/HV6Q1Y~Q
+*.corrupt
+*.tar
