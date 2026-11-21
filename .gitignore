@@ -44,7 +44,10 @@ Thumbs.db
 # Editor files
 .vscode/
 *.swp
-.claude/
+.claude/*
+!.claude/agents/
+!.claude/skills/
+# agent-memory/ reste local : contient des donnees personnelles du foyer (depot public)
 
 # Custom integrations (managed via HACS / forks locales)
 config/custom_components/
