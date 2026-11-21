@@ -689,7 +689,9 @@
       | float(default=0) }}'
     id: Max
     trigger: template
-  conditions: []
+  conditions:
+  - condition: template
+    value_template: "{# Ignore les valeurs transitoires (rechargement des templates, capteur indisponible) : l'input_number n'accepte que -10000..10000 #}\n{{ states('sensor.net_energy') | is_number and (states('sensor.net_energy') | float(0)) > -10000 and (states('sensor.net_energy') | float(0)) < 10000 }}"
   actions:
   - choose:
     - conditions:

@@ -52,6 +52,18 @@ input_number:
     unit_of_measurement: "A"
     icon: mdi:current-ac
 
+  # Courant max tolere par phase (disjoncteur 3P C40A, 40 A par phase).
+  # Le total en W ne suffit pas : les charges monophasees desequilibrent
+  # les phases (L3 a atteint 46 A le 2026-11-14 pour 14,8 kW au total).
+  tesla_phase_limit:
+    name: "Tesla courant max par phase"
+    min: 20
+    max: 40
+    step: 1
+    initial: 36
+    unit_of_measurement: "A"
+    icon: mdi:current-ac
+
   tesla_grid_limit:
     name: "Limite puissance compteur"
     min: 5000

@@ -280,7 +280,7 @@ max_amps    = headroom_w / (sqrt3 * voltage)     # A par phase
 
 **Choix de `tesla_amps`** : les templates utilisent la valeur **commandee** (`number.f_r_i_d_a_y_courant_de_recharge`) plutot que la valeur **lue** (`sensor.f_r_i_d_a_y_courant_du_chargeur`). Le sensor Tessie est poll toutes les ~30s, ce qui provoque des oscillations dans les calculs. La garde `switch=on ET cable=on` force `tesla_amps = 0` quand la Tesla ne charge pas, pour eviter une valeur obsolete au rebranchement.
 
-**Logique** : Calcule combien d'amperes la Tesla peut consommer sans que le soutirage total depasse la limite du compteur (`input_number.tesla_grid_limit` - 500W marge). La borne haute est `input_number.tesla_max_amps` (defaut 28A, configurable depuis l'UI). Installation triphase sans neutre 40A → max theorique ~15 930W, limite par defaut 15 500W. Utilise comme plafond par `tesla_optimized_amp` et par le suivi amperage nocturne.
+**Logique** : Calcule combien d'amperes la Tesla peut consommer sans que le soutirage total depasse la limite du compteur (`input_number.tesla_grid_limit` - 500W marge). La borne haute est `input_number.tesla_max_amps` (defaut 28A, configurable depuis l'UI). Installation triphase sans neutre 40A → puissance contractuelle 15,9 kVA (~15 930W), limite reglee a 14 000W le 2026-11-21 (defaut 15 500W si l'helper est absent). **Contrainte par phase (2026-11-21)** : le disjoncteur C40A coupe sur la phase la plus chargee, pas sur le total ; le sensor retient aussi `tesla_phase_limit` (defaut 36 A) − (courant de la phase hors Tesla) pour chaque phase `active_current_l1/l2/l3` du P1, et prend le minimum des trois contraintes (puissance, phase, `tesla_max_amps`). Mesure du 2026-11-06→21 : L3 a atteint 46 A et L1 43 A (Tesla 8-10 kW + cuisine, soirs 19-21 h) pour un total < 15 kW. Utilise comme plafond par `tesla_optimized_amp` et par le suivi amperage nocturne.
 
 ### Interaction des deux sensors
 
@@ -461,8 +461,10 @@ input_boolean.tesla_smart_charge (MAITRE)
         Fix primaire = auto 4b.
 
 8. Protection reseau (reaction rapide, charge solaire uniquement) :
-  Trigger: template — p1_active_power > (tesla_grid_limit - 500W) pendant 10s
-           (defaut 15 500W - 500W = 15 000W)
+  Trigger 1: template — p1_active_power > (tesla_grid_limit - 500W) pendant 10s
+           (limite 14 000W - 500W = 13 500W)
+  Trigger 2 (2026-11-21): template — max(active_current_l1/l2/l3) > input_number.tesla_phase_limit
+           (36 A) pendant 10s ; l'action reduit l'amperage au `tesla_max_amp_grid` (deja par phase)
   Conditions: HC pending off + charge on + home (GPS OU WiFi)
   Si max_grid < 5A --> pause charge + notification
   Sinon --> reduit amperage au max admissible
@@ -588,7 +590,8 @@ L'automation **Awtrix Tesla Charging** affiche sur l'afficheur LED :
 | `input_number.tesla_soc_solaire_max` | SoC max en mode solaire (force au demarrage des autos 1/3 SmartCharge) | 90% |
 | `input_number.tesla_seuil_solaire` | Production solaire prevue en-dessous de laquelle on charge la nuit | 40 kWh |
 | `input_number.tesla_max_amps` | Amperage max de l'installation | 28A |
-| `input_number.tesla_grid_limit` | Limite puissance compteur (W) | 15 500W |
+| `input_number.tesla_grid_limit` | Limite puissance compteur (W) | 15 500W (regle a 14 000W le 2026-11-21) |
+| `input_number.tesla_phase_limit` | Courant max tolere par phase (A, disjoncteur 40 A) | 36 A |
 | `input_boolean.tesla_night_charge_pending` | Flag : charge nocturne programmee (gere par l'automation) | off |
 
 ### Template sensors

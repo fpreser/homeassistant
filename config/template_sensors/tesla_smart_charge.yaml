@@ -79,7 +79,23 @@
       {# Conversion W total -> A par phase : I = P / (sqrt(3) * V_ligne)               #}
       {# Borne haute = input_number.tesla_max_amps (limite installation configurable)  #}
       {% set max_amps    = (headroom_w / (sqrt3 * voltage)) | round(0) | int %}
-      {{ [0, [max_amps, max_user_amps] | min] | max }}
+
+      {# Contrainte PAR PHASE (disjoncteur C40A = 40 A par phase).                     #}
+      {# La Tesla tire tesla_amps sur chacune des 3 phases ; les autres charges        #}
+      {# (monophasees) desequilibrent. Courant hors Tesla de la phase i =              #}
+      {# I_i - tesla_amps. Place restante pour la Tesla = phase_limit - ce courant.    #}
+      {# On retient la phase la plus chargee. Si un courant est indisponible, la phase #}
+      {# est ignoree (pas de blocage de la charge sur capteur manquant).               #}
+      {% set phase_limit = states('input_number.tesla_phase_limit') | float(36) %}
+      {% set ns = namespace(max_phase=99) %}
+      {% for l in ['l1', 'l2', 'l3'] %}
+        {% set s = states('sensor.p1_meter_3c39e7284d28_active_current_' ~ l) %}
+        {% if s not in ['unknown', 'unavailable', 'none', ''] %}
+          {% set room = phase_limit - (s | float(0) - tesla_amps) %}
+          {% set ns.max_phase = [ns.max_phase, room | round(0) | int] | min %}
+        {% endif %}
+      {% endfor %}
+      {{ [0, [max_amps, ns.max_phase, max_user_amps] | min] | max }}
     unit_of_measurement: "A"
     device_class: current
     state_class: measurement

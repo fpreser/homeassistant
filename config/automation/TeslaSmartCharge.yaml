@@ -1042,6 +1042,21 @@
            > (states('input_number.tesla_grid_limit') | float(15500) - 500) }}
       for:
         seconds: 10
+    # Courant PAR PHASE : le disjoncteur C40A coupe sur la phase la plus
+    # chargee, pas sur le total (L3 a atteint 46 A le 2026-11-14 alors que
+    # le total restait < 15 kW). Le sensor tesla_max_amp_grid integre deja
+    # la contrainte par phase (input_number.tesla_phase_limit).
+    - platform: template
+      value_template: >-
+        {% set lim = states('input_number.tesla_phase_limit') | float(36) %}
+        {% set ns = namespace(m=0) %}
+        {% for l in ['l1', 'l2', 'l3'] %}
+          {% set v = states('sensor.p1_meter_3c39e7284d28_active_current_' ~ l) | float(0) %}
+          {% set ns.m = [ns.m, v] | max %}
+        {% endfor %}
+        {{ ns.m > lim }}
+      for:
+        seconds: 10
   condition:
     - condition: state
       entity_id: input_boolean.tesla_night_charge_pending
@@ -1074,8 +1089,14 @@
                 message: >-
                   {% set p1 = states('sensor.p1_meter_3c39e7284d28_active_power') | int(0) %}
                   {% set limite = states('input_number.tesla_grid_limit') | int(15500) %}
+                  {% set i1 = states('sensor.p1_meter_3c39e7284d28_active_current_l1') | float(0) | round(0) %}
+                  {% set i2 = states('sensor.p1_meter_3c39e7284d28_active_current_l2') | float(0) | round(0) %}
+                  {% set i3 = states('sensor.p1_meter_3c39e7284d28_active_current_l3') | float(0) | round(0) %}
                   Charge Tesla mise en pause — soutirage reseau {{ p1 }}W
-                  (limite {{ limite }}W). Reprise auto quand le surplus revient.
+                  (limite {{ limite }}W), courants L1 {{ i1 }}A / L2 {{ i2 }}A /
+                  L3 {{ i3 }}A (limite phase
+                  {{ states('input_number.tesla_phase_limit') | int(36) }}A).
+                  Reprise auto quand le surplus revient.
       # Sinon, reduit au max admissible
       default:
         - service: number.set_value
