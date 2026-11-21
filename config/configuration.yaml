@@ -277,12 +277,6 @@ sensor:
     max_age:
       minutes: 2
 
-http:
-  server_port: 8123
-  use_x_forwarded_for: false
-  trusted_proxies: []
-  ip_ban_enabled: false
-
 prometheus:
   namespace: hass
   filter:
@@ -300,3 +294,13 @@ scene: !include scenes.yaml
 
 # === TEMPLATE SENSORS MODERNES (format 2025.12+) ===
 template: !include_dir_merge_list template_sensors
+
+# === DASHBOARDS YAML ===
+lovelace:
+  dashboards:
+    lovelace-orbit:
+      mode: yaml
+      title: Orbit
+      icon: mdi:orbit
+      show_in_sidebar: true
+      filename: dashboards/orbit.yaml

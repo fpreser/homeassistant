@@ -1456,6 +1456,7 @@
           "badges": [],
           "cards": [
             {
+              "color": "state",
               "type": "entities",
               "entities": [
                 {
@@ -1483,10 +1484,6 @@
                 {
                   "entity": "sensor.tesla_dernier_fetch_api",
                   "name": "Dernier fetch Tessie"
-                },
-                {
-                  "entity": "sensor.f_r_i_d_a_y_cached_data_age",
-                  "name": "Age donnees cache Tessie"
                 },
                 {
                   "entity": "binary_sensor.f_r_i_d_a_y_etat",
@@ -1624,7 +1621,6 @@
                   "name": "Limite puissance compteur"
                 }
               ],
-              "state_color": true,
               "title": "Smart Charge (jour & nuit)"
             },
             {
